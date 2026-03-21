@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git -C \"C:/Users/mjone/groundwork\" init)",
+      "Read(//tmp/**)",
+      "Bash(\"C:/Users/mjone/out1.txt\")",
+      "Bash(git:*)",
+      "Bash(npm install:*)"
+    ]
+  }
+}
