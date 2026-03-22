@@ -1,23 +1,64 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import BottomNav from "@/components/BottomNav";
 import { supabase } from "@/lib/supabase";
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
 const TARGETS = { calories: 2400, protein: 180, carbs: 250, fat: 80 };
 
-const FAST_FOOD = [
-  { place: "Chick-fil-A", item: "Grilled Nuggets (12-count)", cal: 380, protein: 47, carbs: 9, fat: 9 },
-  { place: "Whataburger", item: "Grilled Chicken (no bun)", cal: 310, protein: 34, carbs: 6, fat: 16 },
-  { place: "Chipotle", item: "Bowl — Double Protein, No Rice", cal: 520, protein: 62, carbs: 28, fat: 18 },
-  { place: "McDonald's", item: "Egg McMuffin", cal: 300, protein: 17, carbs: 30, fat: 12 },
-  { place: "Subway", item: "Rotisserie Chicken (6-inch)", cal: 440, protein: 36, carbs: 48, fat: 8 },
+type MealType = "breakfast" | "lunch" | "dinner" | "snack";
+
+const MEALS: { type: MealType; label: string }[] = [
+  { type: "breakfast", label: "Breakfast" },
+  { type: "lunch", label: "Lunch" },
+  { type: "dinner", label: "Dinner" },
+  { type: "snack", label: "Snacks" },
 ];
 
-type MealLog = {
+type FoodEntry = {
+  name: string;
+  cal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+};
+
+const FOODS: FoodEntry[] = [
+  { name: "Eggs (2 large)", cal: 140, protein: 12, carbs: 0, fat: 10 },
+  { name: "Chicken Breast (6oz)", cal: 280, protein: 52, carbs: 0, fat: 6 },
+  { name: "Protein Bar", cal: 200, protein: 20, carbs: 24, fat: 6 },
+  { name: "White Rice (1 cup)", cal: 206, protein: 4, carbs: 45, fat: 0 },
+  { name: "Oatmeal (1 cup)", cal: 158, protein: 6, carbs: 27, fat: 3 },
+  { name: "Banana", cal: 105, protein: 1, carbs: 27, fat: 0 },
+  { name: "Peanut Butter (2 tbsp)", cal: 190, protein: 8, carbs: 6, fat: 16 },
+  { name: "Whey Protein (1 scoop)", cal: 120, protein: 25, carbs: 3, fat: 2 },
+  { name: "Steak (8oz)", cal: 540, protein: 56, carbs: 0, fat: 34 },
+  { name: "Ground Beef (6oz, 80/20)", cal: 430, protein: 38, carbs: 0, fat: 30 },
+  { name: "Sweet Potato", cal: 103, protein: 2, carbs: 24, fat: 0 },
+  { name: "Broccoli (1 cup)", cal: 55, protein: 4, carbs: 11, fat: 0 },
+  { name: "Almonds (1oz)", cal: 164, protein: 6, carbs: 6, fat: 14 },
+  { name: "Greek Yogurt (1 cup)", cal: 130, protein: 17, carbs: 9, fat: 4 },
+  { name: "Turkey Sandwich", cal: 370, protein: 28, carbs: 38, fat: 10 },
+  { name: "Burrito Bowl", cal: 650, protein: 42, carbs: 72, fat: 18 },
+];
+
+const FAST_FOOD = [
+  { place: "Chick-fil-A", item: "Grilled Nuggets (12-count)", name: "Chick-fil-A Grilled Nuggets", cal: 380, protein: 47, carbs: 9, fat: 9 },
+  { place: "Whataburger", item: "Grilled Chicken (no bun)", name: "Whataburger Grilled Chicken", cal: 310, protein: 34, carbs: 6, fat: 16 },
+  { place: "Chipotle", item: "Bowl — Double Protein, No Rice", name: "Chipotle Double Protein Bowl", cal: 520, protein: 62, carbs: 28, fat: 18 },
+  { place: "McDonald's", item: "Egg McMuffin", name: "McDonald's Egg McMuffin", cal: 300, protein: 17, carbs: 30, fat: 12 },
+  { place: "Subway", item: "Rotisserie Chicken (6-inch)", name: "Subway Rotisserie Chicken", cal: 440, protein: 36, carbs: 48, fat: 8 },
+];
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type FoodLog = {
   id: string;
   meal_name: string;
+  meal_type: MealType;
   calories: number;
   protein_g: number;
   carbs_g: number;
@@ -25,22 +66,106 @@ type MealLog = {
   created_at: string;
 };
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 function pct(val: number, target: number) {
-  return Math.min(100, Math.round((val / target) * 100));
+  return Math.min(100, (val / target) * 100);
 }
 
-export default function NutritionPage() {
-  const [todayLogs, setTodayLogs] = useState<MealLog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [mealName, setMealName] = useState("");
-  const [calories, setCalories] = useState("");
-  const [protein, setProtein] = useState("");
-  const [carbs, setCarbs] = useState("");
-  const [fat, setFat] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  });
+}
 
-  async function fetchTodayLogs() {
+function coerceLog(d: Record<string, unknown>): FoodLog {
+  return {
+    id: d.id as string,
+    meal_name: d.meal_name as string,
+    meal_type: ((d.meal_type as string) || "snack") as MealType,
+    calories: (d.calories as number) ?? 0,
+    protein_g: (d.protein_g as number) ?? 0,
+    carbs_g: (d.carbs_g as number) ?? 0,
+    fat_g: (d.fat_g as number) ?? 0,
+    created_at: d.created_at as string,
+  };
+}
+
+// ─── Calorie Ring ─────────────────────────────────────────────────────────────
+
+const RING_R = 64;
+const RING_SW = 10;
+const RING_CIRC = 2 * Math.PI * RING_R;
+
+function CalorieRing({ consumed, goal }: { consumed: number; goal: number }) {
+  const fraction = Math.min(1, consumed / goal);
+  const offset = RING_CIRC * (1 - fraction);
+  const remaining = Math.max(0, goal - consumed);
+  const over = consumed > goal;
+
+  return (
+    <div className="relative flex items-center justify-center shrink-0" style={{ width: 164, height: 164 }}>
+      <svg width={164} height={164} viewBox="0 0 164 164">
+        <circle cx={82} cy={82} r={RING_R} fill="none" stroke="#252525" strokeWidth={RING_SW} transform="rotate(-90 82 82)" />
+        {consumed > 0 && (
+          <circle
+            cx={82} cy={82} r={RING_R} fill="none"
+            stroke={over ? "#E87070" : "#C45B28"}
+            strokeWidth={RING_SW}
+            strokeLinecap="round"
+            strokeDasharray={RING_CIRC}
+            strokeDashoffset={offset}
+            transform="rotate(-90 82 82)"
+            style={{ transition: "stroke-dashoffset 0.5s ease" }}
+          />
+        )}
+      </svg>
+      <div className="absolute flex flex-col items-center gap-0.5">
+        <span
+          className="text-3xl font-bold leading-none"
+          style={{ color: over ? "#E87070" : "#E8E2D8", fontFamily: "var(--font-inter)" }}
+        >
+          {remaining}
+        </span>
+        <span className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+          {over ? "over goal" : "cal left"}
+        </span>
+        <span className="text-[11px] mt-0.5" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+          {consumed} / {goal}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default function NutritionPage() {
+  const [todayLogs, setTodayLogs] = useState<FoodLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expandedMeals, setExpandedMeals] = useState<Set<MealType>>(
+    new Set<MealType>(["breakfast", "lunch", "dinner", "snack"])
+  );
+  const [addingTo, setAddingTo] = useState<MealType | null>(null);
+  const [search, setSearch] = useState("");
+  const [showCustom, setShowCustom] = useState(false);
+  const [customName, setCustomName] = useState("");
+  const [customCal, setCustomCal] = useState("");
+  const [customProtein, setCustomProtein] = useState("");
+  const [customCarbs, setCustomCarbs] = useState("");
+  const [customFat, setCustomFat] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [water, setWater] = useState(0);
+  const [fastFoodPicker, setFastFoodPicker] = useState<number | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyLogs, setHistoryLogs] = useState<FoodLog[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  // ── Fetch ────────────────────────────────────────────────────────────────────
+
+  const fetchTodayLogs = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
 
@@ -49,16 +174,18 @@ export default function NutritionPage() {
 
     const { data } = await supabase
       .from("meal_logs")
-      .select("*")
+      .select("id, meal_name, meal_type, calories, protein_g, carbs_g, fat_g, created_at")
       .eq("user_id", user.id)
       .gte("created_at", today.toISOString())
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: true });
 
-    setTodayLogs(data ?? []);
+    setTodayLogs((data ?? []).map((d) => coerceLog(d as Record<string, unknown>)));
     setLoading(false);
-  }
+  }, []);
 
-  useEffect(() => { fetchTodayLogs(); }, []);
+  useEffect(() => { fetchTodayLogs(); }, [fetchTodayLogs]);
+
+  // ── Derived totals ───────────────────────────────────────────────────────────
 
   const totals = todayLogs.reduce(
     (acc, log) => ({
@@ -70,38 +197,127 @@ export default function NutritionPage() {
     { calories: 0, protein: 0, carbs: 0, fat: 0 }
   );
 
-  async function handleLog(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
+  function logsForMeal(type: MealType) {
+    return todayLogs.filter((l) => l.meal_type === type);
+  }
 
+  function mealCalories(type: MealType) {
+    return logsForMeal(type).reduce((acc, l) => acc + (l.calories ?? 0), 0);
+  }
+
+  // ── Add food ─────────────────────────────────────────────────────────────────
+
+  async function addFood(mealType: MealType, food: FoodEntry) {
+    setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setSaving(false); return; }
 
     await supabase.from("meal_logs").insert({
       user_id: user.id,
-      meal_name: mealName.trim(),
-      calories: Number(calories) || 0,
-      protein_g: Number(protein) || 0,
-      carbs_g: Number(carbs) || 0,
-      fat_g: Number(fat) || 0,
+      meal_name: food.name,
+      meal_type: mealType,
+      calories: food.cal,
+      protein_g: food.protein,
+      carbs_g: food.carbs,
+      fat_g: food.fat,
     });
 
-    setMealName(""); setCalories(""); setProtein(""); setCarbs(""); setFat("");
+    await fetchTodayLogs();
     setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
-    fetchTodayLogs();
   }
+
+  async function addCustomFood(mealType: MealType) {
+    if (!customName.trim()) return;
+    await addFood(mealType, {
+      name: customName.trim(),
+      cal: Number(customCal) || 0,
+      protein: Number(customProtein) || 0,
+      carbs: Number(customCarbs) || 0,
+      fat: Number(customFat) || 0,
+    });
+    setCustomName(""); setCustomCal(""); setCustomProtein(""); setCustomCarbs(""); setCustomFat("");
+    setShowCustom(false);
+  }
+
+  async function removeLog(id: string) {
+    await supabase.from("meal_logs").delete().eq("id", id);
+    setTodayLogs((prev) => prev.filter((l) => l.id !== id));
+  }
+
+  // ── History ──────────────────────────────────────────────────────────────────
+
+  async function loadHistory() {
+    setHistoryLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setHistoryLoading(false); return; }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const sevenDaysAgo = new Date(today.getTime() - 6 * 86400000);
+
+    const { data } = await supabase
+      .from("meal_logs")
+      .select("id, meal_name, meal_type, calories, protein_g, carbs_g, fat_g, created_at")
+      .eq("user_id", user.id)
+      .gte("created_at", sevenDaysAgo.toISOString())
+      .lt("created_at", today.toISOString())
+      .order("created_at", { ascending: false });
+
+    setHistoryLogs((data ?? []).map((d) => coerceLog(d as Record<string, unknown>)));
+    setHistoryLoading(false);
+  }
+
+  function toggleHistory() {
+    if (!showHistory && historyLogs.length === 0) loadHistory();
+    setShowHistory((v) => !v);
+  }
+
+  // Group history by local date (newest first)
+  const historyByDate = historyLogs.reduce<Map<string, FoodLog[]>>((map, log) => {
+    const key = new Date(log.created_at).toLocaleDateString("en-CA");
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(log);
+    return map;
+  }, new Map());
+
+  // ── Section helpers ───────────────────────────────────────────────────────────
+
+  function toggleMeal(type: MealType) {
+    setExpandedMeals((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type); else next.add(type);
+      return next;
+    });
+  }
+
+  function openAddFood(type: MealType) {
+    setAddingTo(type);
+    setSearch("");
+    setShowCustom(false);
+    setCustomName(""); setCustomCal(""); setCustomProtein(""); setCustomCarbs(""); setCustomFat("");
+    setExpandedMeals((prev) => { const next = new Set(prev); next.add(type); return next; });
+  }
+
+  // ── Food search filtering ─────────────────────────────────────────────────────
+
+  const q = search.toLowerCase().trim();
+  const filteredFoods = q ? FOODS.filter((f) => f.name.toLowerCase().includes(q)) : FOODS;
+  const filteredFastFood = FAST_FOOD.filter(
+    (f) => q === "" || f.place.toLowerCase().includes(q) || f.item.toLowerCase().includes(q)
+  );
+  const noResults = q !== "" && filteredFoods.length === 0 && filteredFastFood.length === 0;
+
+  // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
     <main
-      className="min-h-screen flex flex-col px-6 py-10"
+      className="min-h-screen flex flex-col px-4 py-10"
       style={{ backgroundColor: "#0A0A0A", color: "#E8E2D8" }}
     >
-      <div className="max-w-3xl w-full mx-auto flex flex-col gap-10 pb-28">
+      <div className="max-w-2xl w-full mx-auto flex flex-col gap-8 pb-28">
 
         {/* Header */}
-        <header className="flex items-center gap-5">
+        <header className="flex items-center gap-5 px-2">
           <Link
             href="/dashboard"
             className="flex items-center justify-center w-9 h-9 transition-opacity hover:opacity-60"
@@ -128,9 +344,325 @@ export default function NutritionPage() {
           </div>
         </header>
 
-        {/* Daily Tracker */}
+        {/* ── Daily Summary ─────────────────────────────────────────────────── */}
         <section
-          className="px-7 py-6 flex flex-col gap-5"
+          className="px-6 py-7 flex flex-col gap-6"
+          style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
+        >
+          <p
+            className="text-xs font-semibold tracking-[0.25em] uppercase"
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+          >
+            Today&apos;s Summary
+          </p>
+
+          {loading ? (
+            <div className="h-40 animate-pulse" style={{ backgroundColor: "#252525", borderRadius: "8px" }} />
+          ) : (
+            <div className="flex flex-col sm:flex-row items-center gap-8">
+              <CalorieRing consumed={totals.calories} goal={TARGETS.calories} />
+
+              <div className="flex-1 flex flex-col gap-4 w-full">
+                {[
+                  { label: "Protein", val: totals.protein, target: TARGETS.protein, color: "#C45B28" },
+                  { label: "Carbs", val: totals.carbs, target: TARGETS.carbs, color: "#5A8070" },
+                  { label: "Fat", val: totals.fat, target: TARGETS.fat, color: "#7A6A3A" },
+                ].map(({ label, val, target, color }) => (
+                  <div key={label} className="flex flex-col gap-1.5">
+                    <div className="flex justify-between text-xs" style={{ fontFamily: "var(--font-inter)" }}>
+                      <span style={{ color: "#9A9A9A" }}>{label}</span>
+                      <span>
+                        <span style={{ color, fontWeight: 600 }}>{val}g</span>
+                        <span style={{ color: "#9A9A9A" }}> / {target}g</span>
+                      </span>
+                    </div>
+                    <div className="h-2 w-full" style={{ backgroundColor: "#252525", borderRadius: "4px" }}>
+                      <div
+                        className="h-full transition-all duration-500"
+                        style={{ width: `${pct(val, target)}%`, backgroundColor: color, borderRadius: "4px" }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* ── Meal Sections ─────────────────────────────────────────────────── */}
+        {MEALS.map(({ type, label }) => {
+          const logs = logsForMeal(type);
+          const isExpanded = expandedMeals.has(type);
+          const isAdding = addingTo === type;
+          const mealCal = mealCalories(type);
+
+          return (
+            <section
+              key={type}
+              style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px", overflow: "hidden" }}
+            >
+              {/* Section header */}
+              <div
+                className="px-5 py-4 flex items-center justify-between cursor-pointer select-none"
+                style={{ borderBottom: isExpanded ? "1px solid #252525" : "none" }}
+                onClick={() => toggleMeal(type)}
+              >
+                <div className="flex items-center gap-3">
+                  <p
+                    className="text-sm font-bold uppercase tracking-wide"
+                    style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
+                  >
+                    {label}
+                  </p>
+                  {mealCal > 0 && (
+                    <span
+                      className="text-xs font-semibold"
+                      style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+                    >
+                      {mealCal} cal
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      isAdding ? setAddingTo(null) : openAddFood(type);
+                    }}
+                    className="text-xs font-semibold uppercase tracking-widest px-3 py-1.5 transition-opacity hover:opacity-80"
+                    style={{
+                      backgroundColor: isAdding ? "#252525" : "#C45B28",
+                      color: isAdding ? "#9A9A9A" : "#0A0A0A",
+                      borderRadius: "6px",
+                      fontFamily: "var(--font-inter)",
+                    }}
+                  >
+                    {isAdding ? "Cancel" : "+ Add"}
+                  </button>
+                  <svg
+                    viewBox="0 0 20 20" fill="none" width={16} height={16}
+                    style={{ color: "#9A9A9A", transform: isExpanded ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}
+                  >
+                    <path d="M5 8l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+              </div>
+
+              {isExpanded && (
+                <div className="flex flex-col">
+                  {/* Food items */}
+                  {logs.length > 0 && (
+                    <div className="flex flex-col divide-y" style={{ borderColor: "#252525" }}>
+                      {logs.map((log) => (
+                        <div key={log.id} className="px-5 py-3 flex items-center justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <p
+                              className="text-sm font-semibold truncate"
+                              style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
+                            >
+                              {log.meal_name}
+                            </p>
+                            <p className="text-xs mt-0.5" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                              P: {log.protein_g}g · C: {log.carbs_g}g · F: {log.fat_g}g
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-3 shrink-0">
+                            <span
+                              className="text-sm font-bold"
+                              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+                            >
+                              {log.calories} cal
+                            </span>
+                            <button
+                              onClick={() => removeLog(log.id)}
+                              className="transition-opacity hover:opacity-60"
+                              style={{ color: "#5A5A5A" }}
+                              aria-label="Remove"
+                            >
+                              <svg viewBox="0 0 20 20" fill="none" width={14} height={14}>
+                                <path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {logs.length === 0 && !isAdding && (
+                    <p className="px-5 py-4 text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                      Nothing logged yet.
+                    </p>
+                  )}
+
+                  {/* Add Food Panel */}
+                  {isAdding && (
+                    <div
+                      className="flex flex-col gap-4 px-5 py-5"
+                      style={{ borderTop: logs.length > 0 ? "1px solid #252525" : "none" }}
+                    >
+                      {/* Search */}
+                      <input
+                        type="search"
+                        placeholder="Search foods..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        autoFocus
+                        className="w-full px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#C45B28]"
+                        style={{
+                          backgroundColor: "#0A0A0A",
+                          border: "1px solid #252525",
+                          borderRadius: "8px",
+                          color: "#E8E2D8",
+                          fontFamily: "var(--font-inter)",
+                        }}
+                      />
+
+                      {/* Food list */}
+                      <div
+                        className="flex flex-col gap-0.5 max-h-60 overflow-y-auto"
+                        style={{ scrollbarWidth: "thin", scrollbarColor: "#252525 transparent" }}
+                      >
+                        {filteredFoods.map((food) => (
+                          <button
+                            key={food.name}
+                            disabled={saving}
+                            onClick={() => addFood(type, food)}
+                            className="flex items-center justify-between px-3 py-3 text-left transition-colors rounded-lg disabled:opacity-40"
+                            style={{ fontFamily: "var(--font-inter)" }}
+                            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#1E1E1E")}
+                            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                          >
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold truncate" style={{ color: "#E8E2D8" }}>{food.name}</p>
+                              <p className="text-xs" style={{ color: "#9A9A9A" }}>
+                                P: {food.protein}g · C: {food.carbs}g · F: {food.fat}g
+                              </p>
+                            </div>
+                            <span className="text-sm font-bold ml-4 shrink-0" style={{ color: "#C45B28" }}>
+                              {food.cal} cal
+                            </span>
+                          </button>
+                        ))}
+
+                        {/* Fast food in search results */}
+                        {filteredFastFood.length > 0 && q !== "" && (
+                          <>
+                            <div className="px-3 pt-2 pb-1">
+                              <p className="text-xs uppercase tracking-widest" style={{ color: "#9A9A9A" }}>Fast Food</p>
+                            </div>
+                            {filteredFastFood.map((ff) => (
+                              <button
+                                key={ff.place}
+                                disabled={saving}
+                                onClick={() => addFood(type, { name: ff.name, cal: ff.cal, protein: ff.protein, carbs: ff.carbs, fat: ff.fat })}
+                                className="flex items-center justify-between px-3 py-3 text-left rounded-lg disabled:opacity-40"
+                                style={{ fontFamily: "var(--font-inter)" }}
+                                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#1E1E1E")}
+                                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                              >
+                                <div>
+                                  <p className="text-sm font-semibold" style={{ color: "#E8E2D8" }}>{ff.place}</p>
+                                  <p className="text-xs" style={{ color: "#9A9A9A" }}>{ff.item}</p>
+                                </div>
+                                <span className="text-sm font-bold ml-4 shrink-0" style={{ color: "#C45B28" }}>{ff.cal} cal</span>
+                              </button>
+                            ))}
+                          </>
+                        )}
+
+                        {noResults && (
+                          <p className="px-3 py-2 text-sm" style={{ color: "#9A9A9A" }}>
+                            No results for &ldquo;{search}&rdquo;.
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Custom entry toggle */}
+                      <button
+                        onClick={() => setShowCustom((v) => !v)}
+                        className="text-xs font-semibold uppercase tracking-widest text-left transition-opacity hover:opacity-70"
+                        style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                      >
+                        {showCustom ? "− Hide Custom Entry" : "+ Custom Food"}
+                      </button>
+
+                      {showCustom && (
+                        <div className="flex flex-col gap-3">
+                          <input
+                            type="text"
+                            placeholder="Food name"
+                            value={customName}
+                            onChange={(e) => setCustomName(e.target.value)}
+                            className="w-full px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#C45B28]"
+                            style={{
+                              backgroundColor: "#0A0A0A",
+                              border: "1px solid #252525",
+                              borderRadius: "8px",
+                              color: "#E8E2D8",
+                              fontFamily: "var(--font-inter)",
+                            }}
+                          />
+                          <div className="grid grid-cols-4 gap-2">
+                            {[
+                              { label: "Cal", val: customCal, set: setCustomCal },
+                              { label: "Protein", val: customProtein, set: setCustomProtein },
+                              { label: "Carbs", val: customCarbs, set: setCustomCarbs },
+                              { label: "Fat", val: customFat, set: setCustomFat },
+                            ].map(({ label, val, set }) => (
+                              <div key={label} className="flex flex-col gap-1">
+                                <label
+                                  className="text-xs uppercase tracking-widest"
+                                  style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                                >
+                                  {label}
+                                </label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  placeholder="0"
+                                  value={val}
+                                  onChange={(e) => set(e.target.value)}
+                                  className="px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-[#C45B28]"
+                                  style={{
+                                    backgroundColor: "#0A0A0A",
+                                    border: "1px solid #252525",
+                                    borderRadius: "8px",
+                                    color: "#E8E2D8",
+                                    fontFamily: "var(--font-inter)",
+                                  }}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                          <button
+                            onClick={() => addCustomFood(type)}
+                            disabled={saving || !customName.trim()}
+                            className="py-2.5 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90 disabled:opacity-40"
+                            style={{
+                              backgroundColor: "#C45B28",
+                              color: "#0A0A0A",
+                              borderRadius: "8px",
+                              fontFamily: "var(--font-inter)",
+                              fontWeight: 600,
+                              minHeight: "44px",
+                            }}
+                          >
+                            {saving ? "Adding..." : "Add Food"}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
+          );
+        })}
+
+        {/* ── Water Tracker ─────────────────────────────────────────────────── */}
+        <section
+          className="px-6 py-6 flex flex-col gap-5"
           style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
         >
           <div className="flex items-baseline justify-between">
@@ -138,158 +670,66 @@ export default function NutritionPage() {
               className="text-xs font-semibold tracking-[0.25em] uppercase"
               style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
             >
-              Today&apos;s Intake
+              Water
             </p>
-            <span className="text-2xl font-bold" style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}>
-              {totals.calories}{" "}
-              <span className="text-sm font-normal" style={{ color: "#9A9A9A" }}>
-                / {TARGETS.calories} cal
-              </span>
+            <span className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+              {water} / 8 glasses
             </span>
           </div>
 
-          {/* Calorie bar */}
-          <div className="h-2 w-full" style={{ backgroundColor: "#252525" }}>
-            <div
-              className="h-full transition-all duration-500"
-              style={{ width: `${pct(totals.calories, TARGETS.calories)}%`, backgroundColor: "#C45B28" }}
-            />
+          <div className="flex gap-3 flex-wrap">
+            {Array.from({ length: 8 }, (_, i) => {
+              const filled = i < water;
+              return (
+                <button
+                  key={i}
+                  onClick={() => setWater(filled ? i : i + 1)}
+                  className="transition-all duration-150 active:scale-95"
+                  aria-label={`Glass ${i + 1}`}
+                >
+                  <svg viewBox="0 0 28 36" width={36} height={44} fill="none">
+                    {/* Glass body */}
+                    <path
+                      d="M5 3h18l-2.5 30H7.5L5 3z"
+                      fill={filled ? "#0D1B2A" : "none"}
+                      stroke={filled ? "#2A5A8F" : "#2A2A2A"}
+                      strokeWidth="1.5"
+                      strokeLinejoin="round"
+                    />
+                    {/* Water fill */}
+                    {filled && (
+                      <path
+                        d="M7.8 17h12.4l-1.8 16H9.6L7.8 17z"
+                        fill="#1E3A5F"
+                        opacity="0.9"
+                      />
+                    )}
+                    {/* Rim line */}
+                    <line x1="5" y1="3" x2="23" y2="3" stroke={filled ? "#2A5A8F" : "#2A2A2A"} strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Macro bars */}
-          {[
-            { label: "Protein", val: totals.protein, target: TARGETS.protein, unit: "g", color: "#C45B28" },
-            { label: "Carbs", val: totals.carbs, target: TARGETS.carbs, unit: "g", color: "#9A9A9A" },
-            { label: "Fat", val: totals.fat, target: TARGETS.fat, unit: "g", color: "#9A9A9A" },
-          ].map(({ label, val, target, unit, color }) => (
-            <div key={label} className="flex flex-col gap-1">
-              <div className="flex justify-between text-xs" style={{ color: "#9A9A9A" }}>
-                <span style={{ fontFamily: "var(--font-inter)", letterSpacing: "0.1em" }}>{label}</span>
-                <span style={{ fontFamily: "var(--font-inter)" }}>
-                  {val}
-                  {unit} / {target}
-                  {unit}
-                </span>
-              </div>
-              <div className="h-1.5 w-full" style={{ backgroundColor: "#252525" }}>
-                <div
-                  className="h-full transition-all duration-500"
-                  style={{ width: `${pct(val, target)}%`, backgroundColor: color }}
-                />
-              </div>
+          {water > 0 && (
+            <div className="h-1.5 w-full" style={{ backgroundColor: "#252525", borderRadius: "4px" }}>
+              <div
+                className="h-full transition-all duration-500"
+                style={{ width: `${(water / 8) * 100}%`, backgroundColor: "#1E3A5F", borderRadius: "4px" }}
+              />
             </div>
-          ))}
-        </section>
+          )}
 
-        {/* Log Meal */}
-        <section className="flex flex-col gap-5">
-          <p
-            className="text-xs font-semibold tracking-[0.25em] uppercase"
-            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
-          >
-            Log a Meal
-          </p>
-          <form onSubmit={handleLog} className="flex flex-col gap-4">
-            <input
-              type="text"
-              required
-              placeholder="Meal name"
-              value={mealName}
-              onChange={(e) => setMealName(e.target.value)}
-              className="px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#C45B28]"
-              style={{
-                backgroundColor: "#161616",
-                border: "1px solid #252525",
-                borderRadius: "8px",
-                color: "#E8E2D8",
-                fontFamily: "var(--font-inter)",
-              }}
-            />
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[
-                { label: "Calories", val: calories, set: setCalories },
-                { label: "Protein (g)", val: protein, set: setProtein },
-                { label: "Carbs (g)", val: carbs, set: setCarbs },
-                { label: "Fat (g)", val: fat, set: setFat },
-              ].map(({ label, val, set }) => (
-                <div key={label} className="flex flex-col gap-1">
-                  <label
-                    className="text-xs uppercase tracking-widest"
-                    style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
-                  >
-                    {label}
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="0"
-                    value={val}
-                    onChange={(e) => set(e.target.value)}
-                    className="px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#C45B28]"
-                    style={{
-                      backgroundColor: "#161616",
-                      border: "1px solid #252525",
-                      borderRadius: "8px",
-                      color: "#E8E2D8",
-                      fontFamily: "var(--font-inter)",
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
-            <button
-              type="submit"
-              disabled={saving}
-              className="py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90 disabled:opacity-50"
-              style={{
-                backgroundColor: "#C45B28",
-                color: "#0A0A0A",
-                borderRadius: "8px",
-                fontFamily: "var(--font-inter)",
-                fontWeight: 600,
-                minHeight: "48px",
-              }}
-            >
-              {saved ? "✓ Logged" : saving ? "Saving..." : "Log Meal"}
-            </button>
-          </form>
-        </section>
-
-        {/* Today's meals */}
-        {!loading && todayLogs.length > 0 && (
-          <section className="flex flex-col gap-4">
-            <p
-              className="text-xs font-semibold tracking-[0.25em] uppercase"
-              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
-            >
-              Logged Today
+          {water === 8 && (
+            <p className="text-xs font-semibold" style={{ color: "#5A8A70", fontFamily: "var(--font-inter)" }}>
+              Goal reached. Well done.
             </p>
-            <div className="flex flex-col gap-3">
-              {todayLogs.map((log) => (
-                <div
-                  key={log.id}
-                  className="px-5 py-4 flex items-center justify-between"
-                  style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
-                >
-                  <div>
-                    <p className="text-sm font-bold" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
-                      {log.meal_name}
-                    </p>
-                    <p className="text-xs mt-0.5" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-                      P: {log.protein_g}g · C: {log.carbs_g}g · F: {log.fat_g}g
-                    </p>
-                  </div>
-                  <span className="text-sm font-bold" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>
-                    {log.calories} cal
-                  </span>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
+          )}
+        </section>
 
-        {/* Jobsite Eating Guide */}
-        <section className="flex flex-col gap-5">
+        {/* ── Jobsite Eating Guide ──────────────────────────────────────────── */}
+        <section className="flex flex-col gap-4">
           <div>
             <p
               className="text-xs font-semibold tracking-[0.25em] uppercase mb-1"
@@ -298,50 +738,172 @@ export default function NutritionPage() {
               Jobsite Eating Guide
             </p>
             <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-              Best options when you&apos;re stuck in a drive-through.
+              Best options when you&apos;re stuck in a drive-through. Tap Add to log it.
             </p>
           </div>
+
           <div className="flex flex-col gap-3">
-            {FAST_FOOD.map((item) => (
-              <div
-                key={item.place}
-                className="px-6 py-5"
-                style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
-              >
-                <div className="flex items-baseline justify-between mb-2">
-                  <h3
-                    className="text-base font-bold uppercase"
-                    style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
-                  >
-                    {item.place}
-                  </h3>
-                  <span
-                    className="text-sm font-bold"
-                    style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
-                  >
-                    {item.cal} cal
-                  </span>
+            {FAST_FOOD.map((ff, idx) => {
+              const isPicking = fastFoodPicker === idx;
+              return (
+                <div
+                  key={ff.place}
+                  className="px-5 py-5 flex flex-col gap-3"
+                  style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <h3
+                        className="text-sm font-bold uppercase"
+                        style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
+                      >
+                        {ff.place}
+                      </h3>
+                      <p className="text-xs mt-0.5" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                        {ff.item}
+                      </p>
+                      <p className="text-xs mt-1" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                        P: {ff.protein}g · C: {ff.carbs}g · F: {ff.fat}g
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-2 shrink-0">
+                      <span className="text-sm font-bold" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>
+                        {ff.cal} cal
+                      </span>
+                      <button
+                        onClick={() => setFastFoodPicker(isPicking ? null : idx)}
+                        className="text-xs font-semibold uppercase tracking-widest px-3 py-1.5 transition-opacity hover:opacity-80"
+                        style={{
+                          backgroundColor: isPicking ? "#252525" : "#161616",
+                          color: isPicking ? "#9A9A9A" : "#C45B28",
+                          border: `1px solid ${isPicking ? "#252525" : "#C45B28"}`,
+                          borderRadius: "6px",
+                          fontFamily: "var(--font-inter)",
+                        }}
+                      >
+                        {isPicking ? "Cancel" : "Add"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {isPicking && (
+                    <div className="flex flex-col gap-2 pt-2" style={{ borderTop: "1px solid #252525" }}>
+                      <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                        Add to:
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {MEALS.map(({ type, label }) => (
+                          <button
+                            key={type}
+                            disabled={saving}
+                            onClick={async () => {
+                              setFastFoodPicker(null);
+                              await addFood(type, { name: ff.name, cal: ff.cal, protein: ff.protein, carbs: ff.carbs, fat: ff.fat });
+                            }}
+                            className="px-4 py-2 text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-80 disabled:opacity-40"
+                            style={{
+                              backgroundColor: "#252525",
+                              color: "#E8E2D8",
+                              borderRadius: "6px",
+                              fontFamily: "var(--font-inter)",
+                            }}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <p className="text-sm mb-3" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-                  {item.item}
-                </p>
-                <div className="flex gap-4 text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-                  <span>
-                    Protein:{" "}
-                    <span style={{ color: "#9A9A9A" }}>{item.protein}g</span>
-                  </span>
-                  <span>
-                    Carbs:{" "}
-                    <span style={{ color: "#9A9A9A" }}>{item.carbs}g</span>
-                  </span>
-                  <span>
-                    Fat:{" "}
-                    <span style={{ color: "#9A9A9A" }}>{item.fat}g</span>
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
+        </section>
+
+        {/* ── Meal History ──────────────────────────────────────────────────── */}
+        <section className="flex flex-col gap-4">
+          <button
+            onClick={toggleHistory}
+            className="flex items-center justify-between px-5 py-4 transition-opacity hover:opacity-80"
+            style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
+          >
+            <span
+              className="text-sm font-bold uppercase tracking-wide"
+              style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
+            >
+              Meal History
+            </span>
+            <svg
+              viewBox="0 0 20 20" fill="none" width={16} height={16}
+              style={{ color: "#9A9A9A", transform: showHistory ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}
+            >
+              <path d="M5 8l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+
+          {showHistory && (
+            <div className="flex flex-col gap-4">
+              {historyLoading ? (
+                <div className="flex flex-col gap-3">
+                  {[...Array(3)].map((_, i) => (
+                    <div
+                      key={i} className="h-20 animate-pulse"
+                      style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
+                    />
+                  ))}
+                </div>
+              ) : historyLogs.length === 0 ? (
+                <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                  No history in the past 7 days.
+                </p>
+              ) : (
+                Array.from(historyByDate.entries()).map(([, logs]) => {
+                  const dayTotal = logs.reduce((acc, l) => acc + (l.calories ?? 0), 0);
+                  return (
+                    <div
+                      key={logs[0].created_at}
+                      style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px", overflow: "hidden" }}
+                    >
+                      <div
+                        className="px-5 py-3 flex items-center justify-between"
+                        style={{ borderBottom: "1px solid #252525" }}
+                      >
+                        <p
+                          className="text-xs font-semibold uppercase tracking-widest"
+                          style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                        >
+                          {formatDate(logs[0].created_at)}
+                        </p>
+                        <span className="text-sm font-bold" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>
+                          {dayTotal} cal
+                        </span>
+                      </div>
+                      <div className="flex flex-col divide-y" style={{ borderColor: "#252525" }}>
+                        {logs.map((log) => (
+                          <div key={log.id} className="px-5 py-3 flex items-center justify-between gap-4">
+                            <div className="min-w-0">
+                              <p
+                                className="text-sm font-semibold truncate"
+                                style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
+                              >
+                                {log.meal_name}
+                              </p>
+                              <p className="text-xs capitalize" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                                {log.meal_type}
+                              </p>
+                            </div>
+                            <span className="text-sm font-bold shrink-0" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>
+                              {log.calories} cal
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
         </section>
 
       </div>
