@@ -32,6 +32,19 @@ const TABS = [
     ),
   },
   {
+    label: "Library",
+    href: "/dashboard/library",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" width={22} height={22}>
+        <line x1="5" y1="8" x2="5" y2="19" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        <rect x="3" y="5" width="4" height="3" rx="0.5" stroke="currentColor" strokeWidth="1.6" />
+        <line x1="10" y1="8" x2="10" y2="19" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        <rect x="8" y="5" width="4" height="3" rx="0.5" stroke="currentColor" strokeWidth="1.6" />
+        <path d="M15 19L17.5 6L21 7.5L18.5 20.5L15 19Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
     label: "Mind",
     href: "/dashboard/mind",
     icon: (
