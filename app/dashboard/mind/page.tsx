@@ -5,13 +5,27 @@ import { useState } from "react";
 import BottomNav from "@/components/BottomNav";
 import { supabase } from "@/lib/supabase";
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
 const MOODS = [
-  { label: "Low", value: 1, color: "#5A3A3A" },
-  { label: "Rough", value: 2, color: "#7A5228" },
-  { label: "Mid", value: 3, color: "#5A5248" },
-  { label: "Good", value: 4, color: "#3A5A3A" },
-  { label: "High", value: 5, color: "#2A6A4A" },
+  { label: "Locked In",  value: "locked_in",  color: "#2A6A4A" },
+  { label: "Solid",      value: "solid",       color: "#3A5A3A" },
+  { label: "Off",        value: "off",         color: "#5A5248" },
+  { label: "Burned Out", value: "burned_out",  color: "#7A5228" },
+  { label: "In Trouble", value: "in_trouble",  color: "#5A1A1A" },
 ];
+
+const SOURCES = ["Work", "Family", "Money", "Health", "Sleep"];
+
+const MOOD_MESSAGES: Record<string, string> = {
+  locked_in:  "That's the standard. Lock it in and go.",
+  solid:      "Good base. Push the edge today.",
+  off:        "Noted. That's real — it matters. What's driving it?",
+  burned_out: "Acknowledged. Rest isn't quitting. What's the source?",
+  in_trouble: "Takes guts to say that. You're not alone — what's weighing on you?",
+};
+
+type Phase = "mood" | "source" | "done";
 
 const TOOLS = [
   {
@@ -40,24 +54,45 @@ const TOOLS = [
   },
 ];
 
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function MindPage() {
-  const [selectedMood, setSelectedMood] = useState<number | null>(null);
-  const [saved, setSaved] = useState(false);
+  const [phase, setPhase] = useState<Phase>("mood");
+  const [selectedMood, setSelectedMood] = useState<(typeof MOODS)[number] | null>(null);
+  const [savedId, setSavedId] = useState<string | null>(null);
 
-  async function handleMoodSelect(value: number, label: string) {
-    setSelectedMood(value);
-    setSaved(false);
+  async function handleMoodSelect(mood: (typeof MOODS)[number]) {
+    setSelectedMood(mood);
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setPhase("source");
+      return;
+    }
 
-    await supabase.from("mood_checkins").insert({
-      user_id: user.id,
-      mood: label,
-    });
+    const { data } = await supabase
+      .from("mood_checkins")
+      .insert({ user_id: user.id, mood: mood.label })
+      .select("id")
+      .single();
 
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    if (data?.id) setSavedId(data.id);
+    setPhase("source");
+  }
+
+  async function handleSourceSelect(source: string) {
+    if (savedId) {
+      await supabase.from("mood_checkins").update({ source }).eq("id", savedId);
+    }
+    setPhase("done");
+  }
+
+  function reset() {
+    setPhase("mood");
+    setSelectedMood(null);
+    setSavedId(null);
   }
 
   return (
@@ -102,7 +137,13 @@ export default function MindPage() {
         </header>
 
         {/* Daily Check-In */}
-        <section style={{ border: "1px solid #252525", backgroundColor: "#161616", borderRadius: "12px" }}>
+        <section
+          style={{
+            border: "1px solid #252525",
+            backgroundColor: "#161616",
+            borderRadius: "12px",
+          }}
+        >
           <div className="px-8 py-6" style={{ borderBottom: "1px solid #252525" }}>
             <p
               className="text-xs font-semibold tracking-[0.25em] uppercase mb-1"
@@ -114,54 +155,143 @@ export default function MindPage() {
               className="text-2xl font-bold uppercase"
               style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
             >
-              How are you doing today — really?
+              {phase === "mood"
+                ? "How are you right now — really?"
+                : phase === "source"
+                ? "What's the source?"
+                : "Checked in."}
             </h2>
+            {phase === "mood" && (
+              <p className="text-sm mt-1" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                One tap. Under 10 seconds.
+              </p>
+            )}
           </div>
 
-          <div className="px-8 py-6 flex flex-col gap-5">
-            <div className="flex gap-2 flex-wrap">
-              {MOODS.map(({ label, value, color }) => {
-                const active = selectedMood === value;
-                return (
+          <div className="px-8 py-6 flex flex-col gap-4">
+
+            {/* Phase: Mood selection */}
+            {phase === "mood" && (
+              <div className="flex flex-col gap-2">
+                {MOODS.map((mood) => (
                   <button
-                    key={value}
-                    onClick={() => handleMoodSelect(value, label)}
-                    className="flex-1 min-w-[72px] py-3 text-sm font-bold uppercase tracking-widest transition-all duration-150 active:scale-95"
+                    key={mood.value}
+                    onClick={() => handleMoodSelect(mood)}
+                    className="w-full flex items-center justify-between px-6 text-sm font-bold uppercase tracking-widest transition-all duration-150 active:scale-[0.99] hover:opacity-90"
                     style={{
                       fontFamily: "var(--font-inter)",
-                      fontWeight: 600,
-                      backgroundColor: active ? color : "#161616",
-                      color: active ? "#E8E2D8" : "#9A9A9A",
-                      border: `1px solid ${active ? color : "#252525"}`,
+                      backgroundColor: "#0A0A0A",
+                      color: "#E8E2D8",
+                      border: "1px solid #252525",
                       borderRadius: "8px",
-                      minHeight: "48px",
+                      height: "56px",
                     }}
                   >
-                    {label}
+                    {mood.label}
+                    <div
+                      className="w-2 h-2 rounded-full"
+                      style={{ backgroundColor: mood.color }}
+                    />
                   </button>
-                );
-              })}
-            </div>
-
-            {selectedMood && (
-              <div className="flex items-center gap-3">
-                <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-                  {selectedMood <= 2
-                    ? "Noted. That's real — and it matters. Try the Stress Reset below."
-                    : selectedMood === 3
-                    ? "Solid. Let's sharpen that edge. Box Breathing is a good place to start."
-                    : "That's what we're building toward. Keep it going."}
-                </p>
-                {saved && (
-                  <span
-                    className="text-xs font-semibold uppercase tracking-widest shrink-0"
-                    style={{ color: "#4CAF50", fontFamily: "var(--font-inter)" }}
-                  >
-                    ✓ Saved
-                  </span>
-                )}
+                ))}
               </div>
             )}
+
+            {/* Phase: Source selection */}
+            {phase === "source" && (
+              <>
+                {selectedMood && (
+                  <div
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg"
+                    style={{ backgroundColor: "#0A0A0A", border: `1px solid ${selectedMood.color}` }}
+                  >
+                    <div
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: selectedMood.color }}
+                    />
+                    <p
+                      className="text-sm"
+                      style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                    >
+                      {MOOD_MESSAGES[selectedMood.value]}
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex flex-wrap gap-2">
+                  {SOURCES.map((source) => (
+                    <button
+                      key={source}
+                      onClick={() => handleSourceSelect(source)}
+                      className="flex-1 min-w-[80px] flex items-center justify-center px-4 text-sm font-bold uppercase tracking-widest transition-all active:scale-95 hover:opacity-90"
+                      style={{
+                        fontFamily: "var(--font-inter)",
+                        backgroundColor: "#0A0A0A",
+                        color: "#E8E2D8",
+                        border: "1px solid #252525",
+                        borderRadius: "8px",
+                        height: "56px",
+                      }}
+                    >
+                      {source}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setPhase("done")}
+                  className="text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-60 text-left"
+                  style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                >
+                  Skip →
+                </button>
+              </>
+            )}
+
+            {/* Phase: Done */}
+            {phase === "done" && (
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-4">
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: selectedMood?.color ?? "#C45B28" }}
+                  >
+                    <svg viewBox="0 0 20 20" fill="none" width={16} height={16}>
+                      <path
+                        d="M4 10l4 4 8-8"
+                        stroke="#fff"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <p
+                      className="text-sm font-bold"
+                      style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
+                    >
+                      {selectedMood?.label} — logged.
+                    </p>
+                    <p
+                      className="text-xs"
+                      style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                    >
+                      {selectedMood ? MOOD_MESSAGES[selectedMood.value] : ""}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={reset}
+                  className="text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-60 text-left"
+                  style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                >
+                  + Check in again
+                </button>
+              </div>
+            )}
+
           </div>
         </section>
 
@@ -190,7 +320,11 @@ export default function MindPage() {
           </p>
           <div
             className="px-8 py-7 flex flex-col gap-5"
-            style={{ backgroundColor: "#0D1B2A", border: "1px solid #1E3A5F", borderRadius: "12px" }}
+            style={{
+              backgroundColor: "#0D1B2A",
+              border: "1px solid #1E3A5F",
+              borderRadius: "12px",
+            }}
           >
             <p
               className="text-lg font-bold uppercase"
@@ -198,13 +332,18 @@ export default function MindPage() {
             >
               You don&apos;t have to carry it alone.
             </p>
-            <p className="text-sm leading-relaxed" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-              Construction has one of the highest suicide rates of any industry —
-              more than four times the national average. The pressure is real.
-              The weight is real. And reaching out is one of the strongest things
-              a leader can do.
+            <p
+              className="text-sm leading-relaxed"
+              style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+            >
+              Construction has one of the highest suicide rates of any industry — more than
+              four times the national average. The pressure is real. The weight is real. And
+              reaching out is one of the strongest things a leader can do.
             </p>
-            <p className="text-sm leading-relaxed" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+            <p
+              className="text-sm leading-relaxed"
+              style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+            >
               If you or someone on your crew is struggling, the{" "}
               <strong style={{ color: "#E8E2D8" }}>988 Suicide &amp; Crisis Lifeline</strong>{" "}
               is free, confidential, and available 24/7.
@@ -242,7 +381,10 @@ export default function MindPage() {
                 Text 988
               </a>
             </div>
-            <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+            <p
+              className="text-xs"
+              style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+            >
               Free · Confidential · Available 24/7
             </p>
           </div>
@@ -253,6 +395,8 @@ export default function MindPage() {
     </main>
   );
 }
+
+// ─── Tool Card ────────────────────────────────────────────────────────────────
 
 function ToolCard({
   title,
@@ -279,7 +423,6 @@ function ToolCard({
       onMouseLeave={() => setHovered(false)}
     >
       <div className="px-8 py-6 flex flex-col sm:flex-row sm:items-start gap-4">
-        {/* Text */}
         <div className="flex-1 flex flex-col gap-2">
           <div className="flex items-center gap-3 flex-wrap">
             <h3
@@ -300,12 +443,13 @@ function ToolCard({
               {tag}
             </span>
           </div>
-          <p className="text-sm leading-relaxed" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+          <p
+            className="text-sm leading-relaxed"
+            style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+          >
             {desc}
           </p>
         </div>
-
-        {/* Duration + CTA */}
         <div className="flex sm:flex-col items-center sm:items-end gap-3 sm:gap-2 shrink-0">
           <span
             className="text-sm font-bold"

@@ -9,22 +9,14 @@ import BottomNav from "@/components/BottomNav";
 
 type Profile = {
   full_name: string | null;
-  role: string | null;
-  company: string | null;
   interests: string[] | null;
 };
 
-type Stats = {
-  totalWorkouts: number;
-  totalMoods: number;
-  streak: number;
-};
-
-type SuggestedWorkout = {
-  name: string;
-  slug: string;
-  duration: number;
-  exerciseCount: number;
+type DailyScore = {
+  workout: boolean;
+  checkin: boolean;
+  journal: boolean;
+  meal: boolean;
 };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -40,8 +32,6 @@ const INTEREST_TO_SLUG: Record<string, string> = {
   Bodyweight: "bodyweight",
 };
 
-const ALL_SLUGS = Object.values(INTEREST_TO_SLUG);
-
 const SLUG_LABELS: Record<string, string> = {
   running: "Running",
   weightlifting: "Weightlifting",
@@ -53,13 +43,23 @@ const SLUG_LABELS: Record<string, string> = {
   bodyweight: "Bodyweight",
 };
 
-// 15-min workouts always have 3 exercises
-const EXERCISE_COUNT_15 = 3;
-const DEFAULT_DURATION = 15;
+const ALL_SLUGS = Object.values(INTEREST_TO_SLUG);
 
 const RESETS = [
-  { title: "5-Minute Stress Reset", tag: "Breathing + Grounding", duration: "5 min" },
-  { title: "Box Breathing", tag: "Breathwork", duration: "4 min" },
+  { title: "Box Breathing", duration: "2 min" },
+  { title: "Stress Reset", duration: "2 min" },
+  { title: "4-7-8 Breathing", duration: "2 min" },
+  { title: "Grounding Sequence", duration: "2 min" },
+];
+
+const LEADERSHIP_ACTIONS = [
+  "Give one person specific, real feedback today.",
+  "Have a 5-min conversation with someone you've been avoiding.",
+  "Document one process that only lives in your head.",
+  "Ask your crew: what's slowing you down?",
+  "Leave the site on time. Model what you preach.",
+  "Acknowledge one win your crew had this week.",
+  "Make one decision you've been putting off.",
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -101,88 +101,130 @@ function calcStreak(dates: string[]): number {
   return streak;
 }
 
-function suggestWorkout(interests: string[] | null): SuggestedWorkout {
+function calcScore(s: DailyScore): number {
+  return (
+    (s.workout ? 40 : 0) +
+    (s.checkin ? 20 : 0) +
+    (s.journal ? 20 : 0) +
+    (s.meal ? 20 : 0)
+  );
+}
+
+function calcWeeklyDays(allDates: string[]): { done: number; total: number } {
+  const today = new Date();
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    return d.toLocaleDateString("en-CA");
+  });
+  const activeDays = new Set(
+    allDates
+      .map((d) => new Date(d).toLocaleDateString("en-CA"))
+      .filter((d) => weekDays.includes(d))
+  );
+  return { done: activeDays.size, total: 7 };
+}
+
+function suggestWorkout(interests: string[] | null): { slug: string; name: string } {
   const slugs =
     interests && interests.length > 0
       ? interests.map((i) => INTEREST_TO_SLUG[i]).filter(Boolean)
       : ALL_SLUGS;
-
   const pool = slugs.length > 0 ? slugs : ALL_SLUGS;
-  // Deterministic-ish: vary by day of year so it rotates daily
   const dayOfYear = Math.floor(
     (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000
   );
   const slug = pool[dayOfYear % pool.length];
-
-  return {
-    slug,
-    name: `${SLUG_LABELS[slug]} Workout`,
-    duration: DEFAULT_DURATION,
-    exerciseCount: EXERCISE_COUNT_15,
-  };
+  return { slug, name: `${SLUG_LABELS[slug]} Workout` };
 }
 
-function todayReset() {
-  const day = new Date().getDay(); // 0 = Sun
-  return RESETS[day % 2];
+function todayReset(): { title: string; duration: string } {
+  return RESETS[new Date().getDay() % RESETS.length];
+}
+
+function todayLeadershipAction(): string {
+  const day = Math.floor(Date.now() / 86400000);
+  return LEADERSHIP_ACTIONS[day % LEADERSHIP_ACTIONS.length];
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [workout, setWorkout] = useState<SuggestedWorkout | null>(null);
+  const [streak, setStreak] = useState(0);
+  const [score, setScore] = useState<DailyScore>({
+    workout: false,
+    checkin: false,
+    journal: false,
+    meal: false,
+  });
+  const [weekly, setWeekly] = useState({ done: 0, total: 7 });
+  const [workout, setWorkout] = useState<{ slug: string; name: string } | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const reset = todayReset();
+  const leadAction = todayLeadershipAction();
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
-      const [profileRes, workoutsRes, moodsRes] = await Promise.all([
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayISO = todayStart.toISOString();
+
+      const [profileRes, workoutsRes, moodsRes, journalsRes, mealsRes] = await Promise.all([
+        supabase.from("user_profiles").select("full_name, interests").eq("id", user.id).single(),
+        supabase.from("workout_logs").select("created_at").eq("user_id", user.id),
+        supabase.from("mood_checkins").select("created_at").eq("user_id", user.id),
         supabase
-          .from("user_profiles")
-          .select("full_name, role, company, interests")
-          .eq("id", user.id)
-          .single(),
-        supabase
-          .from("workout_logs")
+          .from("journal_entries")
           .select("created_at")
-          .eq("user_id", user.id),
+          .eq("user_id", user.id)
+          .gte("created_at", todayISO),
         supabase
-          .from("mood_checkins")
+          .from("meal_logs")
           .select("created_at")
-          .eq("user_id", user.id),
+          .eq("user_id", user.id)
+          .gte("created_at", todayISO),
       ]);
 
       const p = profileRes.data as Profile | null;
       if (p) setProfile(p);
+      setWorkout(suggestWorkout(p?.interests ?? null));
 
       const workoutDates = (workoutsRes.data ?? []).map((r) => r.created_at);
       const moodDates = (moodsRes.data ?? []).map((r) => r.created_at);
-      const allDates = [...workoutDates, ...moodDates];
 
-      setStats({
-        totalWorkouts: workoutDates.length,
-        totalMoods: moodDates.length,
-        streak: calcStreak(allDates),
+      setStreak(calcStreak([...workoutDates, ...moodDates]));
+      setWeekly(calcWeeklyDays([...workoutDates, ...moodDates]));
+
+      setScore({
+        workout: workoutDates.some((d) => d >= todayISO),
+        checkin: moodDates.some((d) => d >= todayISO),
+        journal: (journalsRes.data ?? []).length > 0,
+        meal: (mealsRes.data ?? []).length > 0,
       });
 
-      setWorkout(suggestWorkout(p?.interests ?? null));
       setLoading(false);
     }
     load();
   }, []);
 
-  const reset = todayReset();
+  const dailyScore = calcScore(score);
 
   return (
     <main
       className="min-h-screen flex flex-col px-6 py-10"
       style={{ backgroundColor: "#0A0A0A", color: "#E8E2D8" }}
     >
-      {/* Top bar */}
+      {/* Header */}
       <header className="flex items-center justify-between max-w-2xl w-full mx-auto mb-10">
         <p
           className="text-xs font-semibold tracking-[0.3em] uppercase"
@@ -210,134 +252,114 @@ export default function DashboardPage() {
 
       <div className="max-w-2xl w-full mx-auto flex flex-col gap-8 pb-28">
 
-        {/* Greeting + streak */}
+        {/* Greeting + Streak */}
         <section className="flex flex-col gap-1">
-          <p className="text-xs tracking-widest uppercase" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+          <p
+            className="text-xs tracking-widest uppercase"
+            style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+          >
             {todayLabel()}
           </p>
           <h1
             className="text-4xl sm:text-5xl font-bold uppercase leading-tight"
             style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
           >
-            {greeting()}{profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}.
+            {greeting()}
+            {profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}.
           </h1>
 
-          {/* Streak pill */}
-          {stats !== null && (
-            <div className="mt-4 flex items-center gap-3">
-              <div
-                className="flex items-center gap-2 px-4 py-2"
-                style={{ backgroundColor: "#0D1B2A", border: "1px solid #1E3A5F", borderRadius: "8px" }}
+          <div className="mt-4 flex items-center gap-3">
+            <div
+              className="flex items-center gap-2 px-4 py-2"
+              style={{ backgroundColor: "#0D1B2A", border: "1px solid #1E3A5F", borderRadius: "8px" }}
+            >
+              <span
+                className="text-2xl font-bold leading-none"
+                style={{ fontFamily: "var(--font-oswald)", color: "#C45B28" }}
               >
-                <span
-                  className="text-xl font-bold leading-none"
-                  style={{ fontFamily: "var(--font-oswald)", color: "#C45B28" }}
-                >
-                  {stats.streak}
-                </span>
-                <span
-                  className="text-xs font-semibold uppercase tracking-widest"
-                  style={{ fontFamily: "var(--font-inter)", color: "#9A9A9A" }}
-                >
-                  {stats.streak === 1 ? "Day Streak" : "Day Streak"}
-                </span>
-              </div>
-              <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-                {stats.streak === 0
-                  ? "Start something today."
-                  : stats.streak === 1
-                  ? "Day one. Keep going."
-                  : `${stats.streak} days straight.`}
-              </p>
+                {loading ? "–" : streak}
+              </span>
+              <span
+                className="text-xs font-semibold uppercase tracking-widest"
+                style={{ fontFamily: "var(--font-inter)", color: "#9A9A9A" }}
+              >
+                Day Streak
+              </span>
             </div>
-          )}
+            <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+              {loading
+                ? ""
+                : streak === 0
+                ? "Start something today."
+                : streak === 1
+                ? "Day one. Keep going."
+                : `${streak} days straight.`}
+            </p>
+          </div>
         </section>
 
-        {/* ── Action Cards ─────────────────────────────────────────────────── */}
-        <section className="flex flex-col gap-4">
+        {/* Today's Plan — single card, 3 rows */}
+        <section>
           <p
-            className="text-xs font-semibold tracking-[0.25em] uppercase"
+            className="text-xs font-semibold tracking-[0.25em] uppercase mb-4"
             style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
           >
             Today&apos;s Plan
           </p>
-
-          {/* TRAIN */}
-          <ActionCard
-            label="Train"
-            loading={loading}
-            accent="#C45B28"
-            href={
-              workout
-                ? `/dashboard/body/${workout.slug}?time=${workout.duration}`
-                : "/dashboard/body"
-            }
+          <div
+            style={{
+              backgroundColor: "#161616",
+              border: "1px solid #252525",
+              borderRadius: "12px",
+              overflow: "hidden",
+            }}
           >
-            {workout && (
-              <>
-                <h2
-                  className="text-2xl font-bold uppercase leading-tight"
-                  style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
-                >
-                  {workout.name}
-                </h2>
-                <div className="flex gap-4 mt-1">
-                  <Chip>{workout.duration} min</Chip>
-                  <Chip>{workout.exerciseCount} exercises</Chip>
-                </div>
-                <p className="text-xs mt-2" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-                  Based on your training interests
-                </p>
-              </>
-            )}
-          </ActionCard>
-
-          {/* RESET */}
-          <ActionCard
-            label="Reset"
-            loading={false}
-            accent="#7A5228"
-            href="/dashboard/mind"
-          >
-            <h2
-              className="text-2xl font-bold uppercase leading-tight"
-              style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
-            >
-              {reset.title}
-            </h2>
-            <div className="flex gap-4 mt-1">
-              <Chip>{reset.duration}</Chip>
-              <Chip>{reset.tag}</Chip>
-            </div>
-            <p className="text-xs mt-2" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-              Mental reset for the jobsite
-            </p>
-          </ActionCard>
-
-          {/* REFLECT */}
-          <ActionCard
-            label="Reflect"
-            loading={false}
-            accent="#3A5A3A"
-            href="/dashboard/heart"
-          >
-            <h2
-              className="text-2xl font-bold uppercase leading-tight"
-              style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
-            >
-              Journal + Gratitude
-            </h2>
-            <div className="flex gap-4 mt-1">
-              <Chip>3 min</Chip>
-              <Chip>End of Day</Chip>
-            </div>
-            <p className="text-xs mt-2" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-              Leave the job at the gate
-            </p>
-          </ActionCard>
+            <PlanRow
+              step="Train"
+              accent="#C45B28"
+              title={loading ? "Loading…" : (workout?.name ?? "Bodyweight Workout")}
+              meta="10 min"
+              loading={loading}
+            />
+            <div style={{ borderTop: "1px solid #252525" }} />
+            <PlanRow
+              step="Reset"
+              accent="#7A5228"
+              title={reset.title}
+              meta={reset.duration}
+              loading={false}
+            />
+            <div style={{ borderTop: "1px solid #252525" }} />
+            <PlanRow
+              step="Lead"
+              accent="#3A5A3A"
+              title={leadAction}
+              meta="Leadership"
+              loading={false}
+            />
+          </div>
         </section>
 
-        {/* ── Progress ─────────────────────────────────────────────────────── */}
+        {/* START YOUR DAY */}
+        <Link
+          href="/dashboard/today"
+          className="flex items-center justify-center w-full transition-all duration-150 hover:opacity-90 active:scale-[0.99]"
+          style={{
+            backgroundColor: "#C45B28",
+            color: "#0A0A0A",
+            fontFamily: "var(--font-inter)",
+            fontWeight: 700,
+            fontSize: "0.875rem",
+            letterSpacing: "0.2em",
+            textTransform: "uppercase",
+            borderRadius: "12px",
+            minHeight: "64px",
+          }}
+        >
+          Start Your Day →
+        </Link>
+
+        {/* Your Progress */}
         <section className="flex flex-col gap-4">
           <p
             className="text-xs font-semibold tracking-[0.25em] uppercase"
@@ -346,24 +368,104 @@ export default function DashboardPage() {
             Your Progress
           </p>
 
-          <div className="grid grid-cols-3 gap-3">
-            {loading || stats === null ? (
-              <>
-                {[...Array(3)].map((_, i) => (
-                  <div
+          {/* Score + Streak tiles */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Daily score */}
+            <div
+              className="flex flex-col items-center justify-center py-6 gap-2"
+              style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
+            >
+              <span
+                className="text-4xl font-bold leading-none"
+                style={{
+                  fontFamily: "var(--font-oswald)",
+                  color: loading ? "#252525" : dailyScore === 100 ? "#4CAF50" : "#C45B28",
+                }}
+              >
+                {loading ? "–" : dailyScore}
+              </span>
+              <span
+                className="text-[10px] font-semibold uppercase tracking-widest"
+                style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+              >
+                Daily Score / 100
+              </span>
+              {!loading && (
+                <div className="flex gap-2 flex-wrap justify-center mt-1">
+                  <ScorePip label="Train" done={score.workout} points={40} />
+                  <ScorePip label="Check-in" done={score.checkin} points={20} />
+                  <ScorePip label="Journal" done={score.journal} points={20} />
+                  <ScorePip label="Meal" done={score.meal} points={20} />
+                </div>
+              )}
+            </div>
+
+            {/* Streak */}
+            <div
+              className="flex flex-col items-center justify-center py-6 gap-1"
+              style={{ backgroundColor: "#0D1B2A", border: "1px solid #1E3A5F", borderRadius: "12px" }}
+            >
+              <span
+                className="text-4xl font-bold leading-none"
+                style={{ fontFamily: "var(--font-oswald)", color: "#C45B28" }}
+              >
+                {loading ? "–" : streak}
+              </span>
+              <span
+                className="text-[10px] font-semibold uppercase tracking-widest"
+                style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+              >
+                Day Streak
+              </span>
+            </div>
+          </div>
+
+          {/* Weekly bar */}
+          <div
+            className="px-6 py-5 flex flex-col gap-3"
+            style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
+          >
+            <div className="flex items-center justify-between">
+              <span
+                className="text-xs font-semibold uppercase tracking-widest"
+                style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+              >
+                This Week
+              </span>
+              <span
+                className="text-sm font-bold"
+                style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+              >
+                {loading ? "–/7" : `${weekly.done}/7 days`}
+              </span>
+            </div>
+            <div
+              className="w-full rounded-full overflow-hidden"
+              style={{ height: "6px", backgroundColor: "#252525" }}
+            >
+              <div
+                className="h-full rounded-full transition-all duration-700"
+                style={{
+                  backgroundColor: "#C45B28",
+                  width: loading ? "0%" : `${(weekly.done / weekly.total) * 100}%`,
+                }}
+              />
+            </div>
+            <div className="flex justify-between">
+              {Array.from({ length: 7 }, (_, i) => {
+                const d = new Date();
+                d.setDate(d.getDate() - (6 - i));
+                return (
+                  <span
                     key={i}
-                    className="h-24 animate-pulse"
-                    style={{ backgroundColor: "#0D1B2A", border: "1px solid #1E3A5F", borderRadius: "12px" }}
-                  />
-                ))}
-              </>
-            ) : (
-              <>
-                <StatCard value={stats.totalWorkouts} label="Workouts" />
-                <StatCard value={stats.totalMoods} label="Check-Ins" />
-                <StatCard value={stats.streak} label="Day Streak" accent />
-              </>
-            )}
+                    className="text-[9px] uppercase"
+                    style={{ color: "#3A3A3A", fontFamily: "var(--font-inter)" }}
+                  >
+                    {d.toLocaleDateString("en-US", { weekday: "narrow" })}
+                  </span>
+                );
+              })}
+            </div>
           </div>
         </section>
 
@@ -375,117 +477,76 @@ export default function DashboardPage() {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function Chip({ children }: { children: React.ReactNode }) {
-  return (
-    <span
-      className="text-xs font-semibold uppercase tracking-widest px-2 py-0.5"
-      style={{
-        color: "#9A9A9A",
-        border: "1px solid #252525",
-        fontFamily: "var(--font-inter)",
-        borderRadius: "4px",
-      }}
-    >
-      {children}
-    </span>
-  );
-}
-
-function ActionCard({
-  label,
-  loading,
+function PlanRow({
+  step,
   accent,
-  href,
-  children,
+  title,
+  meta,
+  loading,
 }: {
-  label: string;
-  loading: boolean;
+  step: string;
   accent: string;
-  href: string;
-  children: React.ReactNode;
+  title: string;
+  meta: string;
+  loading: boolean;
 }) {
   return (
-    <div
-      className="flex flex-col"
-      style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px", overflow: "hidden" }}
-    >
-      {/* Card label bar */}
+    <div className="flex items-center gap-5 px-6 py-5">
       <div
-        className="px-7 py-2 flex items-center gap-2"
-        style={{ borderBottom: "1px solid #252525", backgroundColor: "#161616" }}
-      >
-        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: accent }} />
-        <p
-          className="text-xs font-semibold uppercase tracking-[0.25em]"
+        className="w-1 self-stretch rounded-full shrink-0"
+        style={{ backgroundColor: accent, minHeight: "2rem" }}
+      />
+      <div className="flex-1 flex flex-col gap-0.5 min-w-0">
+        <span
+          className="text-[10px] font-semibold uppercase tracking-[0.2em]"
           style={{ color: accent, fontFamily: "var(--font-inter)" }}
         >
-          {label}
-        </p>
+          {step}
+        </span>
+        {loading ? (
+          <div
+            className="h-4 w-40 animate-pulse rounded"
+            style={{ backgroundColor: "#252525" }}
+          />
+        ) : (
+          <p
+            className="text-sm font-semibold leading-snug"
+            style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
+          >
+            {title}
+          </p>
+        )}
       </div>
-
-      <div className="px-7 py-6 flex items-end justify-between gap-6">
-        {/* Content */}
-        <div className="flex-1 flex flex-col">
-          {loading ? (
-            <div className="flex flex-col gap-2">
-              <div className="h-7 w-48 animate-pulse" style={{ backgroundColor: "#1A1A1A" }} />
-              <div className="h-4 w-32 animate-pulse" style={{ backgroundColor: "#1A1A1A" }} />
-            </div>
-          ) : (
-            children
-          )}
-        </div>
-
-        {/* Start button */}
-        <Link
-          href={href}
-          className="flex-shrink-0 px-7 py-3 text-sm font-bold uppercase tracking-widest transition-all duration-150 hover:opacity-90 active:scale-95"
-          style={{
-            backgroundColor: accent,
-            color: "#0A0A0A",
-            fontFamily: "var(--font-inter)",
-            fontWeight: 600,
-            borderRadius: "8px",
-            minHeight: "48px",
-            display: "flex",
-            alignItems: "center",
-          }}
-        >
-          Start
-        </Link>
-      </div>
+      <span
+        className="text-xs shrink-0"
+        style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+      >
+        {meta}
+      </span>
     </div>
   );
 }
 
-function StatCard({
-  value,
+function ScorePip({
   label,
-  accent = false,
+  done,
+  points,
 }: {
-  value: number;
   label: string;
-  accent?: boolean;
+  done: boolean;
+  points: number;
 }) {
   return (
-    <div
-      className="flex flex-col items-center justify-center py-6 gap-1"
-      style={{ backgroundColor: "#0D1B2A", border: "1px solid #1E3A5F", borderRadius: "12px" }}
-    >
+    <div className="flex items-center gap-1">
+      <div
+        className="w-1.5 h-1.5 rounded-full"
+        style={{ backgroundColor: done ? "#C45B28" : "#252525" }}
+      />
       <span
-        className="text-3xl font-bold leading-none"
-        style={{
-          fontFamily: "var(--font-oswald)",
-          color: accent ? "#C45B28" : "#E8E2D8",
-        }}
+        className="text-[9px] uppercase tracking-widest"
+        style={{ color: done ? "#9A9A9A" : "#3A3A3A", fontFamily: "var(--font-inter)" }}
       >
-        {value}
-      </span>
-      <span
-        className="text-[10px] font-semibold uppercase tracking-widest text-center"
-        style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
-      >
-        {label}
+        +{points}
       </span>
     </div>
   );

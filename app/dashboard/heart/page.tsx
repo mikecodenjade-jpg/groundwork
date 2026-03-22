@@ -21,20 +21,28 @@ const RELATIONSHIP_TIPS = [
 ];
 
 export default function HeartPage() {
-  const [journal, setJournal] = useState("");
+  const [pissedOff, setPissedOff] = useState("");
+  const [handledWell, setHandledWell] = useState("");
+  const [gratitude, setGratitude] = useState(["", "", ""]);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [gratitude, setGratitude] = useState(["", "", ""]);
+
+  const canSave = pissedOff.trim() || handledWell.trim();
 
   async function handleSave() {
-    if (!journal.trim()) return;
+    if (!canSave) return;
     setSaving(true);
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (user) {
       await supabase.from("journal_entries").insert({
         user_id: user.id,
-        entry: journal.trim(),
+        // Combine for entry field (NOT NULL compat until migration 011 applied)
+        entry: [pissedOff.trim(), handledWell.trim()].filter(Boolean).join(" | ") || "–",
+        pissed_off: pissedOff.trim() || null,
+        handled_well: handledWell.trim() || null,
         gratitude_1: gratitude[0].trim() || null,
         gratitude_2: gratitude[1].trim() || null,
         gratitude_3: gratitude[2].trim() || null,
@@ -43,7 +51,8 @@ export default function HeartPage() {
 
     setSaving(false);
     setSaved(true);
-    setJournal("");
+    setPissedOff("");
+    setHandledWell("");
     setGratitude(["", "", ""]);
     setTimeout(() => setSaved(false), 3000);
   }
@@ -55,6 +64,15 @@ export default function HeartPage() {
       return next;
     });
   }
+
+  const taStyle = {
+    backgroundColor: "#0A0A0A",
+    border: "1px solid #252525",
+    borderRadius: "8px",
+    color: "#E8E2D8",
+    fontFamily: "var(--font-inter)",
+    resize: "none" as const,
+  };
 
   return (
     <main
@@ -97,8 +115,14 @@ export default function HeartPage() {
           </div>
         </header>
 
-        {/* Daily Journal */}
-        <section style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}>
+        {/* Daily Journal — directed prompts */}
+        <section
+          style={{
+            backgroundColor: "#161616",
+            border: "1px solid #252525",
+            borderRadius: "12px",
+          }}
+        >
           <div className="px-8 py-6" style={{ borderBottom: "1px solid #252525" }}>
             <p
               className="text-xs font-semibold tracking-[0.25em] uppercase mb-1"
@@ -110,29 +134,54 @@ export default function HeartPage() {
               className="text-2xl font-bold uppercase"
               style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
             >
-              What&apos;s on your mind?
+              End of day. Be honest.
             </h2>
+            <p className="text-sm mt-1" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+              No one reads this but you.
+            </p>
           </div>
 
-          <div className="px-8 py-6 flex flex-col gap-4">
-            <textarea
-              rows={6}
-              value={journal}
-              onChange={(e) => setJournal(e.target.value)}
-              placeholder="No one reads this but you. Write honestly."
-              className="w-full px-4 py-3 text-sm leading-relaxed resize-none outline-none focus:ring-2 focus:ring-[#C45B28]"
-              style={{
-                backgroundColor: "#161616",
-                border: "1px solid #252525",
-                borderRadius: "8px",
-                color: "#E8E2D8",
-                fontFamily: "var(--font-inter)",
-              }}
-            />
+          <div className="px-8 py-6 flex flex-col gap-6">
+            {/* Prompt 1 */}
+            <div className="flex flex-col gap-2">
+              <label
+                className="text-sm font-bold"
+                style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
+              >
+                What pissed you off today?
+              </label>
+              <textarea
+                rows={4}
+                value={pissedOff}
+                onChange={(e) => setPissedOff(e.target.value)}
+                placeholder="The thing that got under your skin. Say it."
+                className="w-full px-4 py-3 text-sm leading-relaxed outline-none focus:ring-2 focus:ring-[#C45B28]"
+                style={taStyle}
+              />
+            </div>
+
+            {/* Prompt 2 */}
+            <div className="flex flex-col gap-2">
+              <label
+                className="text-sm font-bold"
+                style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
+              >
+                What did you handle well?
+              </label>
+              <textarea
+                rows={4}
+                value={handledWell}
+                onChange={(e) => setHandledWell(e.target.value)}
+                placeholder="One win. Doesn't have to be big."
+                className="w-full px-4 py-3 text-sm leading-relaxed outline-none focus:ring-2 focus:ring-[#C45B28]"
+                style={taStyle}
+              />
+            </div>
+
             <div className="flex items-center gap-4">
               <button
                 onClick={handleSave}
-                disabled={!journal.trim() || saving}
+                disabled={!canSave || saving}
                 className="px-8 py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90 disabled:opacity-30"
                 style={{
                   fontFamily: "var(--font-inter)",
@@ -143,7 +192,7 @@ export default function HeartPage() {
                   minHeight: "48px",
                 }}
               >
-                {saving ? "Saving..." : "Save Entry"}
+                {saving ? "Saving…" : "Save Entry"}
               </button>
               {saved && (
                 <span
@@ -158,7 +207,13 @@ export default function HeartPage() {
         </section>
 
         {/* Gratitude */}
-        <section style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}>
+        <section
+          style={{
+            backgroundColor: "#161616",
+            border: "1px solid #252525",
+            borderRadius: "12px",
+          }}
+        >
           <div className="px-8 py-6" style={{ borderBottom: "1px solid #252525" }}>
             <p
               className="text-xs font-semibold tracking-[0.25em] uppercase mb-1"
@@ -172,7 +227,10 @@ export default function HeartPage() {
             >
               Name 3 things that went right today.
             </h2>
-            <p className="text-sm mt-1" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+            <p
+              className="text-sm mt-1"
+              style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+            >
               Doesn&apos;t have to be big. Showing up counts.
             </p>
           </div>
@@ -199,7 +257,7 @@ export default function HeartPage() {
                   }
                   className="flex-1 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#C45B28]"
                   style={{
-                    backgroundColor: "#161616",
+                    backgroundColor: "#0A0A0A",
                     border: "1px solid #252525",
                     borderRadius: "8px",
                     color: "#E8E2D8",
@@ -220,7 +278,13 @@ export default function HeartPage() {
             Relationships
           </p>
 
-          <div style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}>
+          <div
+            style={{
+              backgroundColor: "#161616",
+              border: "1px solid #252525",
+              borderRadius: "12px",
+            }}
+          >
             <div className="px-8 py-6" style={{ borderBottom: "1px solid #252525" }}>
               <h2
                 className="text-2xl font-bold uppercase leading-snug"
@@ -228,13 +292,14 @@ export default function HeartPage() {
               >
                 The job takes from your family.
                 <br />
-                <span style={{ color: "#C45B28" }}>
-                  Be intentional about giving back.
-                </span>
+                <span style={{ color: "#C45B28" }}>Be intentional about giving back.</span>
               </h2>
-              <p className="text-sm mt-3 leading-relaxed" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-                You manage a crew, a schedule, a budget, and a hundred problems a day.
-                The people at home get whatever&apos;s left. That&apos;s the reality for most
+              <p
+                className="text-sm mt-3 leading-relaxed"
+                style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+              >
+                You manage a crew, a schedule, a budget, and a hundred problems a day. The
+                people at home get whatever&apos;s left. That&apos;s the reality for most
                 construction leaders — and most of them know it isn&apos;t working.
               </p>
             </div>
@@ -253,7 +318,10 @@ export default function HeartPage() {
                     >
                       {tip.title}
                     </p>
-                    <p className="text-sm leading-relaxed" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                    <p
+                      className="text-sm leading-relaxed"
+                      style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                    >
                       {tip.desc}
                     </p>
                   </div>
