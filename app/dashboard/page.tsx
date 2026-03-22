@@ -80,15 +80,33 @@ const PILLARS = [
   },
 ];
 
+type Profile = {
+  full_name: string | null;
+  role: string | null;
+  company: string | null;
+};
+
 export default function DashboardPage() {
   const router = useRouter();
   const [email, setEmail] = useState<string | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [selectedTime, setSelectedTime] = useState<number | null>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setEmail(data.user?.email ?? null);
-    });
+    async function loadUser() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      setEmail(user.email ?? null);
+
+      const { data } = await supabase
+        .from("user_profiles")
+        .select("full_name, role, company")
+        .eq("id", user.id)
+        .single();
+
+      if (data) setProfile(data);
+    }
+    loadUser();
   }, []);
 
   async function handleSignOut() {
@@ -130,12 +148,18 @@ export default function DashboardPage() {
             className="text-5xl md:text-6xl font-bold uppercase leading-tight"
             style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
           >
-            Good Morning.
+            Good Morning{profile?.full_name ? `, ${profile.full_name}` : ""}.
           </h1>
-          {email && (
+          {(profile?.role || profile?.company || email) && (
             <p className="mt-3 text-sm" style={{ color: "#7A7268" }}>
-              Signed in as{" "}
-              <span style={{ color: "#A09890" }}>{email}</span>
+              {profile?.role && profile?.company
+                ? <><span style={{ color: "#A09890" }}>{profile.role}</span> · {profile.company}</>
+                : profile?.role
+                ? <span style={{ color: "#A09890" }}>{profile.role}</span>
+                : profile?.company
+                ? profile.company
+                : <span style={{ color: "#A09890" }}>{email}</span>
+              }
             </p>
           )}
         </section>

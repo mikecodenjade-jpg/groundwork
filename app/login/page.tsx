@@ -24,7 +24,7 @@ export default function LoginPage() {
       if (error) {
         setError(error.message);
       } else {
-        setMessage("Check your email to confirm your account.");
+        router.push("/onboarding");
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({
