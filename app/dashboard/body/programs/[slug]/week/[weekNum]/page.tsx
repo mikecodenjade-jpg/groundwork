@@ -5,6 +5,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { getProgramBySlug, getDays, getWeeks, type DayWorkout } from "@/lib/programs";
 import BottomNav from "@/components/BottomNav";
+import SpotifyPlayer from "@/components/SpotifyPlayer";
 
 const DAY_LABELS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
@@ -234,6 +235,7 @@ export default function WeekPage({
         )}
 
       </div>
+      <SpotifyPlayer category={program?.workoutCategory} />
       <BottomNav />
     </main>
   );

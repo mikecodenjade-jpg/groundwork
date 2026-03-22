@@ -4,6 +4,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useState, useEffect, useRef, useCallback } from "react";
 import BottomNav from "@/components/BottomNav";
+import SpotifyPlayer from "@/components/SpotifyPlayer";
 import { supabase } from "@/lib/supabase";
 
 // Mapbox GL requires the DOM — no SSR
@@ -572,6 +573,7 @@ export default function RunPage() {
         </section>
 
       </div>
+      <SpotifyPlayer category="running" />
       <BottomNav />
     </main>
   );

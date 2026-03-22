@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { use, useState, useEffect, useRef } from "react";
 import BottomNav from "@/components/BottomNav";
+import SpotifyPlayer from "@/components/SpotifyPlayer";
 import { supabase } from "@/lib/supabase";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -783,6 +784,7 @@ export default function CategoryPage({
         </section>
 
       </div>
+      <SpotifyPlayer category={category} />
       <BottomNav />
     </main>
   );
