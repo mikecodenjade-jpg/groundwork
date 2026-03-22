@@ -1,11 +1,23 @@
 "use client";
 
+import Link from "next/link";
+
 export default function Home() {
   return (
     <main style={{ backgroundColor: "#0A0A0A", color: "#E8E2D8" }} className="flex flex-col min-h-screen">
 
       {/* Hero */}
       <section className="flex flex-col items-center justify-center text-center px-6 py-32 min-h-screen relative">
+        {/* Nav */}
+        <div className="absolute top-0 right-0 px-8 py-6 z-20">
+          <Link
+            href="/login"
+            className="text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-70"
+            style={{ color: "#7A7268", fontFamily: "var(--font-oswald)" }}
+          >
+            Sign In
+          </Link>
+        </div>
         <div
           className="absolute inset-0 opacity-5"
           style={{
@@ -38,8 +50,8 @@ export default function Home() {
             crews, budgets, and families. Build My Groundwork gives you the tools
             to carry yourself too.
           </p>
-          <a
-            href="#signup"
+          <Link
+            href="/login"
             className="inline-block px-10 py-4 text-base font-bold uppercase tracking-widest transition-all duration-200 hover:opacity-90 active:scale-95"
             style={{
               backgroundColor: "#C45B28",
@@ -49,7 +61,7 @@ export default function Home() {
             }}
           >
             Take Your Day Back
-          </a>
+          </Link>
         </div>
       </section>
 
