@@ -401,7 +401,7 @@ export default function LandingPage() {
                 },
                 {
                   lead: "No therapy-speak.",
-                  body: "Real tools for real stress. Built around what a superintendent's day actually looks like.",
+                  body: "Real tools for real stress. Built around what a construction leader's day actually looks like.",
                 },
                 {
                   lead: "No fluff.",
@@ -489,19 +489,19 @@ export default function LandingPage() {
               The Origin
             </p>
             <div className="w-12 h-0.5 mb-8" style={{ backgroundColor: "#1E1E1E" }} />
-            <blockquote
+            <h2
               className="text-xl sm:text-2xl font-bold uppercase leading-snug mb-8"
               style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
             >
-              &ldquo;Built by a superintendent with 7 years in the field. Not by a tech company guessing what you need.&rdquo;
-            </blockquote>
+              Built by the Industry. For the Industry.
+            </h2>
             <p className="text-sm leading-relaxed mb-4" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-              This started because the industry keeps losing good people — to burnout, to addiction, to worse —
-              and nobody&apos;s building anything real to stop it.
+              Groundwork was created by construction professionals who got tired of watching good people
+              burn out, break down, and leave.
             </p>
             <p className="text-sm leading-relaxed" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-              Groundwork isn&apos;t a wellness app built for an office. It&apos;s built for the job.
-              For the 5am start. The brutal week. The drive home where you don&apos;t know how to turn it off.
+              Every feature was designed on jobsites, not in boardrooms. This isn&apos;t a tech company
+              guessing what you need. This is the industry taking care of its own.
             </p>
           </div>
         </div>
