@@ -10,6 +10,7 @@ import {
   type Phase,
 } from "@/lib/programs";
 import BottomNav from "@/components/BottomNav";
+import Breadcrumb from "@/components/Breadcrumb";
 
 type Enrollment = {
   id: string;
@@ -104,6 +105,12 @@ export default function ProgramDetailPage({
       style={{ backgroundColor: "#0A0A0A", color: "#E8E2D8" }}
     >
       <div className="max-w-2xl w-full mx-auto flex flex-col gap-10 pb-28">
+
+        <Breadcrumb items={[
+          { label: "Body", href: "/dashboard/body" },
+          { label: "Programs", href: "/dashboard/body/programs" },
+          { label: program.name },
+        ]} />
 
         {/* Header */}
         <header className="flex items-center gap-5">

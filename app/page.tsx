@@ -83,19 +83,29 @@ export default function LandingPage() {
 
         {/* Top nav */}
         <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-8 py-6 z-20">
-          <p
-            className="text-xs font-semibold tracking-[0.3em] uppercase"
+          <Link
+            href="/"
+            className="text-xs font-semibold tracking-[0.3em] uppercase transition-opacity hover:opacity-70"
             style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
           >
             Build My Groundwork
-          </p>
-          <Link
-            href="/login"
-            className="text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-70"
-            style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
-          >
-            Sign In
           </Link>
+          <div className="flex items-center gap-6">
+            <Link
+              href="/demo"
+              className="text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-70"
+              style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+            >
+              Demo
+            </Link>
+            <Link
+              href="/login"
+              className="text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-70"
+              style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+            >
+              Sign In
+            </Link>
+          </div>
         </div>
 
         {/* Subtle grid overlay */}
@@ -151,6 +161,23 @@ export default function LandingPage() {
             }}
           >
             Start Free
+          </Link>
+          <Link
+            href="/demo"
+            className="px-10 py-4 text-sm font-semibold uppercase tracking-widest transition-all duration-150 hover:opacity-70 active:scale-95"
+            style={{
+              border: "1px solid #C45B28",
+              color: "#C45B28",
+              fontFamily: "var(--font-inter)",
+              fontWeight: 600,
+              backgroundColor: "transparent",
+              borderRadius: "8px",
+              minHeight: "48px",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            Try the Demo
           </Link>
           <button
             onClick={scrollToHow}
@@ -595,25 +622,51 @@ export default function LandingPage() {
 
       {/* ── 8. FOOTER ────────────────────────────────────────────────────────── */}
       <footer
-        className="px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-3"
+        className="px-6 py-8 flex flex-col gap-4"
         style={{ borderTop: "1px solid #1A1A1A" }}
       >
-        <p
-          className="text-xs font-semibold tracking-[0.2em] uppercase"
-          style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
-        >
-          Build My Groundwork
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+          <Link
+            href="/"
+            className="text-xs font-semibold tracking-[0.2em] uppercase transition-opacity hover:opacity-70"
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+          >
+            Build My Groundwork
+          </Link>
+          <div className="flex items-center gap-6">
+            <Link
+              href="/demo"
+              className="text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-70"
+              style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+            >
+              Try Demo
+            </Link>
+            <Link
+              href="/privacy"
+              className="text-xs uppercase tracking-widest transition-opacity hover:opacity-70"
+              style={{ color: "#555", fontFamily: "var(--font-inter)" }}
+            >
+              Privacy
+            </Link>
+            <Link
+              href="/terms"
+              className="text-xs uppercase tracking-widest transition-opacity hover:opacity-70"
+              style={{ color: "#555", fontFamily: "var(--font-inter)" }}
+            >
+              Terms
+            </Link>
+            <Link
+              href="/contact"
+              className="text-xs uppercase tracking-widest transition-opacity hover:opacity-70"
+              style={{ color: "#555", fontFamily: "var(--font-inter)" }}
+            >
+              Contact
+            </Link>
+          </div>
+        </div>
+        <p className="text-xs text-center sm:text-left" style={{ color: "#555", fontFamily: "var(--font-inter)" }}>
+          &copy; {new Date().getFullYear()} Groundwork. All rights reserved.
         </p>
-        <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-          © {new Date().getFullYear()} Groundwork. All rights reserved.
-        </p>
-        <Link
-          href="/login"
-          className="text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-70"
-          style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
-        >
-          Sign In
-        </Link>
       </footer>
 
     </main>

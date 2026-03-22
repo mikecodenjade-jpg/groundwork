@@ -115,6 +115,25 @@ export default function HeartPage() {
           </div>
         </header>
 
+        {/* Encouraging intro for new users */}
+        {!saved && !pissedOff && !handledWell && gratitude.every((g) => !g) && (
+          <div
+            className="px-7 py-5 text-center"
+            style={{
+              backgroundColor: "#161616",
+              border: "1px solid #252525",
+              borderRadius: "12px",
+            }}
+          >
+            <p
+              className="text-sm leading-relaxed"
+              style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+            >
+              This is your space. No judgment. Start writing when you are ready.
+            </p>
+          </div>
+        )}
+
         {/* Tonight's Play */}
         <Link
           href="/dashboard/heart/play"

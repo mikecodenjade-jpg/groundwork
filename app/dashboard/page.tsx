@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { getProgramBySlug } from "@/lib/programs";
 import BottomNav from "@/components/BottomNav";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -161,6 +162,11 @@ export default function DashboardPage() {
   const [weekly, setWeekly] = useState({ done: 0, total: 7 });
   const [workout, setWorkout] = useState<{ slug: string; name: string } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeProgram, setActiveProgram] = useState<{
+    slug: string;
+    name: string;
+    currentWeek: number;
+  } | null>(null);
 
   const reset = todayReset();
   const leadAction = todayLeadershipAction();
@@ -212,6 +218,29 @@ export default function DashboardPage() {
         meal: (mealsRes.data ?? []).length > 0,
       });
 
+      // Check for active program enrollment
+      const { data: enrollments } = await supabase
+        .from("program_enrollments")
+        .select("program_slug, current_week, status")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .limit(1);
+
+      if (enrollments && enrollments.length > 0) {
+        const e = enrollments[0];
+        const prog = getProgramBySlug(e.program_slug);
+        if (prog) {
+          const totalWeeks = prog.totalWeeks ?? Infinity;
+          if (e.current_week <= totalWeeks) {
+            setActiveProgram({
+              slug: e.program_slug,
+              name: prog.name,
+              currentWeek: e.current_week,
+            });
+          }
+        }
+      }
+
       setLoading(false);
     }
     load();
@@ -260,13 +289,30 @@ export default function DashboardPage() {
           >
             {todayLabel()}
           </p>
-          <h1
-            className="text-4xl sm:text-5xl font-bold uppercase leading-tight"
-            style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
-          >
-            {greeting()}
-            {profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}.
-          </h1>
+
+          {/* Welcome message for brand-new users */}
+          {!loading && streak === 0 && dailyScore === 0 ? (
+            <>
+              <h1
+                className="text-4xl sm:text-5xl font-bold uppercase leading-tight"
+                style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+              >
+                Welcome to Groundwork
+                {profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}.
+              </h1>
+              <p className="text-sm mt-2" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                Your first day starts now. Hit the button below to get moving.
+              </p>
+            </>
+          ) : (
+            <h1
+              className="text-4xl sm:text-5xl font-bold uppercase leading-tight"
+              style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+            >
+              {greeting()}
+              {profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}.
+            </h1>
+          )}
 
           <div className="mt-4 flex items-center gap-3">
             <div
@@ -297,6 +343,46 @@ export default function DashboardPage() {
             </p>
           </div>
         </section>
+
+        {/* Continue Program card */}
+        {activeProgram && (
+          <Link
+            href={`/dashboard/body/programs/${activeProgram.slug}/week/${activeProgram.currentWeek}`}
+            className="flex items-center justify-between px-6 py-5 transition-opacity hover:opacity-90 active:scale-[0.99]"
+            style={{
+              backgroundColor: "#161616",
+              border: "1px solid #C45B28",
+              borderRadius: "12px",
+            }}
+          >
+            <div className="flex flex-col gap-0.5">
+              <span
+                className="text-xs font-semibold uppercase tracking-widest"
+                style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+              >
+                Continue Program
+              </span>
+              <span
+                className="text-base font-bold"
+                style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
+              >
+                {activeProgram.name}
+              </span>
+              <span
+                className="text-xs"
+                style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+              >
+                Week {activeProgram.currentWeek}
+              </span>
+            </div>
+            <span
+              className="text-sm font-semibold uppercase tracking-widest"
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+            >
+              Go &rsaquo;
+            </span>
+          </Link>
+        )}
 
         {/* Today's Plan — single card, 3 rows */}
         <section>
@@ -371,8 +457,9 @@ export default function DashboardPage() {
           {/* Score + Streak tiles */}
           <div className="grid grid-cols-2 gap-3">
             {/* Daily score */}
-            <div
-              className="flex flex-col items-center justify-center py-6 gap-2"
+            <Link
+              href="/dashboard/badges"
+              className="flex flex-col items-center justify-center py-6 gap-2 transition-opacity hover:opacity-90"
               style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
             >
               <span
@@ -398,11 +485,12 @@ export default function DashboardPage() {
                   <ScorePip label="Meal" done={score.meal} points={20} />
                 </div>
               )}
-            </div>
+            </Link>
 
             {/* Streak */}
-            <div
-              className="flex flex-col items-center justify-center py-6 gap-1"
+            <Link
+              href="/dashboard/badges"
+              className="flex flex-col items-center justify-center py-6 gap-1 transition-opacity hover:opacity-90"
               style={{ backgroundColor: "#0D1B2A", border: "1px solid #1E3A5F", borderRadius: "12px" }}
             >
               <span
@@ -417,8 +505,16 @@ export default function DashboardPage() {
               >
                 Day Streak
               </span>
-            </div>
+            </Link>
           </div>
+
+          <Link
+            href="/dashboard/badges"
+            className="text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-70 self-end"
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+          >
+            View All Badges &rsaquo;
+          </Link>
 
           {/* Weekly bar */}
           <div

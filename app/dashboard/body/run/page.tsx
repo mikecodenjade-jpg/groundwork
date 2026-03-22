@@ -342,7 +342,7 @@ export default function RunPage() {
                 className="text-sm text-center"
                 style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
               >
-                Tap Start to begin tracking your run via GPS.
+                No runs yet. Lace up and hit Start.
               </p>
               <button
                 onClick={startRun}
@@ -480,10 +480,10 @@ export default function RunPage() {
             </div>
           ) : history.length === 0 ? (
             <p
-              className="text-sm"
+              className="text-sm text-center py-6"
               style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
             >
-              No runs logged yet. Complete your first run above.
+              No runs yet. Lace up and hit Start.
             </p>
           ) : (
             <div className="flex flex-col gap-3">

@@ -15,9 +15,19 @@ const oswald = Oswald({
 });
 
 export const metadata: Metadata = {
-  title: "Build My Groundwork",
+  metadataBase: new URL("https://buildmygroundwork.com"),
+  title: "Build My Groundwork - Wellness for Construction Professionals",
   description:
-    "A wellness platform built for construction leaders — Superintendents, Foremen, and Project Managers.",
+    "Fitness, mental health, and leadership tools built by the construction industry, for the construction industry.",
+  openGraph: {
+    title: "Build My Groundwork - Wellness for Construction Professionals",
+    description:
+      "Fitness, mental health, and leadership tools built by the construction industry, for the construction industry.",
+    url: "https://buildmygroundwork.com",
+    siteName: "Build My Groundwork",
+    type: "website",
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Build My Groundwork" }],
+  },
 };
 
 export default function RootLayout({

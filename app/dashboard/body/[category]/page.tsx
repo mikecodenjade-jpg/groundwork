@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { use, useState, useEffect, useRef } from "react";
+import { use, useState, useEffect, useRef, useCallback } from "react";
 import BottomNav from "@/components/BottomNav";
 import SpotifyPlayer from "@/components/SpotifyPlayer";
+import VoiceTracker from "@/components/VoiceTracker";
 import { supabase } from "@/lib/supabase";
+import { checkExercise, getModifyParts, type Injury } from "@/lib/injuries";
+import { exerciseMatchesEquipment, type EquipmentSetting } from "@/lib/equipment";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -542,6 +545,38 @@ export default function CategoryPage({
   const [workoutState, setWorkoutState] = useState<WorkoutState>("idle");
   const [elapsed, setElapsed] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [injuries, setInjuries] = useState<Injury[]>([]);
+  const [equipmentSetting, setEquipmentSetting] = useState<EquipmentSetting>("gym");
+
+  // Fetch active injuries + equipment setting
+  const fetchUserData = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const [injuryRes, profileRes] = await Promise.all([
+      supabase
+        .from("injuries")
+        .select("*")
+        .eq("user_id", user.id)
+        .is("resolved_at", null),
+      supabase
+        .from("user_profiles")
+        .select("equipment_setting")
+        .eq("id", user.id)
+        .single(),
+    ]);
+
+    setInjuries((injuryRes.data as Injury[]) ?? []);
+    setEquipmentSetting((profileRes.data?.equipment_setting as EquipmentSetting) ?? "gym");
+  }, []);
+
+  useEffect(() => { fetchUserData(); }, [fetchUserData]);
+
+  // Filter exercises based on injuries + equipment
+  const modifyParts = getModifyParts(injuries);
+  const filteredExercises = tier.exercises
+    .filter((ex) => checkExercise(ex.name, ex.muscles, injuries) !== "avoid")
+    .filter((ex) => exerciseMatchesEquipment(ex.name, ex.note, equipmentSetting));
 
   useEffect(() => {
     if (workoutState === "active") {
@@ -568,7 +603,7 @@ export default function CategoryPage({
       await supabase.from("workout_logs").insert({
         user_id: user.id,
         workout_name: workoutName,
-        exercises_completed: tier.exercises.length,
+        exercises_completed: filteredExercises.length,
         duration_minutes: durationMinutes,
       });
     }
@@ -609,6 +644,29 @@ export default function CategoryPage({
           </div>
         </header>
 
+        {/* Injury warning banners */}
+        {modifyParts.length > 0 && (
+          <div
+            className="px-5 py-4 text-sm flex items-start gap-3"
+            style={{
+              backgroundColor: "#1A1400",
+              border: "1px solid #5A4A1A",
+              borderRadius: "8px",
+              color: "#E8C040",
+              fontFamily: "var(--font-inter)",
+            }}
+          >
+            <svg width={18} height={18} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: 1 }}>
+              <path d="M12 2L2 22h20L12 2z" stroke="#E8C040" strokeWidth="1.5" strokeLinejoin="round" />
+              <line x1="12" y1="10" x2="12" y2="15" stroke="#E8C040" strokeWidth="1.5" strokeLinecap="round" />
+              <circle cx="12" cy="18" r="0.5" fill="#E8C040" />
+            </svg>
+            <span>
+              <strong className="capitalize">{modifyParts.join(", ")}</strong> injury active — go lighter or skip if it hurts
+            </span>
+          </div>
+        )}
+
         {/* Today's Workout */}
         <section>
           <div style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}>
@@ -629,7 +687,7 @@ export default function CategoryPage({
                     className="text-xs font-semibold uppercase tracking-widest px-2 py-0.5"
                     style={{ color: "#9A9A9A", border: "1px solid #252525", fontFamily: "var(--font-inter)" }}
                   >
-                    {tier.exercises.length} Exercises
+                    {filteredExercises.length} Exercises
                   </span>
                 </div>
                 <p className="text-sm" style={{ color: "#9A9A9A" }}>{data.equipment}</p>
@@ -639,7 +697,9 @@ export default function CategoryPage({
 
             {/* Exercise list */}
             <div className="divide-y" style={{ borderColor: "#252525" }}>
-              {tier.exercises.map((ex, i) => (
+              {filteredExercises.map((ex, i) => {
+                const injuryStatus = checkExercise(ex.name, ex.muscles, injuries);
+                return (
                 <div key={`${ex.name}-${i}`} className="px-8 py-5 flex items-start gap-5">
                   <span
                     className="text-xs font-bold mt-0.5 w-5 shrink-0 text-right"
@@ -653,6 +713,11 @@ export default function CategoryPage({
                     {ex.note && (
                       <p className="text-xs mt-1 italic" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>{ex.note}</p>
                     )}
+                    {injuryStatus === "modify" && (
+                      <p className="text-xs mt-1 font-semibold" style={{ color: "#E8C040", fontFamily: "var(--font-inter)" }}>
+                        ⚠ Go lighter — injury active
+                      </p>
+                    )}
                   </div>
                   <div className="text-right shrink-0">
                     <p
@@ -664,7 +729,8 @@ export default function CategoryPage({
                     <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>sets &times; reps</p>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Workout footer */}
@@ -784,6 +850,7 @@ export default function CategoryPage({
         </section>
 
       </div>
+      <VoiceTracker />
       <SpotifyPlayer category={category} />
       <BottomNav />
     </main>

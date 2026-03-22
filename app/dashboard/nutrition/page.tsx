@@ -921,7 +921,14 @@ export default function NutritionPage() {
                     )}
 
                     {logs.length === 0 && !isAdding && (
-                      <p className="px-5 py-4 text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Nothing logged yet.</p>
+                      <div className="px-5 py-6 text-center">
+                        <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                          No meals tracked today
+                        </p>
+                        <p className="text-xs mt-1" style={{ color: "#555", fontFamily: "var(--font-inter)" }}>
+                          Search for a food above to start tracking.
+                        </p>
+                      </div>
                     )}
 
                     {/* Add Food Panel */}

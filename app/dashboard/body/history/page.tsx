@@ -96,16 +96,28 @@ export default function WorkoutHistoryPage() {
             ))}
           </div>
         ) : logs.length === 0 ? (
-          <div className="py-20 text-center">
+          <div className="py-20 flex flex-col items-center text-center gap-4">
             <p
-              className="text-2xl font-bold uppercase mb-2"
+              className="text-2xl font-bold uppercase"
               style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
             >
-              No workouts logged yet.
+              No workouts logged yet
             </p>
-            <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-              Get after it.
+            <p className="text-sm max-w-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+              Complete your first workout and it will show up here.
             </p>
+            <Link
+              href="/dashboard/body"
+              className="mt-2 px-8 py-3 text-sm font-semibold uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-95"
+              style={{
+                backgroundColor: "#C45B28",
+                color: "#0A0A0A",
+                borderRadius: "8px",
+                fontFamily: "var(--font-inter)",
+              }}
+            >
+              Start a Workout
+            </Link>
           </div>
         ) : (
           <div className="flex flex-col gap-3">

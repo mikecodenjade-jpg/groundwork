@@ -6,6 +6,9 @@ import { supabase } from "@/lib/supabase";
 import { getProgramBySlug, getDays, getWeeks, type DayWorkout } from "@/lib/programs";
 import BottomNav from "@/components/BottomNav";
 import SpotifyPlayer from "@/components/SpotifyPlayer";
+import VoiceTracker from "@/components/VoiceTracker";
+import { getModifyParts, type Injury } from "@/lib/injuries";
+import Breadcrumb from "@/components/Breadcrumb";
 
 const DAY_LABELS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
@@ -26,6 +29,24 @@ export default function WeekPage({
   const [loading, setLoading] = useState(true);
   const [marking, setMarking] = useState<number | null>(null);
   const [weekAdvanced, setWeekAdvanced] = useState(false);
+  const [injuries, setInjuries] = useState<Injury[]>([]);
+
+  // Fetch active injuries
+  useEffect(() => {
+    async function loadInjuries() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from("injuries")
+        .select("*")
+        .eq("user_id", user.id)
+        .is("resolved_at", null);
+      setInjuries((data as Injury[]) ?? []);
+    }
+    loadInjuries();
+  }, []);
+
+  const modifyParts = getModifyParts(injuries);
 
   useEffect(() => {
     async function load() {
@@ -115,6 +136,13 @@ export default function WeekPage({
     >
       <div className="max-w-2xl w-full mx-auto flex flex-col gap-8 pb-28">
 
+        <Breadcrumb items={[
+          { label: "Body", href: "/dashboard/body" },
+          { label: "Programs", href: "/dashboard/body/programs" },
+          { label: program.name, href: `/dashboard/body/programs/${slug}` },
+          { label: `Week ${weekNum}` },
+        ]} />
+
         {/* Header */}
         <header className="flex items-center gap-5">
           <Link
@@ -139,6 +167,29 @@ export default function WeekPage({
             </h1>
           </div>
         </header>
+
+        {/* Injury warning banner */}
+        {modifyParts.length > 0 && (
+          <div
+            className="px-5 py-4 text-sm flex items-start gap-3"
+            style={{
+              backgroundColor: "#1A1400",
+              border: "1px solid #5A4A1A",
+              borderRadius: "8px",
+              color: "#E8C040",
+              fontFamily: "var(--font-inter)",
+            }}
+          >
+            <svg width={18} height={18} viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0, marginTop: 1 }}>
+              <path d="M12 2L2 22h20L12 2z" stroke="#E8C040" strokeWidth="1.5" strokeLinejoin="round" />
+              <line x1="12" y1="10" x2="12" y2="15" stroke="#E8C040" strokeWidth="1.5" strokeLinecap="round" />
+              <circle cx="12" cy="18" r="0.5" fill="#E8C040" />
+            </svg>
+            <span>
+              <strong className="capitalize">{modifyParts.join(", ")}</strong> injury active — go lighter or skip if it hurts
+            </span>
+          </div>
+        )}
 
         {/* Week description */}
         <div
@@ -235,6 +286,7 @@ export default function WeekPage({
         )}
 
       </div>
+      <VoiceTracker />
       <SpotifyPlayer category={program?.workoutCategory} />
       <BottomNav />
     </main>

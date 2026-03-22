@@ -120,12 +120,13 @@ export default function DemoDashboard() {
       <div className="px-6 py-10">
         {/* Top bar */}
         <header className="flex items-center justify-between max-w-5xl w-full mx-auto mb-16">
-          <p
-            className="text-xs font-semibold tracking-[0.3em] uppercase"
+          <Link
+            href="/"
+            className="text-xs font-semibold tracking-[0.3em] uppercase transition-opacity hover:opacity-70"
             style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
           >
             Build My Groundwork
-          </p>
+          </Link>
           <Link
             href="/login"
             className="text-xs font-semibold uppercase tracking-widest px-5 py-2 transition-opacity hover:opacity-60"

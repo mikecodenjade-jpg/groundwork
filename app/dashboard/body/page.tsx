@@ -4,6 +4,11 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import BottomNav from "@/components/BottomNav";
 import { supabase } from "@/lib/supabase";
+import {
+  EQUIPMENT_OPTIONS,
+  categoryAvailable,
+  type EquipmentSetting,
+} from "@/lib/equipment";
 
 const TIME_OPTIONS = [
   { label: "15 min", value: 15 },
@@ -72,37 +77,58 @@ export default function BodyPage() {
   const [fallback, setFallback] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedTime, setSelectedTime] = useState<number | null>(null);
+  const [equipment, setEquipment] = useState<EquipmentSetting>("gym");
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadInterests() {
+    async function loadProfile() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
+      setUserId(user.id);
 
       const { data } = await supabase
         .from("user_profiles")
-        .select("interests")
+        .select("interests, equipment_setting")
         .eq("id", user.id)
         .single();
 
       const interests: string[] | null = data?.interests;
+      const equip = (data?.equipment_setting as EquipmentSetting) ?? "gym";
+      setEquipment(equip);
 
       if (!interests || interests.length === 0) {
         setFallback(true);
-        setVisibleCategories(CATEGORIES);
+        setVisibleCategories(CATEGORIES.filter((c) => categoryAvailable(c.slug, equip)));
       } else {
         const slugs = new Set(
           interests.map((i) => INTEREST_TO_SLUG[i]).filter(Boolean)
         );
-        const filtered = CATEGORIES.filter((c) => slugs.has(c.slug));
-        // If none of their interests map to a body discipline, show all
-        setVisibleCategories(filtered.length > 0 ? filtered : CATEGORIES);
+        const filtered = CATEGORIES
+          .filter((c) => slugs.has(c.slug))
+          .filter((c) => categoryAvailable(c.slug, equip));
+        setVisibleCategories(filtered.length > 0 ? filtered : CATEGORIES.filter((c) => categoryAvailable(c.slug, equip)));
         setFallback(filtered.length === 0);
       }
 
       setLoading(false);
     }
-    loadInterests();
+    loadProfile();
   }, []);
+
+  async function updateEquipment(value: EquipmentSetting) {
+    setEquipment(value);
+    // Re-filter categories immediately
+    setVisibleCategories((prev) => {
+      const base = prev.length > 0 ? CATEGORIES : CATEGORIES;
+      return base.filter((c) => categoryAvailable(c.slug, value));
+    });
+    if (userId) {
+      await supabase
+        .from("user_profiles")
+        .update({ equipment_setting: value })
+        .eq("id", userId);
+    }
+  }
 
   return (
     <main
@@ -144,6 +170,45 @@ export default function BodyPage() {
             </h1>
           </div>
         </header>
+
+        {/* Equipment toggle */}
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <p
+              className="text-xs font-semibold tracking-[0.25em] uppercase"
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+            >
+              Equipment
+            </p>
+            <p
+              className="text-xs"
+              style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+            >
+              Training: {EQUIPMENT_OPTIONS.find((o) => o.value === equipment)?.label}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            {EQUIPMENT_OPTIONS.map(({ value, label }) => {
+              const active = equipment === value;
+              return (
+                <button
+                  key={value}
+                  onClick={() => updateEquipment(value)}
+                  className="flex-1 py-2.5 text-xs font-semibold uppercase tracking-wider transition-all duration-150 active:scale-95"
+                  style={{
+                    fontFamily: "var(--font-inter)",
+                    backgroundColor: active ? "#C45B28" : "#1A1A1A",
+                    color: active ? "#0A0A0A" : "#9A9A9A",
+                    border: `1px solid ${active ? "#C45B28" : "#333"}`,
+                    borderRadius: "20px",
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </section>
 
         {/* Time selector */}
         <section>
@@ -216,6 +281,48 @@ export default function BodyPage() {
           </Link>
 
           <Link
+            href="/dashboard/library"
+            className="flex items-center justify-between px-6 py-4 transition-opacity hover:opacity-80"
+            style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
+          >
+            <span
+              className="text-sm font-bold uppercase tracking-wide"
+              style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
+            >
+              Exercise Library
+            </span>
+            <span style={{ color: "#C45B28" }}>&rsaquo;</span>
+          </Link>
+
+          <Link
+            href="/dashboard/nutrition"
+            className="flex items-center justify-between px-6 py-4 transition-opacity hover:opacity-80"
+            style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
+          >
+            <span
+              className="text-sm font-bold uppercase tracking-wide"
+              style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
+            >
+              Fuel / Nutrition
+            </span>
+            <span style={{ color: "#C45B28" }}>&rsaquo;</span>
+          </Link>
+
+          <Link
+            href="/dashboard/body/run"
+            className="flex items-center justify-between px-6 py-4 transition-opacity hover:opacity-80"
+            style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
+          >
+            <span
+              className="text-sm font-bold uppercase tracking-wide"
+              style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
+            >
+              GPS Run Tracker
+            </span>
+            <span style={{ color: "#C45B28" }}>&rsaquo;</span>
+          </Link>
+
+          <Link
             href="/dashboard/body/history"
             className="flex items-center justify-between px-6 py-4 transition-opacity hover:opacity-80"
             style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
@@ -226,6 +333,29 @@ export default function BodyPage() {
             >
               Workout History
             </span>
+            <span style={{ color: "#C45B28" }}>&rsaquo;</span>
+          </Link>
+
+          <Link
+            href="/dashboard/body/injury"
+            className="flex items-center justify-between px-6 py-4 transition-opacity hover:opacity-80"
+            style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
+          >
+            <div className="flex items-center gap-3">
+              {/* Bandage icon */}
+              <svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="9" width="18" height="6" rx="1" stroke="#E87070" strokeWidth="1.5" />
+                <line x1="9" y1="9" x2="9" y2="15" stroke="#E87070" strokeWidth="1.5" />
+                <line x1="15" y1="9" x2="15" y2="15" stroke="#E87070" strokeWidth="1.5" />
+                <circle cx="12" cy="12" r="1" fill="#E87070" />
+              </svg>
+              <span
+                className="text-sm font-bold uppercase tracking-wide"
+                style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
+              >
+                Injuries
+              </span>
+            </div>
             <span style={{ color: "#C45B28" }}>›</span>
           </Link>
         </div>
