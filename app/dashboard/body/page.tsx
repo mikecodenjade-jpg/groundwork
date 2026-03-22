@@ -5,6 +5,13 @@ import { useState, useEffect } from "react";
 import BottomNav from "@/components/BottomNav";
 import { supabase } from "@/lib/supabase";
 
+const TIME_OPTIONS = [
+  { label: "15 min", value: 15 },
+  { label: "30 min", value: 30 },
+  { label: "45 min", value: 45 },
+  { label: "1 hour", value: 60 },
+];
+
 const CATEGORIES = [
   {
     slug: "running",
@@ -64,6 +71,7 @@ export default function BodyPage() {
   const [visibleCategories, setVisibleCategories] = useState(CATEGORIES);
   const [fallback, setFallback] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [selectedTime, setSelectedTime] = useState<number | null>(null);
 
   useEffect(() => {
     async function loadInterests() {
@@ -137,6 +145,36 @@ export default function BodyPage() {
           </div>
         </header>
 
+        {/* Time selector */}
+        <section>
+          <p
+            className="text-xs font-semibold tracking-[0.25em] uppercase mb-5"
+            style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+          >
+            How much time do you have?
+          </p>
+          <div className="flex flex-wrap gap-3">
+            {TIME_OPTIONS.map(({ label, value }) => {
+              const active = selectedTime === value;
+              return (
+                <button
+                  key={value}
+                  onClick={() => setSelectedTime(active ? null : value)}
+                  className="px-8 py-3 text-sm font-bold uppercase tracking-widest transition-all duration-150 active:scale-95"
+                  style={{
+                    fontFamily: "var(--font-oswald)",
+                    backgroundColor: active ? "#C45B28" : "#141414",
+                    color: active ? "#0A0A0A" : "#E8E2D8",
+                    border: `1px solid ${active ? "#C45B28" : "#2A2A2A"}`,
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+
         <div>
           <h2
             className="text-2xl font-bold uppercase mb-1"
@@ -165,7 +203,7 @@ export default function BodyPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {visibleCategories.map((cat) => (
-              <CategoryCard key={cat.slug} {...cat} />
+              <CategoryCard key={cat.slug} {...cat} selectedTime={selectedTime} />
             ))}
           </div>
         )}
@@ -180,16 +218,21 @@ function CategoryCard({
   slug,
   title,
   desc,
+  selectedTime,
 }: {
   slug: string;
   title: string;
   desc: string;
+  selectedTime: number | null;
 }) {
   const [hovered, setHovered] = useState(false);
+  const href = selectedTime
+    ? `/dashboard/body/${slug}?time=${selectedTime}`
+    : `/dashboard/body/${slug}`;
 
   return (
     <Link
-      href={`/dashboard/body/${slug}`}
+      href={href}
       className="flex flex-col gap-3 px-7 py-6 transition-all duration-150 active:scale-[0.98]"
       style={{
         backgroundColor: hovered ? "#161616" : "#111111",

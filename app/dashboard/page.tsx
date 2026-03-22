@@ -6,13 +6,6 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import BottomNav from "@/components/BottomNav";
 
-const TIME_OPTIONS = [
-  { label: "15 min", value: 15 },
-  { label: "30 min", value: 30 },
-  { label: "45 min", value: 45 },
-  { label: "1 hour", value: 60 },
-];
-
 const PILLARS = [
   {
     title: "Body",
@@ -90,7 +83,6 @@ export default function DashboardPage() {
   const router = useRouter();
   const [email, setEmail] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [selectedTime, setSelectedTime] = useState<number | null>(null);
 
   useEffect(() => {
     async function loadUser() {
@@ -162,36 +154,6 @@ export default function DashboardPage() {
               }
             </p>
           )}
-        </section>
-
-        {/* Time selector */}
-        <section>
-          <p
-            className="text-xs font-semibold tracking-[0.25em] uppercase mb-5"
-            style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
-          >
-            How much time do you have?
-          </p>
-          <div className="flex flex-wrap gap-3">
-            {TIME_OPTIONS.map(({ label, value }) => {
-              const active = selectedTime === value;
-              return (
-                <button
-                  key={value}
-                  onClick={() => setSelectedTime(value)}
-                  className="px-8 py-3 text-sm font-bold uppercase tracking-widest transition-all duration-150 active:scale-95"
-                  style={{
-                    fontFamily: "var(--font-oswald)",
-                    backgroundColor: active ? "#C45B28" : "#141414",
-                    color: active ? "#0A0A0A" : "#E8E2D8",
-                    border: `1px solid ${active ? "#C45B28" : "#2A2A2A"}`,
-                  }}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
         </section>
 
         {/* Pillar cards */}
