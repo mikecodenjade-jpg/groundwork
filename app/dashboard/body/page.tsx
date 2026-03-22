@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import BottomNav from "@/components/BottomNav";
+import { supabase } from "@/lib/supabase";
 
 const EXERCISES = [
   {
@@ -49,8 +50,46 @@ const PROGRAMS = [
   },
 ];
 
+type WorkoutState = "idle" | "active" | "logged";
+
 export default function BodyPage() {
-  const [started, setStarted] = useState(false);
+  const [workoutState, setWorkoutState] = useState<WorkoutState>("idle");
+  const [elapsed, setElapsed] = useState(0); // seconds
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (workoutState === "active") {
+      intervalRef.current = setInterval(() => {
+        setElapsed((s) => s + 1);
+      }, 1000);
+    } else {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [workoutState]);
+
+  function formatTime(seconds: number) {
+    const m = Math.floor(seconds / 60).toString().padStart(2, "0");
+    const s = (seconds % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  }
+
+  async function handleComplete() {
+    setWorkoutState("logged");
+    const durationMinutes = Math.max(1, Math.round(elapsed / 60));
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from("workout_logs").insert({
+        user_id: user.id,
+        workout_name: "Upper Body Grind",
+        exercises_completed: EXERCISES.length,
+        duration_minutes: durationMinutes,
+      });
+    }
+  }
 
   return (
     <main
@@ -189,20 +228,68 @@ export default function BodyPage() {
               ))}
             </div>
 
-            {/* Start button */}
-            <div className="px-8 py-6" style={{ borderTop: "1px solid #1E1E1E" }}>
-              <button
-                onClick={() => setStarted(!started)}
-                className="w-full py-4 text-base font-bold uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-[0.99]"
-                style={{
-                  fontFamily: "var(--font-oswald)",
-                  backgroundColor: started ? "#1E1E1E" : "#C45B28",
-                  color: started ? "#C45B28" : "#0A0A0A",
-                  border: started ? "1px solid #C45B28" : "none",
-                }}
-              >
-                {started ? "✓ Workout Started" : "Start Workout"}
-              </button>
+            {/* Workout footer */}
+            <div className="px-8 py-6 flex flex-col gap-4" style={{ borderTop: "1px solid #1E1E1E" }}>
+              {workoutState === "idle" && (
+                <button
+                  onClick={() => { setElapsed(0); setWorkoutState("active"); }}
+                  className="w-full py-4 text-base font-bold uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-[0.99]"
+                  style={{
+                    fontFamily: "var(--font-oswald)",
+                    backgroundColor: "#C45B28",
+                    color: "#0A0A0A",
+                  }}
+                >
+                  Start Workout
+                </button>
+              )}
+
+              {workoutState === "active" && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span
+                      className="text-xs font-semibold uppercase tracking-widest"
+                      style={{ color: "#7A7268", fontFamily: "var(--font-oswald)" }}
+                    >
+                      Elapsed
+                    </span>
+                    <span
+                      className="text-4xl font-bold tabular-nums"
+                      style={{ fontFamily: "var(--font-oswald)", color: "#C45B28" }}
+                    >
+                      {formatTime(elapsed)}
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleComplete}
+                    className="w-full py-4 text-base font-bold uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-[0.99]"
+                    style={{
+                      fontFamily: "var(--font-oswald)",
+                      backgroundColor: "#C45B28",
+                      color: "#0A0A0A",
+                    }}
+                  >
+                    Complete Workout
+                  </button>
+                </>
+              )}
+
+              {workoutState === "logged" && (
+                <div className="flex items-center justify-between">
+                  <span
+                    className="text-xs font-semibold uppercase tracking-widest"
+                    style={{ color: "#4CAF50", fontFamily: "var(--font-oswald)" }}
+                  >
+                    ✓ Workout Logged
+                  </span>
+                  <span
+                    className="text-sm"
+                    style={{ color: "#5A5248" }}
+                  >
+                    {formatTime(elapsed)} · {EXERCISES.length} exercises
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </section>

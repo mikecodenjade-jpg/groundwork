@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import BottomNav from "@/components/BottomNav";
+import { supabase } from "@/lib/supabase";
 
 const RELATIONSHIP_TIPS = [
   {
@@ -22,10 +23,25 @@ const RELATIONSHIP_TIPS = [
 export default function HeartPage() {
   const [journal, setJournal] = useState("");
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [gratitude, setGratitude] = useState(["", "", ""]);
 
-  function handleSave() {
+  async function handleSave() {
     if (!journal.trim()) return;
+    setSaving(true);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from("journal_entries").insert({
+        user_id: user.id,
+        entry: journal.trim(),
+        gratitude_1: gratitude[0].trim() || null,
+        gratitude_2: gratitude[1].trim() || null,
+        gratitude_3: gratitude[2].trim() || null,
+      });
+    }
+
+    setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   }
@@ -113,7 +129,7 @@ export default function HeartPage() {
             <div className="flex items-center gap-4">
               <button
                 onClick={handleSave}
-                disabled={!journal.trim()}
+                disabled={!journal.trim() || saving}
                 className="px-8 py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90 disabled:opacity-30"
                 style={{
                   fontFamily: "var(--font-oswald)",
@@ -121,12 +137,15 @@ export default function HeartPage() {
                   color: "#0A0A0A",
                 }}
               >
-                Save Entry
+                {saving ? "Saving..." : "Save Entry"}
               </button>
               {saved && (
-                <p className="text-sm" style={{ color: "#4CAF50" }}>
-                  Saved.
-                </p>
+                <span
+                  className="text-xs font-semibold uppercase tracking-widest"
+                  style={{ color: "#4CAF50", fontFamily: "var(--font-oswald)" }}
+                >
+                  ✓ Saved
+                </span>
               )}
             </div>
           </div>
