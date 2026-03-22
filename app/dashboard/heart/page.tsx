@@ -43,6 +43,8 @@ export default function HeartPage() {
 
     setSaving(false);
     setSaved(true);
+    setJournal("");
+    setGratitude(["", "", ""]);
     setTimeout(() => setSaved(false), 3000);
   }
 
