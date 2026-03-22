@@ -470,6 +470,33 @@ export default function DashboardPage() {
         </section>
 
       </div>
+      {/* Floating Ask Coach button */}
+      <Link
+        href="/dashboard/coach"
+        aria-label="Ask Coach"
+        className="fixed z-40 flex items-center justify-center transition-all hover:opacity-90 active:scale-95"
+        style={{
+          bottom: "80px",
+          right: "20px",
+          width: "52px",
+          height: "52px",
+          backgroundColor: "#C45B28",
+          borderRadius: "50%",
+          boxShadow: "0 4px 20px rgba(196, 91, 40, 0.45)",
+        }}
+      >
+        <svg viewBox="0 0 24 24" fill="none" width={22} height={22}>
+          <path
+            d="M4 4h16c.55 0 1 .45 1 1v10c0 .55-.45 1-1 1H8l-4 4V5c0-.55.45-1 1-1Z"
+            stroke="#0A0A0A"
+            strokeWidth="1.8"
+            strokeLinejoin="round"
+          />
+          <line x1="8" y1="9" x2="16" y2="9" stroke="#0A0A0A" strokeWidth="1.4" strokeLinecap="round" />
+          <line x1="8" y1="12" x2="13" y2="12" stroke="#0A0A0A" strokeWidth="1.4" strokeLinecap="round" />
+        </svg>
+      </Link>
+
       <BottomNav />
     </main>
   );

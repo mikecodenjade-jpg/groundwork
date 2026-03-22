@@ -49,6 +49,22 @@ const TABS = [
     ),
   },
   {
+    label: "Coach",
+    href: "/dashboard/coach",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" width={22} height={22}>
+        <path
+          d="M4 4h16c.55 0 1 .45 1 1v10c0 .55-.45 1-1 1H8l-4 4V5c0-.55.45-1 1-1Z"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinejoin="round"
+        />
+        <line x1="8" y1="9" x2="16" y2="9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+        <line x1="8" y1="12" x2="13" y2="12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
     label: "Heart",
     href: "/dashboard/heart",
     icon: (
