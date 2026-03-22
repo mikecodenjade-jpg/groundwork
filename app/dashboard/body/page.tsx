@@ -189,6 +189,21 @@ export default function BodyPage() {
           </p>
         </div>
 
+        {/* Workout History link */}
+        <Link
+          href="/dashboard/body/history"
+          className="flex items-center justify-between px-6 py-4 transition-opacity hover:opacity-80"
+          style={{ backgroundColor: "#111111", border: "1px solid #1E1E1E" }}
+        >
+          <span
+            className="text-sm font-bold uppercase tracking-wide"
+            style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+          >
+            Workout History
+          </span>
+          <span style={{ color: "#C45B28" }}>›</span>
+        </Link>
+
         {/* Category grid */}
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

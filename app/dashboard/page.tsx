@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import BottomNav from "@/components/BottomNav";
@@ -79,10 +78,37 @@ type Profile = {
   company: string | null;
 };
 
+function calcStreak(dates: string[]): number {
+  if (dates.length === 0) return 0;
+
+  const unique = Array.from(
+    new Set(dates.map((d) => new Date(d).toLocaleDateString("en-CA")))
+  ).sort((a, b) => (a > b ? -1 : 1)); // descending
+
+  const today = new Date().toLocaleDateString("en-CA");
+  const yesterday = new Date(Date.now() - 86400000).toLocaleDateString("en-CA");
+
+  // Streak must include today or yesterday to be active
+  if (unique[0] !== today && unique[0] !== yesterday) return 0;
+
+  let streak = 1;
+  for (let i = 1; i < unique.length; i++) {
+    const prev = new Date(unique[i - 1]);
+    const curr = new Date(unique[i]);
+    const diff = Math.round((prev.getTime() - curr.getTime()) / 86400000);
+    if (diff === 1) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
 export default function DashboardPage() {
-  const router = useRouter();
   const [email, setEmail] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [streak, setStreak] = useState<number>(0);
 
   useEffect(() => {
     async function loadUser() {
@@ -90,21 +116,22 @@ export default function DashboardPage() {
       if (!user) return;
       setEmail(user.email ?? null);
 
-      const { data } = await supabase
-        .from("user_profiles")
-        .select("full_name, role, company")
-        .eq("id", user.id)
-        .single();
+      const [profileRes, workoutsRes, moodsRes] = await Promise.all([
+        supabase.from("user_profiles").select("full_name, role, company").eq("id", user.id).single(),
+        supabase.from("workout_logs").select("created_at").eq("user_id", user.id),
+        supabase.from("mood_checkins").select("created_at").eq("user_id", user.id),
+      ]);
 
-      if (data) setProfile(data);
+      if (profileRes.data) setProfile(profileRes.data);
+
+      const allDates = [
+        ...(workoutsRes.data ?? []).map((r) => r.created_at),
+        ...(moodsRes.data ?? []).map((r) => r.created_at),
+      ];
+      setStreak(calcStreak(allDates));
     }
     loadUser();
   }, []);
-
-  async function handleSignOut() {
-    await supabase.auth.signOut();
-    router.push("/");
-  }
 
   return (
     <main
@@ -119,17 +146,22 @@ export default function DashboardPage() {
         >
           Build My Groundwork
         </p>
-        <button
-          onClick={handleSignOut}
-          className="text-xs font-semibold uppercase tracking-widest px-5 py-2 transition-opacity hover:opacity-60"
-          style={{
-            color: "#7A7268",
-            border: "1px solid #2A2A2A",
-            fontFamily: "var(--font-oswald)",
-          }}
+        <Link
+          href="/dashboard/settings"
+          className="flex items-center justify-center w-9 h-9 transition-opacity hover:opacity-60"
+          style={{ border: "1px solid #2A2A2A", color: "#7A7268" }}
+          aria-label="Settings"
         >
-          Sign Out
-        </button>
+          <svg viewBox="0 0 24 24" fill="none" width={18} height={18}>
+            <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
+            <path
+              d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+            />
+          </svg>
+        </Link>
       </header>
 
       <div className="max-w-5xl w-full mx-auto flex flex-col gap-16 pb-24">
@@ -154,6 +186,31 @@ export default function DashboardPage() {
               }
             </p>
           )}
+
+          {/* Streak */}
+          <div className="mt-6 flex items-center gap-4">
+            <span
+              className="text-5xl font-bold leading-none"
+              style={{ fontFamily: "var(--font-oswald)", color: "#C45B28" }}
+            >
+              {streak}
+            </span>
+            <div>
+              <p
+                className="text-sm font-bold uppercase tracking-widest"
+                style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+              >
+                Day Streak
+              </p>
+              <p className="text-xs mt-0.5" style={{ color: "#5A5248" }}>
+                {streak === 0
+                  ? "Log a workout or check-in to start your streak."
+                  : streak === 1
+                  ? "You started. Keep it going."
+                  : `${streak} consecutive days of activity.`}
+              </p>
+            </div>
+          </div>
         </section>
 
         {/* Pillar cards */}

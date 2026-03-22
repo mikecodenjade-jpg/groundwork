@@ -63,6 +63,23 @@ const TABS = [
     ),
   },
   {
+    label: "Fuel",
+    href: "/dashboard/nutrition",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" width={22} height={22}>
+        <path
+          d="M8 3C8 3 7 5 7 8C7 11 9 13 9 13H15C15 13 17 11 17 8C17 5 16 3 16 3"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path d="M9 13V20H15V13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        <line x1="7" y1="17" x2="17" y2="17" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
     label: "Lead",
     href: "/dashboard/lead",
     icon: (
