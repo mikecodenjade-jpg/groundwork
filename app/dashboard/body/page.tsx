@@ -191,20 +191,44 @@ export default function BodyPage() {
           </p>
         </div>
 
-        {/* Workout History link */}
-        <Link
-          href="/dashboard/body/history"
-          className="flex items-center justify-between px-6 py-4 transition-opacity hover:opacity-80"
-          style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
-        >
-          <span
-            className="text-sm font-bold uppercase tracking-wide"
-            style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
+        {/* Quick links */}
+        <div className="flex flex-col gap-2">
+          <Link
+            href="/dashboard/body/programs"
+            className="flex items-center justify-between px-6 py-4 transition-opacity hover:opacity-80"
+            style={{ backgroundColor: "#161616", border: "1px solid #C45B28", borderRadius: "12px" }}
           >
-            Workout History
-          </span>
-          <span style={{ color: "#C45B28" }}>›</span>
-        </Link>
+            <div className="flex flex-col gap-0.5">
+              <span
+                className="text-sm font-bold uppercase tracking-wide"
+                style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
+              >
+                Structured Programs
+              </span>
+              <span
+                className="text-xs"
+                style={{ fontFamily: "var(--font-inter)", color: "#9A9A9A" }}
+              >
+                16-Week Foundation · 8-Week Kickstart · Military Functional
+              </span>
+            </div>
+            <span style={{ color: "#C45B28" }}>›</span>
+          </Link>
+
+          <Link
+            href="/dashboard/body/history"
+            className="flex items-center justify-between px-6 py-4 transition-opacity hover:opacity-80"
+            style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
+          >
+            <span
+              className="text-sm font-bold uppercase tracking-wide"
+              style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
+            >
+              Workout History
+            </span>
+            <span style={{ color: "#C45B28" }}>›</span>
+          </Link>
+        </div>
 
         {/* Category grid */}
         {loading ? (
