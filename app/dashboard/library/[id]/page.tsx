@@ -4,24 +4,120 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
-import { EXERCISES, type Exercise } from "@/lib/exercises";
+import { DIFFICULTY_COLORS, type Exercise } from "@/app/dashboard/library/page";
 
-const REMOTE_URL =
-  "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json";
+// ── Types ─────────────────────────────────────────────────────────────────────
 
-const IMAGE_BASE =
-  "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises";
-
-const LEVEL_COLORS: Record<string, string> = {
-  beginner: "#4CAF50",
-  intermediate: "#FF9800",
-  expert: "#F44336",
+type RawExercise = {
+  id?: string; _id?: string;
+  name?: string; title?: string;
+  muscleGroup?: string; primaryMuscleGroup?: string;
+  primaryMuscles?: string | string[];
+  secondaryMuscles?: string | string[];
+  equipment?: string;
+  difficulty?: string; level?: string;
+  thumbnailUrl?: string; thumbnail?: string; imageUrl?: string;
+  videoUrl?: string; video?: string; videoUri?: string;
+  instructions?: string[] | string;
+  steps?: string[] | string;
+  category?: string; type?: string;
 };
+
+function toStringArray(v: string | string[] | undefined): string[] {
+  if (!v) return [];
+  if (Array.isArray(v)) return v.filter(Boolean);
+  return v.split(/[,;]/).map((s) => s.trim()).filter(Boolean);
+}
+
+function normalise(r: RawExercise): Exercise {
+  const primaryMuscle =
+    r.muscleGroup ?? r.primaryMuscleGroup ?? toStringArray(r.primaryMuscles)[0] ?? "";
+  return {
+    id: r.id ?? r._id ?? "",
+    name: r.name ?? r.title ?? "Unknown",
+    primaryMuscle,
+    secondaryMuscles: toStringArray(r.secondaryMuscles),
+    equipment: r.equipment ?? "",
+    difficulty: r.difficulty ?? r.level ?? "",
+    thumbnailUrl: r.thumbnailUrl ?? r.thumbnail ?? r.imageUrl ?? null,
+    videoUrl: r.videoUrl ?? r.video ?? r.videoUri ?? null,
+    instructions: toStringArray(r.instructions ?? r.steps),
+    category: r.category ?? r.type ?? "",
+  };
+}
 
 function cap(s: string) {
   if (!s) return "N/A";
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
+
+// ── Video Player ──────────────────────────────────────────────────────────────
+// Handles direct MP4/WebM URLs and YouTube/Vimeo embeds.
+
+function VideoPlayer({ url, title }: { url: string; title: string }) {
+  const isYouTube = /youtube\.com|youtu\.be/.test(url);
+  const isVimeo = /vimeo\.com/.test(url);
+
+  if (isYouTube) {
+    const videoId = url.match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{11})/)?.[1] ?? "";
+    const embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0&playsinline=1`;
+    return (
+      <div
+        className="w-full overflow-hidden rounded-xl"
+        style={{ aspectRatio: "16/9", backgroundColor: "#000" }}
+      >
+        <iframe
+          src={embedUrl}
+          title={title}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          className="w-full h-full"
+        />
+      </div>
+    );
+  }
+
+  if (isVimeo) {
+    const videoId = url.match(/vimeo\.com\/(\d+)/)?.[1] ?? "";
+    const embedUrl = `https://player.vimeo.com/video/${videoId}?playsinline=1`;
+    return (
+      <div
+        className="w-full overflow-hidden rounded-xl"
+        style={{ aspectRatio: "16/9", backgroundColor: "#000" }}
+      >
+        <iframe
+          src={embedUrl}
+          title={title}
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowFullScreen
+          className="w-full h-full"
+        />
+      </div>
+    );
+  }
+
+  // Direct video file (mp4, webm, m3u8, etc.)
+  return (
+    <div
+      className="w-full overflow-hidden rounded-xl"
+      style={{ backgroundColor: "#000" }}
+    >
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+      <video
+        src={url}
+        controls
+        playsInline
+        className="w-full"
+        style={{ maxHeight: "320px", display: "block" }}
+        poster={undefined}
+      >
+        Your browser does not support video playback.
+      </video>
+    </div>
+  );
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function ExerciseDetailPage() {
   const params = useParams<{ id: string }>();
@@ -29,47 +125,37 @@ export default function ExerciseDetailPage() {
 
   const [exercise, setExercise] = useState<Exercise | null>(null);
   const [loading, setLoading] = useState(true);
-  const [imgErrors, setImgErrors] = useState<Set<string>>(new Set());
+  const [error, setError] = useState<string | null>(null);
   const [added, setAdded] = useState(false);
 
   useEffect(() => {
     if (!id) return;
+    setLoading(true);
+    setError(null);
 
-    // Check local data immediately
-    const local = EXERCISES.find((e) => e.id === id);
-    if (local) {
-      setExercise(local);
-      setLoading(false);
-      // Still try remote in background to get images
-      fetch(REMOTE_URL)
-        .then((r) => (r.ok ? r.json() : null))
-        .then((data: Exercise[] | null) => {
-          if (!data) return;
-          const remote = data.find((e) => e.id === id);
-          if (remote) setExercise(remote);
-        })
-        .catch(() => {});
-      return;
-    }
-
-    // Not in local db — try remote (e.g. user arrived via deep link from full remote db)
-    fetch(REMOTE_URL)
+    fetch(`/api/exercises/${encodeURIComponent(id)}`)
       .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        if (!r.ok) throw new Error(`API error ${r.status}`);
         return r.json();
       })
-      .then((data: Exercise[]) => {
-        const found = data.find((e) => e.id === id);
-        if (!found) throw new Error("Exercise not found");
-        setExercise(found);
+      .then((json: RawExercise | { data?: RawExercise; exercise?: RawExercise }) => {
+        // Handle wrapped responses: { data: {...} } or { exercise: {...} } or the object itself
+        const raw: RawExercise =
+          ("data" in json && json.data && typeof json.data === "object" && !Array.isArray(json.data))
+            ? json.data
+            : ("exercise" in json && json.exercise && typeof json.exercise === "object")
+            ? json.exercise
+            : (json as RawExercise);
+        setExercise(normalise(raw));
         setLoading(false);
       })
-      .catch(() => {
+      .catch((e: Error) => {
+        setError(e.message);
         setLoading(false);
       });
   }, [id]);
 
-  const levelColor = exercise ? (LEVEL_COLORS[exercise.level] ?? "#9A9A9A") : "#9A9A9A";
+  const diffColor = exercise ? (DIFFICULTY_COLORS[exercise.difficulty] ?? "#9A9A9A") : "#9A9A9A";
 
   return (
     <main
@@ -99,37 +185,58 @@ export default function ExerciseDetailPage() {
           </p>
         </header>
 
-        {/* ── Loading Skeleton ───────────────────────────────────────── */}
+        {/* ── Skeleton ───────────────────────────────────────────────── */}
         {loading && (
           <div className="flex flex-col gap-4">
-            <div className="h-10 w-3/4 animate-pulse rounded-lg" style={{ backgroundColor: "#161616" }} />
-            <div className="h-48 animate-pulse rounded-xl" style={{ backgroundColor: "#161616" }} />
+            <div className="h-9 w-3/4 animate-pulse rounded-lg" style={{ backgroundColor: "#161616" }} />
+            <div className="w-full animate-pulse rounded-xl" style={{ aspectRatio: "16/9", backgroundColor: "#161616" }} />
             <div className="grid grid-cols-2 gap-3">
-              <div className="h-16 animate-pulse rounded-xl" style={{ backgroundColor: "#161616" }} />
-              <div className="h-16 animate-pulse rounded-xl" style={{ backgroundColor: "#161616" }} />
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-16 animate-pulse rounded-xl" style={{ backgroundColor: "#161616" }} />
+              ))}
             </div>
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-4 animate-pulse rounded" style={{ backgroundColor: "#161616", width: `${85 - i * 8}%` }} />
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-4 animate-pulse rounded" style={{ backgroundColor: "#161616", width: `${90 - i * 10}%` }} />
             ))}
           </div>
         )}
 
-        {/* ── Not found ─────────────────────────────────────────────── */}
-        {!loading && !exercise && (
+        {/* ── Error ──────────────────────────────────────────────────── */}
+        {!loading && error && (
           <div className="text-center py-16">
-            <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-              Exercise not found.{" "}
-              <Link href="/dashboard/library" style={{ color: "#C45B28" }}>
-                Back to library
-              </Link>
+            <p className="text-sm mb-3" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+              {error}
             </p>
+            <Link
+              href="/dashboard/library"
+              className="text-sm font-semibold"
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+            >
+              ← Back to library
+            </Link>
           </div>
         )}
 
-        {/* ── Exercise Detail ────────────────────────────────────────── */}
-        {exercise && !loading && (
+        {/* ── Not found ──────────────────────────────────────────────── */}
+        {!loading && !error && !exercise && (
+          <div className="text-center py-16">
+            <p className="text-sm mb-3" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+              Exercise not found.
+            </p>
+            <Link
+              href="/dashboard/library"
+              className="text-sm font-semibold"
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+            >
+              ← Back to library
+            </Link>
+          </div>
+        )}
+
+        {/* ── Exercise detail ────────────────────────────────────────── */}
+        {!loading && exercise && (
           <>
-            {/* Title + badges */}
+            {/* Title + meta badges */}
             <div className="flex flex-col gap-3">
               <h1
                 className="text-3xl font-bold uppercase leading-tight"
@@ -138,133 +245,128 @@ export default function ExerciseDetailPage() {
                 {exercise.name}
               </h1>
               <div className="flex items-center gap-2 flex-wrap">
-                <span
-                  className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
-                  style={{
-                    backgroundColor: `${levelColor}18`,
-                    color: levelColor,
-                    border: `1px solid ${levelColor}40`,
-                    fontFamily: "var(--font-inter)",
-                  }}
-                >
-                  {exercise.level}
-                </span>
-                <span
-                  className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
-                  style={{
-                    backgroundColor: "rgba(196,91,40,0.12)",
-                    color: "#C45B28",
-                    border: "1px solid rgba(196,91,40,0.3)",
-                    fontFamily: "var(--font-inter)",
-                  }}
-                >
-                  {exercise.category}
-                </span>
+                {exercise.difficulty && (
+                  <span
+                    className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
+                    style={{
+                      backgroundColor: `${diffColor}18`,
+                      color: diffColor,
+                      border: `1px solid ${diffColor}40`,
+                      fontFamily: "var(--font-inter)",
+                    }}
+                  >
+                    {exercise.difficulty}
+                  </span>
+                )}
+                {exercise.category && (
+                  <span
+                    className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
+                    style={{
+                      backgroundColor: "rgba(196,91,40,0.12)",
+                      color: "#C45B28",
+                      border: "1px solid rgba(196,91,40,0.3)",
+                      fontFamily: "var(--font-inter)",
+                    }}
+                  >
+                    {exercise.category}
+                  </span>
+                )}
               </div>
             </div>
 
-            {/* Images */}
-            {exercise.images.length > 0 && (
-              <div className="flex gap-3 overflow-x-auto -mx-4 px-4 pb-1">
-                {exercise.images.map((img, idx) => {
-                  if (imgErrors.has(img)) return null;
-                  const src = `${IMAGE_BASE}/${exercise.id}/images/${img}`;
-                  return (
-                    <div
-                      key={idx}
-                      className="flex-shrink-0 overflow-hidden rounded-xl"
-                      style={{
-                        width: "220px",
-                        height: "160px",
-                        backgroundColor: "#161616",
-                        border: "1px solid #252525",
-                      }}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={src}
-                        alt={`${exercise.name} step ${idx + 1}`}
-                        className="w-full h-full object-cover"
-                        onError={() =>
-                          setImgErrors((prev) => new Set([...prev, img]))
-                        }
-                      />
-                    </div>
-                  );
-                })}
+            {/* ── Video Player ─────────────────────────────────────── */}
+            {exercise.videoUrl && (
+              <VideoPlayer url={exercise.videoUrl} title={exercise.name} />
+            )}
+
+            {/* Thumbnail fallback if no video but has image */}
+            {!exercise.videoUrl && exercise.thumbnailUrl && (
+              <div
+                className="w-full overflow-hidden rounded-xl"
+                style={{ aspectRatio: "16/9", backgroundColor: "#111" }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={exercise.thumbnailUrl}
+                  alt={exercise.name}
+                  className="w-full h-full object-cover"
+                />
               </div>
             )}
 
-            {/* Detail grid */}
+            {/* ── Detail grid ──────────────────────────────────────── */}
             <div className="grid grid-cols-2 gap-3">
-              <DetailCell label="Equipment" value={cap(exercise.equipment)} />
-              {exercise.force && (
-                <DetailCell label="Force" value={cap(exercise.force)} />
+              {exercise.equipment && (
+                <DetailCell label="Equipment" value={cap(exercise.equipment)} />
               )}
-              {exercise.mechanic && (
-                <DetailCell label="Mechanic" value={cap(exercise.mechanic)} />
+              {exercise.difficulty && (
+                <DetailCell label="Difficulty" value={cap(exercise.difficulty)} />
+              )}
+              {exercise.category && (
+                <DetailCell label="Category" value={cap(exercise.category)} />
               )}
             </div>
 
-            {/* Muscles */}
-            <div
-              className="p-4 rounded-xl flex flex-col gap-4"
-              style={{ backgroundColor: "#161616", border: "1px solid #252525" }}
-            >
-              <div>
-                <p
-                  className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-2.5"
-                  style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
-                >
-                  Primary Muscles
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {exercise.primaryMuscles.map((m) => (
-                    <span
-                      key={m}
-                      className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                      style={{
-                        backgroundColor: "rgba(196,91,40,0.12)",
-                        color: "#C45B28",
-                        border: "1px solid rgba(196,91,40,0.25)",
-                        fontFamily: "var(--font-inter)",
-                      }}
+            {/* ── Muscles ──────────────────────────────────────────── */}
+            {(exercise.primaryMuscle || exercise.secondaryMuscles.length > 0) && (
+              <div
+                className="p-4 rounded-xl flex flex-col gap-4"
+                style={{ backgroundColor: "#161616", border: "1px solid #252525" }}
+              >
+                {exercise.primaryMuscle && (
+                  <div>
+                    <p
+                      className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-2.5"
+                      style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
                     >
-                      {cap(m)}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {exercise.secondaryMuscles.length > 0 && (
-                <div>
-                  <p
-                    className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-2.5"
-                    style={{ color: "#555", fontFamily: "var(--font-inter)" }}
-                  >
-                    Secondary Muscles
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {exercise.secondaryMuscles.map((m) => (
+                      Primary Muscles
+                    </p>
+                    <div className="flex flex-wrap gap-2">
                       <span
-                        key={m}
                         className="text-xs font-semibold px-2.5 py-1 rounded-full"
                         style={{
-                          backgroundColor: "#1C1C1C",
-                          color: "#9A9A9A",
-                          border: "1px solid #2A2A2A",
+                          backgroundColor: "rgba(196,91,40,0.12)",
+                          color: "#C45B28",
+                          border: "1px solid rgba(196,91,40,0.25)",
                           fontFamily: "var(--font-inter)",
                         }}
                       >
-                        {cap(m)}
+                        {cap(exercise.primaryMuscle)}
                       </span>
-                    ))}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
 
-            {/* Instructions */}
+                {exercise.secondaryMuscles.length > 0 && (
+                  <div>
+                    <p
+                      className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-2.5"
+                      style={{ color: "#555", fontFamily: "var(--font-inter)" }}
+                    >
+                      Secondary Muscles
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {exercise.secondaryMuscles.map((m) => (
+                        <span
+                          key={m}
+                          className="text-xs font-semibold px-2.5 py-1 rounded-full"
+                          style={{
+                            backgroundColor: "#1C1C1C",
+                            color: "#9A9A9A",
+                            border: "1px solid #2A2A2A",
+                            fontFamily: "var(--font-inter)",
+                          }}
+                        >
+                          {cap(m)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Instructions ─────────────────────────────────────── */}
             {exercise.instructions.length > 0 && (
               <div className="flex flex-col gap-4">
                 <p
@@ -299,7 +401,7 @@ export default function ExerciseDetailPage() {
               </div>
             )}
 
-            {/* Add to Workout */}
+            {/* ── Add to Workout ────────────────────────────────────── */}
             <button
               onClick={() => setAdded(true)}
               className="w-full py-4 font-bold uppercase tracking-wider text-sm transition-all duration-200"
