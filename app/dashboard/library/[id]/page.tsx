@@ -4,31 +4,32 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
-import { type Exercise } from "@/app/dashboard/library/page";
 
-// ── Raw response type ─────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
-type RawExercise = {
-  id?: string;
-  name?: string;
-  bodyPart?: string;
-  target?: string;
-  secondaryMuscles?: string[];
-  equipment?: string;
-  gifUrl?: string;
-  instructions?: string[];
+type Exercise = {
+  exerciseId: string;
+  name: string;
+  bodyPart: string;
+  target: string;
+  secondaryMuscles: string[];
+  equipment: string;
+  gifUrl: string | null;
+  instructions: string[];
 };
 
-function normalise(r: RawExercise): Exercise {
+const API = "https://oss.exercisedb.dev/api/v1";
+
+function normalise(r: Record<string, unknown>): Exercise {
   return {
-    id: r.id ?? "",
-    name: r.name ?? "Unknown",
-    bodyPart: r.bodyPart ?? "",
-    target: r.target ?? "",
-    secondaryMuscles: Array.isArray(r.secondaryMuscles) ? r.secondaryMuscles : [],
-    equipment: r.equipment ?? "",
-    gifUrl: r.gifUrl ?? null,
-    instructions: Array.isArray(r.instructions) ? r.instructions : [],
+    exerciseId: String(r.exerciseId ?? r.id ?? ""),
+    name: String(r.name ?? "Unknown"),
+    bodyPart: String(r.bodyPart ?? ""),
+    target: String(r.target ?? ""),
+    secondaryMuscles: Array.isArray(r.secondaryMuscles) ? r.secondaryMuscles.map(String) : [],
+    equipment: String(r.equipment ?? ""),
+    gifUrl: r.gifUrl ? String(r.gifUrl) : null,
+    instructions: Array.isArray(r.instructions) ? r.instructions.map(String) : [],
   };
 }
 
@@ -53,13 +54,14 @@ export default function ExerciseDetailPage() {
     setLoading(true);
     setError(null);
 
-    fetch(`/api/exercises/${encodeURIComponent(id)}`)
+    fetch(`${API}/exercises/${encodeURIComponent(id)}`)
       .then((r) => {
         if (!r.ok) throw new Error(`API error ${r.status}`);
         return r.json();
       })
-      .then((json: RawExercise) => {
-        setExercise(normalise(json));
+      .then((json) => {
+        const data = json.data ?? json;
+        setExercise(normalise(data as Record<string, unknown>));
         setLoading(false);
       })
       .catch((e: Error) => {
@@ -100,7 +102,7 @@ export default function ExerciseDetailPage() {
         {loading && (
           <div className="flex flex-col gap-4">
             <div className="h-9 w-3/4 animate-pulse rounded-lg" style={{ backgroundColor: "#161616" }} />
-            <div className="w-full animate-pulse rounded-xl" style={{ aspectRatio: "1/1", backgroundColor: "#161616" }} />
+            <div className="w-full animate-pulse rounded-xl" style={{ aspectRatio: "4/3", backgroundColor: "#161616" }} />
             <div className="grid grid-cols-2 gap-3">
               {[...Array(3)].map((_, i) => (
                 <div key={i} className="h-16 animate-pulse rounded-xl" style={{ backgroundColor: "#161616" }} />
@@ -123,7 +125,7 @@ export default function ExerciseDetailPage() {
               className="text-sm font-semibold"
               style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
             >
-              ← Back to library
+              &larr; Back to library
             </Link>
           </div>
         )}
@@ -139,7 +141,7 @@ export default function ExerciseDetailPage() {
               className="text-sm font-semibold"
               style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
             >
-              ← Back to library
+              &larr; Back to library
             </Link>
           </div>
         )}

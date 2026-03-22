@@ -1,9 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useState, useEffect, useRef, useCallback } from "react";
 import BottomNav from "@/components/BottomNav";
 import { supabase } from "@/lib/supabase";
+
+// Mapbox GL requires the DOM — no SSR
+const RunMap = dynamic(() => import("@/components/RunMap"), { ssr: false });
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -15,6 +19,7 @@ type RunLog = {
   duration_seconds: number;
   avg_pace: string;
   created_at: string;
+  route_data: Coord[] | null;
 };
 
 type RunSummary = {
@@ -22,6 +27,7 @@ type RunSummary = {
   durationSeconds: number;
   avgPace: string;
   date: string;
+  route: Coord[];
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -74,6 +80,7 @@ export default function RunPage() {
   const [summary, setSummary] = useState<RunSummary | null>(null);
   const [history, setHistory] = useState<RunLog[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [expandedRun, setExpandedRun] = useState<string | null>(null);
 
   const watchIdRef = useRef<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -91,7 +98,7 @@ export default function RunPage() {
 
     const { data } = await supabase
       .from("run_logs")
-      .select("id, distance_miles, duration_seconds, avg_pace, created_at")
+      .select("id, distance_miles, duration_seconds, avg_pace, created_at, route_data")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(20);
@@ -175,6 +182,7 @@ export default function RunPage() {
       durationSeconds: finalSecs,
       avgPace: pace,
       date: new Date().toISOString(),
+      route: [...coordsRef.current],
     });
     setPhase("done");
     saveRun(finalDist, finalSecs, pace, coordsRef.current);
@@ -262,6 +270,19 @@ export default function RunPage() {
           </div>
         )}
 
+        {/* ── Test map (always visible in idle) ─────────────────────────── */}
+        {phase === "idle" && (
+          <section className="flex flex-col gap-2">
+            <p
+              className="text-xs font-semibold tracking-[0.25em] uppercase"
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+            >
+              Map Preview — Dallas, TX
+            </p>
+            <RunMap height="400px" interactive />
+          </section>
+        )}
+
         {/* ── Tracker card ─────────────────────────────────────────────────── */}
         <section
           className="flex flex-col items-center gap-8 px-8 py-10"
@@ -339,6 +360,22 @@ export default function RunPage() {
                 Run Complete
               </p>
 
+              {/* Route map with summary overlay */}
+              {summary.route.length >= 2 && (
+                <div className="w-full">
+                  <RunMap
+                    coords={summary.route}
+                    height="300px"
+                    interactive
+                    summary={{
+                      distance: `${summary.distanceMiles.toFixed(2)} mi`,
+                      time: formatTime(summary.durationSeconds),
+                      pace: `${summary.avgPace} /mi`,
+                    }}
+                  />
+                </div>
+              )}
+
               {/* Summary grid */}
               <div className="grid grid-cols-2 gap-4 w-full">
                 <SummaryTile label="Distance" value={`${summary.distanceMiles.toFixed(2)} mi`} />
@@ -402,34 +439,87 @@ export default function RunPage() {
             </p>
           ) : (
             <div className="flex flex-col gap-3">
-              {history.map((run) => (
-                <div
-                  key={run.id}
-                  className="px-5 py-4 flex items-center justify-between"
-                  style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
-                >
-                  <div className="flex flex-col gap-0.5">
-                    <span
-                      className="text-base font-bold"
-                      style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
-                    >
-                      {run.distance_miles.toFixed(2)} mi
-                    </span>
-                    <span
-                      className="text-xs"
-                      style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
-                    >
-                      {formatTime(run.duration_seconds)} · {run.avg_pace}/mi
-                    </span>
-                  </div>
-                  <span
-                    className="text-xs"
-                    style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+              {history.map((run) => {
+                const isExpanded = expandedRun === run.id;
+                const hasRoute = Array.isArray(run.route_data) && run.route_data.length >= 2;
+
+                return (
+                  <div
+                    key={run.id}
+                    className="flex flex-col overflow-hidden transition-all"
+                    style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
                   >
-                    {formatDate(run.created_at)}
-                  </span>
-                </div>
-              ))}
+                    {/* Clickable header */}
+                    <button
+                      onClick={() => hasRoute && setExpandedRun(isExpanded ? null : run.id)}
+                      className="px-5 py-4 flex items-center justify-between w-full text-left"
+                      style={{ cursor: hasRoute ? "pointer" : "default" }}
+                    >
+                      <div className="flex flex-col gap-0.5">
+                        <span
+                          className="text-base font-bold"
+                          style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
+                        >
+                          {run.distance_miles.toFixed(2)} mi
+                        </span>
+                        <span
+                          className="text-xs"
+                          style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                        >
+                          {formatTime(run.duration_seconds)} · {run.avg_pace}/mi
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="text-xs"
+                          style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                        >
+                          {formatDate(run.created_at)}
+                        </span>
+                        {hasRoute && (
+                          <svg
+                            viewBox="0 0 20 20" fill="none" width={14} height={14}
+                            className="transition-transform"
+                            style={{
+                              color: "#555",
+                              transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                            }}
+                          >
+                            <path d="M5 8L10 13L15 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
+                      </div>
+                    </button>
+
+                    {/* Mini map (collapsed) */}
+                    {hasRoute && !isExpanded && (
+                      <div className="px-3 pb-3">
+                        <RunMap
+                          coords={run.route_data!}
+                          height="200px"
+                          interactive={false}
+                        />
+                      </div>
+                    )}
+
+                    {/* Full map (expanded) */}
+                    {hasRoute && isExpanded && (
+                      <div className="px-3 pb-3">
+                        <RunMap
+                          coords={run.route_data!}
+                          height="350px"
+                          interactive
+                          summary={{
+                            distance: `${run.distance_miles.toFixed(2)} mi`,
+                            time: formatTime(run.duration_seconds),
+                            pace: `${run.avg_pace} /mi`,
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </section>

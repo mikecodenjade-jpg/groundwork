@@ -6,47 +6,22 @@ import BottomNav from "@/components/BottomNav";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-// ExerciseDB (exercises2.p.rapidapi.com) exercise shape
 export type Exercise = {
-  id: string;
+  exerciseId: string;
   name: string;
-  bodyPart: string;           // e.g. "chest", "back", "upper arms"
-  target: string;             // target muscle, e.g. "pectorals"
+  bodyPart: string;
+  target: string;
   secondaryMuscles: string[];
-  equipment: string;          // e.g. "barbell", "body weight"
-  gifUrl: string | null;      // animated GIF demonstration
+  equipment: string;
+  gifUrl: string | null;
   instructions: string[];
 };
 
-type RawExercise = {
-  id?: string;
-  name?: string;
-  bodyPart?: string;
-  target?: string;
-  secondaryMuscles?: string[];
-  equipment?: string;
-  gifUrl?: string;
-  instructions?: string[];
-};
-
-function normaliseExercise(r: RawExercise): Exercise {
-  return {
-    id: r.id ?? "",
-    name: r.name ?? "Unknown",
-    bodyPart: r.bodyPart ?? "",
-    target: r.target ?? "",
-    secondaryMuscles: Array.isArray(r.secondaryMuscles) ? r.secondaryMuscles : [],
-    equipment: r.equipment ?? "",
-    gifUrl: r.gifUrl ?? null,
-    instructions: Array.isArray(r.instructions) ? r.instructions : [],
-  };
-}
-
 // ── Constants ─────────────────────────────────────────────────────────────────
 
+const API = "https://oss.exercisedb.dev/api/v1";
 const PAGE_SIZE = 20;
 
-// ExerciseDB's actual bodyPart values
 const BODY_PART_FILTERS: { label: string; value: string }[] = [
   { label: "All", value: "" },
   { label: "Back", value: "back" },
@@ -78,31 +53,48 @@ function cap(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-// ── API helper ────────────────────────────────────────────────────────────────
+// ── Normalise API response ────────────────────────────────────────────────────
 
-type FetchParams = {
-  search: string;
-  bodyPart: string;
-  equipment: string;
-  page: number;
-};
+function normalise(r: Record<string, unknown>): Exercise {
+  return {
+    exerciseId: String(r.exerciseId ?? r.id ?? ""),
+    name: String(r.name ?? "Unknown"),
+    bodyPart: String(r.bodyPart ?? ""),
+    target: String(r.target ?? ""),
+    secondaryMuscles: Array.isArray(r.secondaryMuscles) ? r.secondaryMuscles.map(String) : [],
+    equipment: String(r.equipment ?? ""),
+    gifUrl: r.gifUrl ? String(r.gifUrl) : null,
+    instructions: Array.isArray(r.instructions) ? r.instructions.map(String) : [],
+  };
+}
 
-async function fetchExercises(p: FetchParams): Promise<{ exercises: Exercise[]; hasMore: boolean }> {
-  const url = new URL("/api/exercises", window.location.origin);
-  if (p.search)    url.searchParams.set("search", p.search);
-  if (p.bodyPart)  url.searchParams.set("bodyPart", p.bodyPart);
-  if (p.equipment) url.searchParams.set("equipment", p.equipment);
-  url.searchParams.set("page", String(p.page));
+// ── Fetch helpers ─────────────────────────────────────────────────────────────
+
+async function fetchList(bodyPart: string, equipment: string, offset: number): Promise<Exercise[]> {
+  const url = new URL(`${API}/exercises`);
+  if (bodyPart) url.searchParams.set("bodyPart", bodyPart);
+  if (equipment) url.searchParams.set("equipment", equipment);
   url.searchParams.set("limit", String(PAGE_SIZE));
+  url.searchParams.set("offset", String(offset));
 
   const res = await fetch(url.toString());
   if (!res.ok) throw new Error(`API error ${res.status}`);
   const json = await res.json();
+  const raw: Record<string, unknown>[] = Array.isArray(json.data) ? json.data : Array.isArray(json) ? json : [];
+  return raw.map(normalise);
+}
 
-  const raw: RawExercise[] = Array.isArray(json.exercises) ? json.exercises : [];
-  const hasMore: boolean = json.hasMore ?? raw.length === PAGE_SIZE;
+async function fetchSearch(query: string, offset: number): Promise<Exercise[]> {
+  const url = new URL(`${API}/exercises/search`);
+  url.searchParams.set("query", query);
+  url.searchParams.set("limit", String(PAGE_SIZE));
+  url.searchParams.set("offset", String(offset));
 
-  return { exercises: raw.map(normaliseExercise), hasMore };
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error(`API error ${res.status}`);
+  const json = await res.json();
+  const raw: Record<string, unknown>[] = Array.isArray(json.data) ? json.data : Array.isArray(json) ? json : [];
+  return raw.map(normalise);
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -112,8 +104,8 @@ export default function LibraryPage() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
-  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [offset, setOffset] = useState(0);
 
   const [search, setSearch] = useState("");
   const [bodyPartFilter, setBodyPartFilter] = useState("");
@@ -129,34 +121,39 @@ export default function LibraryPage() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [search]);
 
-  const load = useCallback(async (params: FetchParams, append: boolean) => {
+  // Fetch exercises
+  const load = useCallback(async (currentOffset: number, append: boolean) => {
     if (!append) setLoading(true);
     else setLoadingMore(true);
     setError(null);
 
     try {
-      const { exercises: data, hasMore: more } = await fetchExercises(params);
+      const data = debouncedSearch
+        ? await fetchSearch(debouncedSearch, currentOffset)
+        : await fetchList(bodyPartFilter, equipmentFilter, currentOffset);
+
       setExercises((prev) => append ? [...prev, ...data] : data);
-      setHasMore(more);
+      setHasMore(data.length === PAGE_SIZE);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load exercises");
     } finally {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, []);
+  }, [debouncedSearch, bodyPartFilter, equipmentFilter]);
 
-  // Reset + reload when filters change
+  // Reset when filters/search change
   useEffect(() => {
-    setPage(1);
-    load({ search: debouncedSearch, bodyPart: bodyPartFilter, equipment: equipmentFilter, page: 1 }, false);
+    setOffset(0);
+    load(0, false);
   }, [debouncedSearch, bodyPartFilter, equipmentFilter, load]);
 
   // Load more
-  useEffect(() => {
-    if (page === 1) return;
-    load({ search: debouncedSearch, bodyPart: bodyPartFilter, equipment: equipmentFilter, page }, true);
-  }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
+  const handleLoadMore = () => {
+    const next = offset + PAGE_SIZE;
+    setOffset(next);
+    load(next, true);
+  };
 
   return (
     <main
@@ -287,7 +284,7 @@ export default function LibraryPage() {
               {error}
             </p>
             <button
-              onClick={() => load({ search: debouncedSearch, bodyPart: bodyPartFilter, equipment: equipmentFilter, page: 1 }, false)}
+              onClick={() => { setOffset(0); load(0, false); }}
               className="text-xs font-semibold uppercase tracking-wider flex-shrink-0 transition-opacity hover:opacity-70"
               style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
             >
@@ -309,15 +306,15 @@ export default function LibraryPage() {
         {!loading && exercises.length > 0 && (
           <div className="grid grid-cols-2 gap-3">
             {exercises.map((ex) => (
-              <ExerciseCard key={ex.id} exercise={ex} />
+              <ExerciseCard key={ex.exerciseId} exercise={ex} />
             ))}
           </div>
         )}
 
         {/* ── Load More ──────────────────────────────────────────────── */}
-        {!loading && hasMore && (
+        {!loading && hasMore && exercises.length > 0 && (
           <button
-            onClick={() => setPage((p) => p + 1)}
+            onClick={handleLoadMore}
             disabled={loadingMore}
             className="w-full py-3 text-sm font-semibold uppercase tracking-wider transition-opacity hover:opacity-70 disabled:opacity-40"
             style={{
@@ -386,7 +383,7 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
 
   return (
     <Link
-      href={`/dashboard/library/${encodeURIComponent(exercise.id)}`}
+      href={`/dashboard/library/${encodeURIComponent(exercise.exerciseId)}`}
       className="flex flex-col transition-all duration-150 overflow-hidden"
       style={{
         backgroundColor: "#161616",
@@ -394,7 +391,7 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
         borderRadius: "12px",
       }}
     >
-      {/* GIF / Thumbnail */}
+      {/* GIF Thumbnail */}
       <div
         className="w-full flex-shrink-0 relative overflow-hidden"
         style={{ aspectRatio: "1/1", backgroundColor: "#111" }}
@@ -405,6 +402,7 @@ function ExerciseCard({ exercise }: { exercise: Exercise }) {
             src={exercise.gifUrl}
             alt={exercise.name}
             className="w-full h-full object-cover"
+            loading="lazy"
             onError={() => setImgError(true)}
           />
         ) : (
