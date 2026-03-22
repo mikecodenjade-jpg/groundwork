@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import BottomNav from "@/components/BottomNav";
 
 const MOODS = [
   { label: "Low", value: 1, color: "#5A3A3A" },
@@ -149,7 +150,7 @@ export default function MindPage() {
         </section>
 
         {/* Professional Support */}
-        <section className="pb-12">
+        <section className="pb-28">
           <p
             className="text-xs font-semibold tracking-[0.25em] uppercase mb-4"
             style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
@@ -211,6 +212,7 @@ export default function MindPage() {
         </section>
 
       </div>
+      <BottomNav />
     </main>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import BottomNav from "@/components/BottomNav";
 
 const TIME_OPTIONS = [
   { label: "15 min", value: 15 },
@@ -121,7 +122,7 @@ export default function DashboardPage() {
         </button>
       </header>
 
-      <div className="max-w-5xl w-full mx-auto flex flex-col gap-16">
+      <div className="max-w-5xl w-full mx-auto flex flex-col gap-16 pb-24">
 
         {/* Greeting */}
         <section>
@@ -185,6 +186,7 @@ export default function DashboardPage() {
         </section>
 
       </div>
+      <BottomNav />
     </main>
   );
 }
