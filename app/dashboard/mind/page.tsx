@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import BottomNav from "@/components/BottomNav";
+import { supabase } from "@/lib/supabase";
 
 const MOODS = [
   { label: "Low", value: 1, color: "#5A3A3A" },
@@ -41,6 +42,23 @@ const TOOLS = [
 
 export default function MindPage() {
   const [selectedMood, setSelectedMood] = useState<number | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  async function handleMoodSelect(value: number, label: string) {
+    setSelectedMood(value);
+    setSaved(false);
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    await supabase.from("mood_checkins").insert({
+      user_id: user.id,
+      mood: label,
+    });
+
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  }
 
   return (
     <main
@@ -107,7 +125,7 @@ export default function MindPage() {
                 return (
                   <button
                     key={value}
-                    onClick={() => setSelectedMood(value)}
+                    onClick={() => handleMoodSelect(value, label)}
                     className="flex-1 min-w-[72px] py-3 text-sm font-bold uppercase tracking-widest transition-all duration-150 active:scale-95"
                     style={{
                       fontFamily: "var(--font-oswald)",
@@ -123,13 +141,23 @@ export default function MindPage() {
             </div>
 
             {selectedMood && (
-              <p className="text-sm" style={{ color: "#7A7268" }}>
-                {selectedMood <= 2
-                  ? "Noted. That's real — and it matters. Try the Stress Reset below."
-                  : selectedMood === 3
-                  ? "Solid. Let's sharpen that edge. Box Breathing is a good place to start."
-                  : "That's what we're building toward. Keep it going."}
-              </p>
+              <div className="flex items-center gap-3">
+                <p className="text-sm" style={{ color: "#7A7268" }}>
+                  {selectedMood <= 2
+                    ? "Noted. That's real — and it matters. Try the Stress Reset below."
+                    : selectedMood === 3
+                    ? "Solid. Let's sharpen that edge. Box Breathing is a good place to start."
+                    : "That's what we're building toward. Keep it going."}
+                </p>
+                {saved && (
+                  <span
+                    className="text-xs font-semibold uppercase tracking-widest shrink-0"
+                    style={{ color: "#4CAF50", fontFamily: "var(--font-oswald)" }}
+                  >
+                    ✓ Saved
+                  </span>
+                )}
+              </div>
             )}
           </div>
         </section>
