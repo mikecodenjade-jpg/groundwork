@@ -115,6 +115,63 @@ export default function HeartPage() {
           </div>
         </header>
 
+        {/* Tonight's Play */}
+        <Link
+          href="/dashboard/heart/play"
+          className="flex items-center gap-5 px-7 py-6 transition-all duration-150 group"
+          style={{
+            backgroundColor: "#161616",
+            border: "1px solid #252525",
+            borderRadius: "12px",
+          }}
+        >
+          {/* Icon */}
+          <div
+            className="flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-xl"
+            style={{ backgroundColor: "#1A0A00", border: "1px solid #2A1A00" }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" width={22} height={22}>
+              <path d="M12 3C7 3 3 7 3 12C3 17 7 21 12 21C17 21 21 17 21 12" stroke="#C45B28" strokeWidth="1.8" strokeLinecap="round" />
+              <path d="M17 3L21 7M21 3L17 7" stroke="#C45B28" strokeWidth="1.8" strokeLinecap="round" />
+              <circle cx="9" cy="12" r="1.5" fill="#C45B28" />
+              <circle cx="12" cy="12" r="1.5" fill="#C45B28" />
+              <circle cx="15" cy="12" r="1.5" fill="#C45B28" />
+            </svg>
+          </div>
+
+          {/* Text */}
+          <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+            <p
+              className="text-[10px] font-semibold uppercase tracking-[0.25em]"
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+            >
+              Tonight&apos;s Play
+            </p>
+            <p
+              className="text-base font-bold leading-tight"
+              style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
+            >
+              Too tired to think?
+            </p>
+            <p
+              className="text-sm"
+              style={{ color: "#666", fontFamily: "var(--font-inter)" }}
+            >
+              We got you. Pick an activity for your kids in 10 seconds.
+            </p>
+          </div>
+
+          {/* Arrow */}
+          <svg
+            viewBox="0 0 20 20" fill="none" width={16} height={16}
+            className="flex-shrink-0 transition-transform group-hover:translate-x-0.5"
+            style={{ color: "#555" }}
+          >
+            <path d="M7 4L13 10L7 16" stroke="currentColor" strokeWidth="2"
+              strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </Link>
+
         {/* Daily Journal — directed prompts */}
         <section
           style={{

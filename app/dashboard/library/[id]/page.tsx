@@ -4,117 +4,37 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
-import { DIFFICULTY_COLORS, type Exercise } from "@/app/dashboard/library/page";
+import { type Exercise } from "@/app/dashboard/library/page";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// ── Raw response type ─────────────────────────────────────────────────────────
 
 type RawExercise = {
-  id?: string; _id?: string;
-  name?: string; title?: string;
-  muscleGroup?: string; primaryMuscleGroup?: string;
-  primaryMuscles?: string | string[];
-  secondaryMuscles?: string | string[];
+  id?: string;
+  name?: string;
+  bodyPart?: string;
+  target?: string;
+  secondaryMuscles?: string[];
   equipment?: string;
-  difficulty?: string; level?: string;
-  thumbnailUrl?: string; thumbnail?: string; imageUrl?: string;
-  videoUrl?: string; video?: string; videoUri?: string;
-  instructions?: string[] | string;
-  steps?: string[] | string;
-  category?: string; type?: string;
+  gifUrl?: string;
+  instructions?: string[];
 };
 
-function toStringArray(v: string | string[] | undefined): string[] {
-  if (!v) return [];
-  if (Array.isArray(v)) return v.filter(Boolean);
-  return v.split(/[,;]/).map((s) => s.trim()).filter(Boolean);
-}
-
 function normalise(r: RawExercise): Exercise {
-  const primaryMuscle =
-    r.muscleGroup ?? r.primaryMuscleGroup ?? toStringArray(r.primaryMuscles)[0] ?? "";
   return {
-    id: r.id ?? r._id ?? "",
-    name: r.name ?? r.title ?? "Unknown",
-    primaryMuscle,
-    secondaryMuscles: toStringArray(r.secondaryMuscles),
+    id: r.id ?? "",
+    name: r.name ?? "Unknown",
+    bodyPart: r.bodyPart ?? "",
+    target: r.target ?? "",
+    secondaryMuscles: Array.isArray(r.secondaryMuscles) ? r.secondaryMuscles : [],
     equipment: r.equipment ?? "",
-    difficulty: r.difficulty ?? r.level ?? "",
-    thumbnailUrl: r.thumbnailUrl ?? r.thumbnail ?? r.imageUrl ?? null,
-    videoUrl: r.videoUrl ?? r.video ?? r.videoUri ?? null,
-    instructions: toStringArray(r.instructions ?? r.steps),
-    category: r.category ?? r.type ?? "",
+    gifUrl: r.gifUrl ?? null,
+    instructions: Array.isArray(r.instructions) ? r.instructions : [],
   };
 }
 
 function cap(s: string) {
   if (!s) return "N/A";
   return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-// ── Video Player ──────────────────────────────────────────────────────────────
-// Handles direct MP4/WebM URLs and YouTube/Vimeo embeds.
-
-function VideoPlayer({ url, title }: { url: string; title: string }) {
-  const isYouTube = /youtube\.com|youtu\.be/.test(url);
-  const isVimeo = /vimeo\.com/.test(url);
-
-  if (isYouTube) {
-    const videoId = url.match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{11})/)?.[1] ?? "";
-    const embedUrl = `https://www.youtube.com/embed/${videoId}?rel=0&playsinline=1`;
-    return (
-      <div
-        className="w-full overflow-hidden rounded-xl"
-        style={{ aspectRatio: "16/9", backgroundColor: "#000" }}
-      >
-        <iframe
-          src={embedUrl}
-          title={title}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          className="w-full h-full"
-        />
-      </div>
-    );
-  }
-
-  if (isVimeo) {
-    const videoId = url.match(/vimeo\.com\/(\d+)/)?.[1] ?? "";
-    const embedUrl = `https://player.vimeo.com/video/${videoId}?playsinline=1`;
-    return (
-      <div
-        className="w-full overflow-hidden rounded-xl"
-        style={{ aspectRatio: "16/9", backgroundColor: "#000" }}
-      >
-        <iframe
-          src={embedUrl}
-          title={title}
-          allow="autoplay; fullscreen; picture-in-picture"
-          allowFullScreen
-          className="w-full h-full"
-        />
-      </div>
-    );
-  }
-
-  // Direct video file (mp4, webm, m3u8, etc.)
-  return (
-    <div
-      className="w-full overflow-hidden rounded-xl"
-      style={{ backgroundColor: "#000" }}
-    >
-      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-      <video
-        src={url}
-        controls
-        playsInline
-        className="w-full"
-        style={{ maxHeight: "320px", display: "block" }}
-        poster={undefined}
-      >
-        Your browser does not support video playback.
-      </video>
-    </div>
-  );
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -138,15 +58,8 @@ export default function ExerciseDetailPage() {
         if (!r.ok) throw new Error(`API error ${r.status}`);
         return r.json();
       })
-      .then((json: RawExercise | { data?: RawExercise; exercise?: RawExercise }) => {
-        // Handle wrapped responses: { data: {...} } or { exercise: {...} } or the object itself
-        const raw: RawExercise =
-          ("data" in json && json.data && typeof json.data === "object" && !Array.isArray(json.data))
-            ? json.data
-            : ("exercise" in json && json.exercise && typeof json.exercise === "object")
-            ? json.exercise
-            : (json as RawExercise);
-        setExercise(normalise(raw));
+      .then((json: RawExercise) => {
+        setExercise(normalise(json));
         setLoading(false);
       })
       .catch((e: Error) => {
@@ -154,8 +67,6 @@ export default function ExerciseDetailPage() {
         setLoading(false);
       });
   }, [id]);
-
-  const diffColor = exercise ? (DIFFICULTY_COLORS[exercise.difficulty] ?? "#9A9A9A") : "#9A9A9A";
 
   return (
     <main
@@ -189,9 +100,9 @@ export default function ExerciseDetailPage() {
         {loading && (
           <div className="flex flex-col gap-4">
             <div className="h-9 w-3/4 animate-pulse rounded-lg" style={{ backgroundColor: "#161616" }} />
-            <div className="w-full animate-pulse rounded-xl" style={{ aspectRatio: "16/9", backgroundColor: "#161616" }} />
+            <div className="w-full animate-pulse rounded-xl" style={{ aspectRatio: "1/1", backgroundColor: "#161616" }} />
             <div className="grid grid-cols-2 gap-3">
-              {[...Array(4)].map((_, i) => (
+              {[...Array(3)].map((_, i) => (
                 <div key={i} className="h-16 animate-pulse rounded-xl" style={{ backgroundColor: "#161616" }} />
               ))}
             </div>
@@ -236,90 +147,56 @@ export default function ExerciseDetailPage() {
         {/* ── Exercise detail ────────────────────────────────────────── */}
         {!loading && exercise && (
           <>
-            {/* Title + meta badges */}
-            <div className="flex flex-col gap-3">
-              <h1
-                className="text-3xl font-bold uppercase leading-tight"
-                style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
-              >
-                {exercise.name}
-              </h1>
-              <div className="flex items-center gap-2 flex-wrap">
-                {exercise.difficulty && (
-                  <span
-                    className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
-                    style={{
-                      backgroundColor: `${diffColor}18`,
-                      color: diffColor,
-                      border: `1px solid ${diffColor}40`,
-                      fontFamily: "var(--font-inter)",
-                    }}
-                  >
-                    {exercise.difficulty}
-                  </span>
-                )}
-                {exercise.category && (
-                  <span
-                    className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
-                    style={{
-                      backgroundColor: "rgba(196,91,40,0.12)",
-                      color: "#C45B28",
-                      border: "1px solid rgba(196,91,40,0.3)",
-                      fontFamily: "var(--font-inter)",
-                    }}
-                  >
-                    {exercise.category}
-                  </span>
-                )}
-              </div>
-            </div>
+            {/* Title */}
+            <h1
+              className="text-3xl font-bold uppercase leading-tight"
+              style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+            >
+              {exercise.name}
+            </h1>
 
-            {/* ── Video Player ─────────────────────────────────────── */}
-            {exercise.videoUrl && (
-              <VideoPlayer url={exercise.videoUrl} title={exercise.name} />
-            )}
-
-            {/* Thumbnail fallback if no video but has image */}
-            {!exercise.videoUrl && exercise.thumbnailUrl && (
+            {/* ── Animated GIF ─────────────────────────────────────── */}
+            {exercise.gifUrl && (
               <div
                 className="w-full overflow-hidden rounded-xl"
-                style={{ aspectRatio: "16/9", backgroundColor: "#111" }}
+                style={{ backgroundColor: "#111" }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={exercise.thumbnailUrl}
+                  src={exercise.gifUrl}
                   alt={exercise.name}
-                  className="w-full h-full object-cover"
+                  className="w-full"
+                  style={{ display: "block", maxHeight: "420px", objectFit: "contain" }}
                 />
               </div>
             )}
 
             {/* ── Detail grid ──────────────────────────────────────── */}
             <div className="grid grid-cols-2 gap-3">
+              {exercise.bodyPart && (
+                <DetailCell label="Body Part" value={cap(exercise.bodyPart)} />
+              )}
+              {exercise.target && (
+                <DetailCell label="Target Muscle" value={cap(exercise.target)} />
+              )}
               {exercise.equipment && (
                 <DetailCell label="Equipment" value={cap(exercise.equipment)} />
-              )}
-              {exercise.difficulty && (
-                <DetailCell label="Difficulty" value={cap(exercise.difficulty)} />
-              )}
-              {exercise.category && (
-                <DetailCell label="Category" value={cap(exercise.category)} />
               )}
             </div>
 
             {/* ── Muscles ──────────────────────────────────────────── */}
-            {(exercise.primaryMuscle || exercise.secondaryMuscles.length > 0) && (
+            {(exercise.target || exercise.secondaryMuscles.length > 0) && (
               <div
                 className="p-4 rounded-xl flex flex-col gap-4"
                 style={{ backgroundColor: "#161616", border: "1px solid #252525" }}
               >
-                {exercise.primaryMuscle && (
+                {exercise.target && (
                   <div>
                     <p
                       className="text-[10px] font-semibold uppercase tracking-[0.2em] mb-2.5"
                       style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
                     >
-                      Primary Muscles
+                      Target Muscle
                     </p>
                     <div className="flex flex-wrap gap-2">
                       <span
@@ -331,7 +208,7 @@ export default function ExerciseDetailPage() {
                           fontFamily: "var(--font-inter)",
                         }}
                       >
-                        {cap(exercise.primaryMuscle)}
+                        {cap(exercise.target)}
                       </span>
                     </div>
                   </div>
