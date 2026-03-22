@@ -47,7 +47,7 @@ export default function OnboardingPage() {
       return;
     }
 
-    router.push("/dashboard");
+    router.push("/onboarding/interests");
   }
 
   return (

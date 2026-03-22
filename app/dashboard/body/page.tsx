@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import BottomNav from "@/components/BottomNav";
+import { supabase } from "@/lib/supabase";
 
 const CATEGORIES = [
   {
@@ -47,7 +48,54 @@ const CATEGORIES = [
   },
 ];
 
+// Maps the interest label stored in Supabase to a category slug
+const INTEREST_TO_SLUG: Record<string, string> = {
+  "Running": "running",
+  "Weightlifting": "weightlifting",
+  "Bodybuilding": "bodybuilding",
+  "Hybrid / Functional": "hybrid-functional",
+  "Calisthenics": "calisthenics",
+  "Mobility & Recovery": "mobility-recovery",
+  "Rucking": "rucking",
+  "Bodyweight": "bodyweight",
+};
+
 export default function BodyPage() {
+  const [visibleCategories, setVisibleCategories] = useState(CATEGORIES);
+  const [fallback, setFallback] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadInterests() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
+
+      const { data } = await supabase
+        .from("user_profiles")
+        .select("interests")
+        .eq("id", user.id)
+        .single();
+
+      const interests: string[] | null = data?.interests;
+
+      if (!interests || interests.length === 0) {
+        setFallback(true);
+        setVisibleCategories(CATEGORIES);
+      } else {
+        const slugs = new Set(
+          interests.map((i) => INTEREST_TO_SLUG[i]).filter(Boolean)
+        );
+        const filtered = CATEGORIES.filter((c) => slugs.has(c.slug));
+        // If none of their interests map to a body discipline, show all
+        setVisibleCategories(filtered.length > 0 ? filtered : CATEGORIES);
+        setFallback(filtered.length === 0);
+      }
+
+      setLoading(false);
+    }
+    loadInterests();
+  }, []);
+
   return (
     <main
       className="min-h-screen flex flex-col px-6 py-10"
@@ -97,16 +145,30 @@ export default function BodyPage() {
             Choose Your Discipline.
           </h2>
           <p className="text-sm" style={{ color: "#7A7268" }}>
-            Pick the training style that fits where you are today.
+            {fallback
+              ? "Select your interests in Settings to personalize this page."
+              : "Pick the training style that fits where you are today."}
           </p>
         </div>
 
         {/* Category grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {CATEGORIES.map((cat) => (
-            <CategoryCard key={cat.slug} {...cat} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div
+                key={i}
+                className="h-28 animate-pulse"
+                style={{ backgroundColor: "#111111", border: "1px solid #1E1E1E" }}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {visibleCategories.map((cat) => (
+              <CategoryCard key={cat.slug} {...cat} />
+            ))}
+          </div>
+        )}
 
       </div>
       <BottomNav />
