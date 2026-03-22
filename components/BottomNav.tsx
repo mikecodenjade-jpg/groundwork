@@ -119,13 +119,13 @@ export default function BottomNav() {
             href={href}
             className="flex flex-1 flex-col items-center justify-center gap-1 transition-opacity"
             style={{
-              color: active ? "#C45B28" : "#5A5248",
+              color: active ? "#C45B28" : "#666666",
             }}
           >
             {icon}
             <span
               className="text-[10px] font-semibold uppercase tracking-widest"
-              style={{ fontFamily: "var(--font-oswald)" }}
+              style={{ fontFamily: "var(--font-inter)" }}
             >
               {label}
             </span>

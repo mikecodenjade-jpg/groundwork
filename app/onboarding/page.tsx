@@ -58,7 +58,7 @@ export default function OnboardingPage() {
       <div className="w-full max-w-md">
         <p
           className="text-center text-xs font-semibold tracking-[0.3em] uppercase mb-3"
-          style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+          style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
         >
           Build My Groundwork
         </p>
@@ -68,7 +68,10 @@ export default function OnboardingPage() {
         >
           Let&apos;s get your profile set up.
         </h1>
-        <p className="text-center text-sm mb-10" style={{ color: "#7A7268" }}>
+        <p
+          className="text-center text-sm mb-10"
+          style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+        >
           Takes 30 seconds. Helps us build the right tools for you.
         </p>
 
@@ -78,7 +81,7 @@ export default function OnboardingPage() {
             <label
               htmlFor="fullName"
               className="text-xs font-semibold uppercase tracking-widest"
-              style={{ color: "#7A7268" }}
+              style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
             >
               Full Name
             </label>
@@ -92,9 +95,11 @@ export default function OnboardingPage() {
               placeholder="Mike Johnson"
               className="px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#C45B28]"
               style={{
-                backgroundColor: "#141414",
-                border: "1px solid #2A2A2A",
+                backgroundColor: "#161616",
+                border: "1px solid #252525",
+                borderRadius: "8px",
                 color: "#E8E2D8",
+                fontFamily: "var(--font-inter)",
               }}
             />
           </div>
@@ -104,7 +109,7 @@ export default function OnboardingPage() {
             <label
               htmlFor="role"
               className="text-xs font-semibold uppercase tracking-widest"
-              style={{ color: "#7A7268" }}
+              style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
             >
               Role
             </label>
@@ -115,14 +120,16 @@ export default function OnboardingPage() {
               onChange={(e) => setRole(e.target.value)}
               className="px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#C45B28] appearance-none"
               style={{
-                backgroundColor: "#141414",
-                border: "1px solid #2A2A2A",
-                color: role ? "#E8E2D8" : "#5A5248",
+                backgroundColor: "#161616",
+                border: "1px solid #252525",
+                borderRadius: "8px",
+                color: role ? "#E8E2D8" : "#9A9A9A",
+                fontFamily: "var(--font-inter)",
               }}
             >
               <option value="" disabled>Select your role</option>
               {ROLES.map((r) => (
-                <option key={r} value={r} style={{ backgroundColor: "#141414", color: "#E8E2D8" }}>
+                <option key={r} value={r} style={{ backgroundColor: "#161616", color: "#E8E2D8" }}>
                   {r}
                 </option>
               ))}
@@ -134,7 +141,7 @@ export default function OnboardingPage() {
             <label
               htmlFor="company"
               className="text-xs font-semibold uppercase tracking-widest"
-              style={{ color: "#7A7268" }}
+              style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
             >
               Company
             </label>
@@ -147,9 +154,11 @@ export default function OnboardingPage() {
               placeholder="Acme Construction"
               className="px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#C45B28]"
               style={{
-                backgroundColor: "#141414",
-                border: "1px solid #2A2A2A",
+                backgroundColor: "#161616",
+                border: "1px solid #252525",
+                borderRadius: "8px",
                 color: "#E8E2D8",
+                fontFamily: "var(--font-inter)",
               }}
             />
           </div>
@@ -161,6 +170,7 @@ export default function OnboardingPage() {
                 borderColor: "#C45B28",
                 backgroundColor: "#1A0E09",
                 color: "#E8E2D8",
+                fontFamily: "var(--font-inter)",
               }}
             >
               {error}
@@ -174,7 +184,9 @@ export default function OnboardingPage() {
             style={{
               backgroundColor: "#C45B28",
               color: "#0A0A0A",
-              fontFamily: "var(--font-oswald)",
+              borderRadius: "8px",
+              fontFamily: "var(--font-inter)",
+              fontWeight: 600,
             }}
           >
             {saving ? "Saving..." : "Let's Build"}

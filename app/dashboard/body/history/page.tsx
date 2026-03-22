@@ -55,7 +55,7 @@ export default function WorkoutHistoryPage() {
           <Link
             href="/dashboard/body"
             className="flex items-center justify-center w-9 h-9 transition-opacity hover:opacity-60"
-            style={{ border: "1px solid #2A2A2A", color: "#7A7268" }}
+            style={{ border: "1px solid #252525", color: "#9A9A9A", borderRadius: "8px" }}
             aria-label="Back to body"
           >
             <svg viewBox="0 0 20 20" fill="none" width={16} height={16}>
@@ -71,7 +71,7 @@ export default function WorkoutHistoryPage() {
           <div>
             <p
               className="text-xs font-semibold tracking-[0.25em] uppercase mb-0.5"
-              style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
             >
               Body
             </p>
@@ -91,7 +91,7 @@ export default function WorkoutHistoryPage() {
               <div
                 key={i}
                 className="h-24 animate-pulse"
-                style={{ backgroundColor: "#111111", border: "1px solid #1E1E1E" }}
+                style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
               />
             ))}
           </div>
@@ -103,7 +103,7 @@ export default function WorkoutHistoryPage() {
             >
               No workouts logged yet.
             </p>
-            <p className="text-sm" style={{ color: "#7A7268" }}>
+            <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
               Get after it.
             </p>
           </div>
@@ -113,7 +113,7 @@ export default function WorkoutHistoryPage() {
               <div
                 key={log.id}
                 className="px-6 py-5"
-                style={{ backgroundColor: "#111111", border: "1px solid #1E1E1E" }}
+                style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
               >
                 <div className="flex items-start justify-between gap-4 mb-2">
                   <h3
@@ -124,17 +124,17 @@ export default function WorkoutHistoryPage() {
                   </h3>
                   <span
                     className="text-xs font-semibold uppercase tracking-widest flex-shrink-0"
-                    style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+                    style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
                   >
                     {log.duration_minutes} min
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <p className="text-xs" style={{ color: "#5A5248" }}>
+                  <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
                     {log.exercises_completed} exercise
                     {log.exercises_completed !== 1 ? "s" : ""} completed
                   </p>
-                  <p className="text-xs" style={{ color: "#5A5248" }}>
+                  <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
                     {formatDate(log.created_at)}
                   </p>
                 </div>

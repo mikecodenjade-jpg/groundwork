@@ -105,7 +105,7 @@ export default function NutritionPage() {
           <Link
             href="/dashboard"
             className="flex items-center justify-center w-9 h-9 transition-opacity hover:opacity-60"
-            style={{ border: "1px solid #2A2A2A", color: "#7A7268" }}
+            style={{ border: "1px solid #252525", color: "#9A9A9A" }}
             aria-label="Back to dashboard"
           >
             <svg viewBox="0 0 20 20" fill="none" width={16} height={16}>
@@ -115,7 +115,7 @@ export default function NutritionPage() {
           <div>
             <p
               className="text-xs font-semibold tracking-[0.25em] uppercase mb-0.5"
-              style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
             >
               Pillar
             </p>
@@ -131,25 +131,25 @@ export default function NutritionPage() {
         {/* Daily Tracker */}
         <section
           className="px-7 py-6 flex flex-col gap-5"
-          style={{ backgroundColor: "#111111", border: "1px solid #1E1E1E" }}
+          style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
         >
           <div className="flex items-baseline justify-between">
             <p
               className="text-xs font-semibold tracking-[0.25em] uppercase"
-              style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
             >
               Today&apos;s Intake
             </p>
-            <span className="text-2xl font-bold" style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}>
+            <span className="text-2xl font-bold" style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}>
               {totals.calories}{" "}
-              <span className="text-sm font-normal" style={{ color: "#7A7268" }}>
+              <span className="text-sm font-normal" style={{ color: "#9A9A9A" }}>
                 / {TARGETS.calories} cal
               </span>
             </span>
           </div>
 
           {/* Calorie bar */}
-          <div className="h-2 w-full" style={{ backgroundColor: "#1E1E1E" }}>
+          <div className="h-2 w-full" style={{ backgroundColor: "#252525" }}>
             <div
               className="h-full transition-all duration-500"
               style={{ width: `${pct(totals.calories, TARGETS.calories)}%`, backgroundColor: "#C45B28" }}
@@ -159,19 +159,19 @@ export default function NutritionPage() {
           {/* Macro bars */}
           {[
             { label: "Protein", val: totals.protein, target: TARGETS.protein, unit: "g", color: "#C45B28" },
-            { label: "Carbs", val: totals.carbs, target: TARGETS.carbs, unit: "g", color: "#7A7268" },
-            { label: "Fat", val: totals.fat, target: TARGETS.fat, unit: "g", color: "#5A5248" },
+            { label: "Carbs", val: totals.carbs, target: TARGETS.carbs, unit: "g", color: "#9A9A9A" },
+            { label: "Fat", val: totals.fat, target: TARGETS.fat, unit: "g", color: "#9A9A9A" },
           ].map(({ label, val, target, unit, color }) => (
             <div key={label} className="flex flex-col gap-1">
-              <div className="flex justify-between text-xs" style={{ color: "#7A7268" }}>
-                <span style={{ fontFamily: "var(--font-oswald)", letterSpacing: "0.1em" }}>{label}</span>
-                <span>
+              <div className="flex justify-between text-xs" style={{ color: "#9A9A9A" }}>
+                <span style={{ fontFamily: "var(--font-inter)", letterSpacing: "0.1em" }}>{label}</span>
+                <span style={{ fontFamily: "var(--font-inter)" }}>
                   {val}
                   {unit} / {target}
                   {unit}
                 </span>
               </div>
-              <div className="h-1.5 w-full" style={{ backgroundColor: "#1E1E1E" }}>
+              <div className="h-1.5 w-full" style={{ backgroundColor: "#252525" }}>
                 <div
                   className="h-full transition-all duration-500"
                   style={{ width: `${pct(val, target)}%`, backgroundColor: color }}
@@ -185,7 +185,7 @@ export default function NutritionPage() {
         <section className="flex flex-col gap-5">
           <p
             className="text-xs font-semibold tracking-[0.25em] uppercase"
-            style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
           >
             Log a Meal
           </p>
@@ -197,7 +197,13 @@ export default function NutritionPage() {
               value={mealName}
               onChange={(e) => setMealName(e.target.value)}
               className="px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#C45B28]"
-              style={{ backgroundColor: "#141414", border: "1px solid #2A2A2A", color: "#E8E2D8" }}
+              style={{
+                backgroundColor: "#161616",
+                border: "1px solid #252525",
+                borderRadius: "8px",
+                color: "#E8E2D8",
+                fontFamily: "var(--font-inter)",
+              }}
             />
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
@@ -209,7 +215,7 @@ export default function NutritionPage() {
                 <div key={label} className="flex flex-col gap-1">
                   <label
                     className="text-xs uppercase tracking-widest"
-                    style={{ color: "#5A5248", fontFamily: "var(--font-oswald)" }}
+                    style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
                   >
                     {label}
                   </label>
@@ -220,7 +226,13 @@ export default function NutritionPage() {
                     value={val}
                     onChange={(e) => set(e.target.value)}
                     className="px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#C45B28]"
-                    style={{ backgroundColor: "#141414", border: "1px solid #2A2A2A", color: "#E8E2D8" }}
+                    style={{
+                      backgroundColor: "#161616",
+                      border: "1px solid #252525",
+                      borderRadius: "8px",
+                      color: "#E8E2D8",
+                      fontFamily: "var(--font-inter)",
+                    }}
                   />
                 </div>
               ))}
@@ -229,7 +241,14 @@ export default function NutritionPage() {
               type="submit"
               disabled={saving}
               className="py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90 disabled:opacity-50"
-              style={{ backgroundColor: "#C45B28", color: "#0A0A0A", fontFamily: "var(--font-oswald)" }}
+              style={{
+                backgroundColor: "#C45B28",
+                color: "#0A0A0A",
+                borderRadius: "8px",
+                fontFamily: "var(--font-inter)",
+                fontWeight: 600,
+                minHeight: "48px",
+              }}
             >
               {saved ? "✓ Logged" : saving ? "Saving..." : "Log Meal"}
             </button>
@@ -241,7 +260,7 @@ export default function NutritionPage() {
           <section className="flex flex-col gap-4">
             <p
               className="text-xs font-semibold tracking-[0.25em] uppercase"
-              style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
             >
               Logged Today
             </p>
@@ -250,17 +269,17 @@ export default function NutritionPage() {
                 <div
                   key={log.id}
                   className="px-5 py-4 flex items-center justify-between"
-                  style={{ backgroundColor: "#111111", border: "1px solid #1E1E1E" }}
+                  style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
                 >
                   <div>
-                    <p className="text-sm font-bold" style={{ color: "#E8E2D8", fontFamily: "var(--font-oswald)" }}>
+                    <p className="text-sm font-bold" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
                       {log.meal_name}
                     </p>
-                    <p className="text-xs mt-0.5" style={{ color: "#5A5248" }}>
+                    <p className="text-xs mt-0.5" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
                       P: {log.protein_g}g · C: {log.carbs_g}g · F: {log.fat_g}g
                     </p>
                   </div>
-                  <span className="text-sm font-bold" style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}>
+                  <span className="text-sm font-bold" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>
                     {log.calories} cal
                   </span>
                 </div>
@@ -274,11 +293,11 @@ export default function NutritionPage() {
           <div>
             <p
               className="text-xs font-semibold tracking-[0.25em] uppercase mb-1"
-              style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
             >
               Jobsite Eating Guide
             </p>
-            <p className="text-sm" style={{ color: "#7A7268" }}>
+            <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
               Best options when you&apos;re stuck in a drive-through.
             </p>
           </div>
@@ -287,37 +306,37 @@ export default function NutritionPage() {
               <div
                 key={item.place}
                 className="px-6 py-5"
-                style={{ backgroundColor: "#111111", border: "1px solid #1E1E1E" }}
+                style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
               >
                 <div className="flex items-baseline justify-between mb-2">
                   <h3
                     className="text-base font-bold uppercase"
-                    style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+                    style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
                   >
                     {item.place}
                   </h3>
                   <span
                     className="text-sm font-bold"
-                    style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+                    style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
                   >
                     {item.cal} cal
                   </span>
                 </div>
-                <p className="text-sm mb-3" style={{ color: "#7A7268" }}>
+                <p className="text-sm mb-3" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
                   {item.item}
                 </p>
-                <div className="flex gap-4 text-xs" style={{ color: "#5A5248" }}>
+                <div className="flex gap-4 text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
                   <span>
                     Protein:{" "}
-                    <span style={{ color: "#A09890" }}>{item.protein}g</span>
+                    <span style={{ color: "#9A9A9A" }}>{item.protein}g</span>
                   </span>
                   <span>
                     Carbs:{" "}
-                    <span style={{ color: "#A09890" }}>{item.carbs}g</span>
+                    <span style={{ color: "#9A9A9A" }}>{item.carbs}g</span>
                   </span>
                   <span>
                     Fat:{" "}
-                    <span style={{ color: "#A09890" }}>{item.fat}g</span>
+                    <span style={{ color: "#9A9A9A" }}>{item.fat}g</span>
                   </span>
                 </div>
               </div>

@@ -86,7 +86,7 @@ export default function SettingsPage() {
           <Link
             href="/dashboard"
             className="flex items-center justify-center w-9 h-9 transition-opacity hover:opacity-60"
-            style={{ border: "1px solid #2A2A2A", color: "#7A7268" }}
+            style={{ border: "1px solid #252525", color: "#9A9A9A", borderRadius: "8px" }}
             aria-label="Back to dashboard"
           >
             <svg viewBox="0 0 20 20" fill="none" width={16} height={16}>
@@ -102,7 +102,7 @@ export default function SettingsPage() {
           <div>
             <p
               className="text-xs font-semibold tracking-[0.25em] uppercase mb-0.5"
-              style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
             >
               Account
             </p>
@@ -118,12 +118,12 @@ export default function SettingsPage() {
         {/* Profile card */}
         <section
           className="px-7 py-6 flex flex-col gap-5"
-          style={{ backgroundColor: "#111111", border: "1px solid #1E1E1E" }}
+          style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
         >
           <div className="flex items-center justify-between">
             <p
               className="text-xs font-semibold tracking-[0.25em] uppercase"
-              style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
             >
               Profile
             </p>
@@ -131,7 +131,7 @@ export default function SettingsPage() {
               <button
                 onClick={() => setEditing(true)}
                 className="text-xs font-semibold uppercase tracking-widest px-4 py-1.5 transition-opacity hover:opacity-70"
-                style={{ border: "1px solid #2A2A2A", color: "#7A7268", fontFamily: "var(--font-oswald)" }}
+                style={{ border: "1px solid #252525", color: "#9A9A9A", fontFamily: "var(--font-inter)", borderRadius: "8px" }}
               >
                 Edit
               </button>
@@ -153,7 +153,7 @@ export default function SettingsPage() {
               <div className="flex flex-col gap-1">
                 <label
                   className="text-xs uppercase tracking-widest"
-                  style={{ color: "#5A5248", fontFamily: "var(--font-oswald)" }}
+                  style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
                 >
                   Full Name
                 </label>
@@ -163,13 +163,13 @@ export default function SettingsPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   className="px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#C45B28]"
-                  style={{ backgroundColor: "#141414", border: "1px solid #2A2A2A", color: "#E8E2D8" }}
+                  style={{ backgroundColor: "#161616", border: "1px solid #252525", color: "#E8E2D8", borderRadius: "8px", fontFamily: "var(--font-inter)" }}
                 />
               </div>
               <div className="flex flex-col gap-1">
                 <label
                   className="text-xs uppercase tracking-widest"
-                  style={{ color: "#5A5248", fontFamily: "var(--font-oswald)" }}
+                  style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
                 >
                   Role
                 </label>
@@ -178,14 +178,16 @@ export default function SettingsPage() {
                   onChange={(e) => setRole(e.target.value)}
                   className="px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#C45B28] appearance-none"
                   style={{
-                    backgroundColor: "#141414",
-                    border: "1px solid #2A2A2A",
-                    color: role ? "#E8E2D8" : "#5A5248",
+                    backgroundColor: "#161616",
+                    border: "1px solid #252525",
+                    color: role ? "#E8E2D8" : "#9A9A9A",
+                    borderRadius: "8px",
+                    fontFamily: "var(--font-inter)",
                   }}
                 >
                   <option value="">Select role</option>
                   {ROLES.map((r) => (
-                    <option key={r} value={r} style={{ backgroundColor: "#141414", color: "#E8E2D8" }}>
+                    <option key={r} value={r} style={{ backgroundColor: "#161616", color: "#E8E2D8" }}>
                       {r}
                     </option>
                   ))}
@@ -194,7 +196,7 @@ export default function SettingsPage() {
               <div className="flex flex-col gap-1">
                 <label
                   className="text-xs uppercase tracking-widest"
-                  style={{ color: "#5A5248", fontFamily: "var(--font-oswald)" }}
+                  style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
                 >
                   Company
                 </label>
@@ -203,7 +205,7 @@ export default function SettingsPage() {
                   value={company}
                   onChange={(e) => setCompany(e.target.value)}
                   className="px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#C45B28]"
-                  style={{ backgroundColor: "#141414", border: "1px solid #2A2A2A", color: "#E8E2D8" }}
+                  style={{ backgroundColor: "#161616", border: "1px solid #252525", color: "#E8E2D8", borderRadius: "8px", fontFamily: "var(--font-inter)" }}
                 />
               </div>
               <div className="flex gap-3">
@@ -211,7 +213,7 @@ export default function SettingsPage() {
                   type="submit"
                   disabled={saving}
                   className="flex-1 py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90 disabled:opacity-50"
-                  style={{ backgroundColor: "#C45B28", color: "#0A0A0A", fontFamily: "var(--font-oswald)" }}
+                  style={{ backgroundColor: "#C45B28", color: "#0A0A0A", fontFamily: "var(--font-inter)", fontWeight: 600, borderRadius: "8px", minHeight: "48px" }}
                 >
                   {saving ? "Saving..." : "Save"}
                 </button>
@@ -219,7 +221,7 @@ export default function SettingsPage() {
                   type="button"
                   onClick={() => setEditing(false)}
                   className="px-6 py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-70"
-                  style={{ border: "1px solid #2A2A2A", color: "#7A7268", fontFamily: "var(--font-oswald)" }}
+                  style={{ border: "1px solid #252525", color: "#9A9A9A", fontFamily: "var(--font-inter)", borderRadius: "8px" }}
                 >
                   Cancel
                 </button>
@@ -228,7 +230,7 @@ export default function SettingsPage() {
           ) : (
             <div className="flex flex-col gap-3">
               {saved && (
-                <p className="text-xs" style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}>
+                <p className="text-xs" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>
                   ✓ Profile updated
                 </p>
               )}
@@ -241,11 +243,11 @@ export default function SettingsPage() {
                 <div key={label} className="flex items-baseline gap-4">
                   <span
                     className="text-xs uppercase tracking-widest w-20 flex-shrink-0"
-                    style={{ color: "#5A5248", fontFamily: "var(--font-oswald)" }}
+                    style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
                   >
                     {label}
                   </span>
-                  <span className="text-sm" style={{ color: "#E8E2D8" }}>
+                  <span className="text-sm" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
                     {val}
                   </span>
                 </div>
@@ -258,18 +260,18 @@ export default function SettingsPage() {
         <section className="flex flex-col gap-4">
           <p
             className="text-xs font-semibold tracking-[0.25em] uppercase"
-            style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
           >
             Training
           </p>
           <Link
             href="/onboarding/interests"
             className="flex items-center justify-between px-6 py-4 transition-opacity hover:opacity-80"
-            style={{ backgroundColor: "#111111", border: "1px solid #1E1E1E" }}
+            style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
           >
             <span
               className="text-sm font-bold uppercase tracking-wide"
-              style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+              style={{ fontFamily: "var(--font-inter)", fontWeight: 600, color: "#E8E2D8" }}
             >
               Update Training Interests
             </span>
@@ -282,7 +284,7 @@ export default function SettingsPage() {
           <button
             onClick={handleSignOut}
             className="w-full py-4 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-70"
-            style={{ border: "1px solid #2A2A2A", color: "#7A7268", fontFamily: "var(--font-oswald)" }}
+            style={{ border: "1px solid #252525", color: "#9A9A9A", fontFamily: "var(--font-inter)", borderRadius: "8px", minHeight: "48px" }}
           >
             Sign Out
           </button>

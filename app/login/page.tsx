@@ -50,7 +50,7 @@ export default function LoginPage() {
         {/* Logo / Brand */}
         <p
           className="text-center text-xs font-semibold tracking-[0.3em] uppercase mb-3"
-          style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+          style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
         >
           Build My Groundwork
         </p>
@@ -67,7 +67,7 @@ export default function LoginPage() {
             <label
               htmlFor="email"
               className="text-xs font-semibold uppercase tracking-widest"
-              style={{ color: "#7A7268" }}
+              style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
             >
               Email
             </label>
@@ -81,9 +81,11 @@ export default function LoginPage() {
               placeholder="you@example.com"
               className="px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#C45B28]"
               style={{
-                backgroundColor: "#141414",
-                border: "1px solid #2A2A2A",
+                backgroundColor: "#161616",
+                border: "1px solid #252525",
+                borderRadius: "8px",
                 color: "#E8E2D8",
+                fontFamily: "var(--font-inter)",
               }}
             />
           </div>
@@ -92,7 +94,7 @@ export default function LoginPage() {
             <label
               htmlFor="password"
               className="text-xs font-semibold uppercase tracking-widest"
-              style={{ color: "#7A7268" }}
+              style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
             >
               Password
             </label>
@@ -108,9 +110,11 @@ export default function LoginPage() {
               placeholder="••••••••"
               className="px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#C45B28]"
               style={{
-                backgroundColor: "#141414",
-                border: "1px solid #2A2A2A",
+                backgroundColor: "#161616",
+                border: "1px solid #252525",
+                borderRadius: "8px",
                 color: "#E8E2D8",
+                fontFamily: "var(--font-inter)",
               }}
             />
           </div>
@@ -123,6 +127,7 @@ export default function LoginPage() {
                 borderColor: "#C45B28",
                 backgroundColor: "#1A0E09",
                 color: "#E8E2D8",
+                fontFamily: "var(--font-inter)",
               }}
             >
               {error}
@@ -135,6 +140,7 @@ export default function LoginPage() {
                 borderColor: "#4CAF50",
                 backgroundColor: "#0A130A",
                 color: "#E8E2D8",
+                fontFamily: "var(--font-inter)",
               }}
             >
               {message}
@@ -148,7 +154,9 @@ export default function LoginPage() {
             style={{
               backgroundColor: "#C45B28",
               color: "#0A0A0A",
-              fontFamily: "var(--font-oswald)",
+              borderRadius: "8px",
+              fontFamily: "var(--font-inter)",
+              fontWeight: 600,
             }}
           >
             {loading
@@ -160,7 +168,10 @@ export default function LoginPage() {
         </form>
 
         {/* Mode toggle */}
-        <p className="text-center text-sm mt-8" style={{ color: "#7A7268" }}>
+        <p
+          className="text-center text-sm mt-8"
+          style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+        >
           {mode === "signin" ? "Don't have an account?" : "Already have an account?"}{" "}
           <button
             onClick={() => {
@@ -169,7 +180,11 @@ export default function LoginPage() {
               setMessage(null);
             }}
             className="font-semibold transition-opacity hover:opacity-80"
-            style={{ color: "#C45B28" }}
+            style={{
+              color: "#C45B28",
+              fontFamily: "var(--font-inter)",
+              fontWeight: 600,
+            }}
           >
             {mode === "signin" ? "Sign Up" : "Sign In"}
           </button>

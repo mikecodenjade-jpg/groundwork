@@ -86,8 +86,9 @@ function PillarCard({
       href={href}
       className="p-8 flex flex-col gap-5 transition-all duration-150 active:scale-[0.98]"
       style={{
-        backgroundColor: hovered ? "#161616" : "#111111",
-        border: `1px solid ${hovered ? "#C45B28" : "#1E1E1E"}`,
+        backgroundColor: "#161616",
+        border: `1px solid ${hovered ? "#C45B28" : "#252525"}`,
+        borderRadius: "12px",
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -100,7 +101,7 @@ function PillarCard({
         >
           {title}
         </h2>
-        <p className="text-sm leading-relaxed" style={{ color: "#7A7268" }}>
+        <p className="text-sm leading-relaxed" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
           {desc}
         </p>
       </div>
@@ -121,7 +122,7 @@ export default function DemoDashboard() {
         <header className="flex items-center justify-between max-w-5xl w-full mx-auto mb-16">
           <p
             className="text-xs font-semibold tracking-[0.3em] uppercase"
-            style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
           >
             Build My Groundwork
           </p>
@@ -129,9 +130,10 @@ export default function DemoDashboard() {
             href="/login"
             className="text-xs font-semibold uppercase tracking-widest px-5 py-2 transition-opacity hover:opacity-60"
             style={{
-              color: "#7A7268",
-              border: "1px solid #2A2A2A",
-              fontFamily: "var(--font-oswald)",
+              color: "#9A9A9A",
+              border: "1px solid #252525",
+              borderRadius: "8px",
+              fontFamily: "var(--font-inter)",
             }}
           >
             Sign Up Free
@@ -148,8 +150,8 @@ export default function DemoDashboard() {
             >
               Good Morning, Guest.
             </h1>
-            <p className="mt-3 text-sm" style={{ color: "#7A7268" }}>
-              <span style={{ color: "#A09890" }}>Demo Mode</span> · Sign up to save your progress
+            <p className="mt-3 text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+              <span style={{ color: "#9A9A9A" }}>Demo Mode</span> · Sign up to save your progress
             </p>
 
             {/* Streak — sample data */}
@@ -163,11 +165,11 @@ export default function DemoDashboard() {
               <div>
                 <p
                   className="text-sm font-bold uppercase tracking-widest"
-                  style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+                  style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
                 >
                   Day Streak
                 </p>
-                <p className="text-xs mt-0.5" style={{ color: "#5A5248" }}>
+                <p className="text-xs mt-0.5" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
                   Log a workout or check-in to start your streak.
                 </p>
               </div>
@@ -178,7 +180,7 @@ export default function DemoDashboard() {
           <section>
             <p
               className="text-xs font-semibold tracking-[0.25em] uppercase mb-5"
-              style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
             >
               Choose Your Pillar
             </p>
@@ -192,16 +194,16 @@ export default function DemoDashboard() {
           {/* CTA */}
           <section
             className="px-8 py-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6"
-            style={{ backgroundColor: "#111111", border: "1px solid #1E1E1E" }}
+            style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
           >
             <div>
               <p
                 className="text-lg font-bold uppercase mb-1"
-                style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+                style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
               >
                 Ready to make it yours?
               </p>
-              <p className="text-sm" style={{ color: "#7A7268" }}>
+              <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
                 Sign up free. No credit card. Your data saves. Your streak starts.
               </p>
             </div>
@@ -211,7 +213,12 @@ export default function DemoDashboard() {
               style={{
                 backgroundColor: "#C45B28",
                 color: "#0A0A0A",
-                fontFamily: "var(--font-oswald)",
+                borderRadius: "8px",
+                fontFamily: "var(--font-inter)",
+                fontWeight: 600,
+                minHeight: "48px",
+                display: "flex",
+                alignItems: "center",
               }}
             >
               Start Free

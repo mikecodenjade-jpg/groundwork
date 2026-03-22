@@ -68,7 +68,7 @@ export default function InterestsPage() {
         <div>
           <p
             className="text-xs font-semibold tracking-[0.3em] uppercase mb-3"
-            style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
           >
             Build My Groundwork
           </p>
@@ -78,7 +78,10 @@ export default function InterestsPage() {
           >
             What are you into?
           </h1>
-          <p className="text-sm leading-relaxed" style={{ color: "#7A7268" }}>
+          <p
+            className="text-sm leading-relaxed"
+            style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+          >
             Pick everything that interests you. You can change this anytime.
           </p>
         </div>
@@ -93,10 +96,12 @@ export default function InterestsPage() {
                 onClick={() => toggleInterest(interest)}
                 className="px-4 py-4 text-sm font-bold uppercase tracking-wide text-left transition-all duration-150 active:scale-[0.97]"
                 style={{
-                  fontFamily: "var(--font-oswald)",
-                  backgroundColor: active ? "#1A0E09" : "#141414",
-                  color: active ? "#E8E2D8" : "#7A7268",
-                  border: `1px solid ${active ? "#C45B28" : "#2A2A2A"}`,
+                  fontFamily: "var(--font-inter)",
+                  fontWeight: 600,
+                  backgroundColor: active ? "#1A0E09" : "#161616",
+                  color: active ? "#E8E2D8" : "#9A9A9A",
+                  border: `1px solid ${active ? "#C45B28" : "#252525"}`,
+                  borderRadius: "8px",
                 }}
               >
                 {interest}
@@ -106,7 +111,10 @@ export default function InterestsPage() {
         </div>
 
         {/* Selection count */}
-        <p className="text-xs" style={{ color: "#5A5248" }}>
+        <p
+          className="text-xs"
+          style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+        >
           {selected.length === 0
             ? "Nothing selected yet — pick at least one."
             : `${selected.length} selected`}
@@ -115,7 +123,12 @@ export default function InterestsPage() {
         {error && (
           <p
             className="text-sm px-4 py-3 border-l-4"
-            style={{ borderColor: "#C45B28", backgroundColor: "#1A0E09", color: "#E8E2D8" }}
+            style={{
+              borderColor: "#C45B28",
+              backgroundColor: "#1A0E09",
+              color: "#E8E2D8",
+              fontFamily: "var(--font-inter)",
+            }}
           >
             {error}
           </p>
@@ -127,9 +140,11 @@ export default function InterestsPage() {
           disabled={selected.length === 0 || saving}
           className="w-full py-4 text-base font-bold uppercase tracking-widest transition-opacity hover:opacity-90 disabled:opacity-30"
           style={{
-            fontFamily: "var(--font-oswald)",
+            fontFamily: "var(--font-inter)",
+            fontWeight: 600,
             backgroundColor: "#C45B28",
             color: "#0A0A0A",
+            borderRadius: "8px",
           }}
         >
           {saving ? "Saving..." : "Continue"}

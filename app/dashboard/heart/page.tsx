@@ -68,7 +68,7 @@ export default function HeartPage() {
           <Link
             href="/dashboard"
             className="flex items-center justify-center w-9 h-9 transition-opacity hover:opacity-60"
-            style={{ border: "1px solid #2A2A2A", color: "#7A7268" }}
+            style={{ border: "1px solid #252525", color: "#9A9A9A" }}
             aria-label="Back to dashboard"
           >
             <svg viewBox="0 0 20 20" fill="none" width={16} height={16}>
@@ -84,7 +84,7 @@ export default function HeartPage() {
           <div>
             <p
               className="text-xs font-semibold tracking-[0.25em] uppercase mb-0.5"
-              style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
             >
               Pillar
             </p>
@@ -98,17 +98,17 @@ export default function HeartPage() {
         </header>
 
         {/* Daily Journal */}
-        <section style={{ backgroundColor: "#111111", border: "1px solid #1E1E1E" }}>
-          <div className="px-8 py-6" style={{ borderBottom: "1px solid #1E1E1E" }}>
+        <section style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}>
+          <div className="px-8 py-6" style={{ borderBottom: "1px solid #252525" }}>
             <p
               className="text-xs font-semibold tracking-[0.25em] uppercase mb-1"
-              style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
             >
               Daily Journal
             </p>
             <h2
               className="text-2xl font-bold uppercase"
-              style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+              style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
             >
               What&apos;s on your mind?
             </h2>
@@ -122,10 +122,11 @@ export default function HeartPage() {
               placeholder="No one reads this but you. Write honestly."
               className="w-full px-4 py-3 text-sm leading-relaxed resize-none outline-none focus:ring-2 focus:ring-[#C45B28]"
               style={{
-                backgroundColor: "#0E0E0E",
-                border: "1px solid #2A2A2A",
+                backgroundColor: "#161616",
+                border: "1px solid #252525",
+                borderRadius: "8px",
                 color: "#E8E2D8",
-                fontFamily: "var(--font-geist)",
+                fontFamily: "var(--font-inter)",
               }}
             />
             <div className="flex items-center gap-4">
@@ -134,9 +135,12 @@ export default function HeartPage() {
                 disabled={!journal.trim() || saving}
                 className="px-8 py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90 disabled:opacity-30"
                 style={{
-                  fontFamily: "var(--font-oswald)",
+                  fontFamily: "var(--font-inter)",
+                  fontWeight: 600,
                   backgroundColor: "#C45B28",
                   color: "#0A0A0A",
+                  borderRadius: "8px",
+                  minHeight: "48px",
                 }}
               >
                 {saving ? "Saving..." : "Save Entry"}
@@ -144,7 +148,7 @@ export default function HeartPage() {
               {saved && (
                 <span
                   className="text-xs font-semibold uppercase tracking-widest"
-                  style={{ color: "#4CAF50", fontFamily: "var(--font-oswald)" }}
+                  style={{ color: "#4CAF50", fontFamily: "var(--font-inter)" }}
                 >
                   ✓ Saved
                 </span>
@@ -154,21 +158,21 @@ export default function HeartPage() {
         </section>
 
         {/* Gratitude */}
-        <section style={{ backgroundColor: "#111111", border: "1px solid #1E1E1E" }}>
-          <div className="px-8 py-6" style={{ borderBottom: "1px solid #1E1E1E" }}>
+        <section style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}>
+          <div className="px-8 py-6" style={{ borderBottom: "1px solid #252525" }}>
             <p
               className="text-xs font-semibold tracking-[0.25em] uppercase mb-1"
-              style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
             >
               Gratitude
             </p>
             <h2
               className="text-2xl font-bold uppercase"
-              style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+              style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
             >
               Name 3 things that went right today.
             </h2>
-            <p className="text-sm mt-1" style={{ color: "#7A7268" }}>
+            <p className="text-sm mt-1" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
               Doesn&apos;t have to be big. Showing up counts.
             </p>
           </div>
@@ -178,7 +182,7 @@ export default function HeartPage() {
               <div key={i} className="flex items-center gap-4">
                 <span
                   className="text-lg font-bold w-6 shrink-0 text-center"
-                  style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+                  style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
                 >
                   {i + 1}
                 </span>
@@ -195,10 +199,11 @@ export default function HeartPage() {
                   }
                   className="flex-1 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#C45B28]"
                   style={{
-                    backgroundColor: "#0E0E0E",
-                    border: "1px solid #2A2A2A",
+                    backgroundColor: "#161616",
+                    border: "1px solid #252525",
+                    borderRadius: "8px",
                     color: "#E8E2D8",
-                    fontFamily: "var(--font-geist)",
+                    fontFamily: "var(--font-inter)",
                   }}
                 />
               </div>
@@ -210,16 +215,16 @@ export default function HeartPage() {
         <section className="pb-28">
           <p
             className="text-xs font-semibold tracking-[0.25em] uppercase mb-4"
-            style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
           >
             Relationships
           </p>
 
-          <div style={{ backgroundColor: "#111111", border: "1px solid #1E1E1E" }}>
-            <div className="px-8 py-6" style={{ borderBottom: "1px solid #1E1E1E" }}>
+          <div style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}>
+            <div className="px-8 py-6" style={{ borderBottom: "1px solid #252525" }}>
               <h2
                 className="text-2xl font-bold uppercase leading-snug"
-                style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+                style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
               >
                 The job takes from your family.
                 <br />
@@ -227,14 +232,14 @@ export default function HeartPage() {
                   Be intentional about giving back.
                 </span>
               </h2>
-              <p className="text-sm mt-3 leading-relaxed" style={{ color: "#7A7268" }}>
+              <p className="text-sm mt-3 leading-relaxed" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
                 You manage a crew, a schedule, a budget, and a hundred problems a day.
                 The people at home get whatever&apos;s left. That&apos;s the reality for most
                 construction leaders — and most of them know it isn&apos;t working.
               </p>
             </div>
 
-            <div className="divide-y" style={{ borderColor: "#1A1A1A" }}>
+            <div className="divide-y" style={{ borderColor: "#252525" }}>
               {RELATIONSHIP_TIPS.map((tip) => (
                 <div key={tip.title} className="px-8 py-6 flex gap-5">
                   <div
@@ -244,11 +249,11 @@ export default function HeartPage() {
                   <div className="flex flex-col gap-1">
                     <p
                       className="text-base font-bold uppercase"
-                      style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+                      style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
                     >
                       {tip.title}
                     </p>
-                    <p className="text-sm leading-relaxed" style={{ color: "#7A7268" }}>
+                    <p className="text-sm leading-relaxed" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
                       {tip.desc}
                     </p>
                   </div>

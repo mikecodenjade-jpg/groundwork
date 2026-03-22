@@ -11,13 +11,13 @@ export default function DemoBanner() {
         borderBottom: "1px solid #C45B28",
       }}
     >
-      <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#A09890", fontFamily: "var(--font-oswald)" }}>
+      <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
         You&apos;re viewing a demo.
       </p>
       <Link
         href="/login"
         className="text-xs font-bold uppercase tracking-widest underline transition-opacity hover:opacity-70"
-        style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+        style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
       >
         Sign up to save your progress →
       </Link>

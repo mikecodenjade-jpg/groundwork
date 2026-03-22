@@ -55,7 +55,7 @@ export default function DemoBodyPage() {
             <Link
               href="/demo"
               className="flex items-center justify-center w-9 h-9 transition-opacity hover:opacity-60"
-              style={{ border: "1px solid #2A2A2A", color: "#7A7268" }}
+              style={{ border: "1px solid #252525", borderRadius: "8px", color: "#9A9A9A" }}
               aria-label="Back to demo dashboard"
             >
               <svg viewBox="0 0 20 20" fill="none" width={16} height={16}>
@@ -65,7 +65,7 @@ export default function DemoBodyPage() {
             <div>
               <p
                 className="text-xs font-semibold tracking-[0.25em] uppercase mb-0.5"
-                style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+                style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
               >
                 Pillar
               </p>
@@ -82,7 +82,7 @@ export default function DemoBodyPage() {
           <section>
             <p
               className="text-xs font-semibold tracking-[0.25em] uppercase mb-5"
-              style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
             >
               How much time do you have?
             </p>
@@ -95,10 +95,12 @@ export default function DemoBodyPage() {
                     onClick={() => setSelectedTime(active ? null : value)}
                     className="px-8 py-3 text-sm font-bold uppercase tracking-widest transition-all duration-150 active:scale-95"
                     style={{
-                      fontFamily: "var(--font-oswald)",
-                      backgroundColor: active ? "#C45B28" : "#141414",
+                      fontFamily: "var(--font-inter)",
+                      fontWeight: 600,
+                      backgroundColor: active ? "#C45B28" : "#161616",
                       color: active ? "#0A0A0A" : "#E8E2D8",
-                      border: `1px solid ${active ? "#C45B28" : "#2A2A2A"}`,
+                      border: `1px solid ${active ? "#C45B28" : "#252525"}`,
+                      borderRadius: "8px",
                     }}
                   >
                     {label}
@@ -111,11 +113,11 @@ export default function DemoBodyPage() {
           <div>
             <h2
               className="text-2xl font-bold uppercase mb-1"
-              style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+              style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
             >
               Choose Your Discipline.
             </h2>
-            <p className="text-sm" style={{ color: "#7A7268" }}>
+            <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
               Pick the training style that fits where you are today.
             </p>
           </div>
@@ -140,14 +142,14 @@ export default function DemoBodyPage() {
             >
               <div
                 className="w-full max-w-lg flex flex-col gap-6 px-8 py-8 relative"
-                style={{ backgroundColor: "#111111", border: "1px solid #2A2A2A" }}
+                style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p
                       className="text-xs font-semibold tracking-[0.25em] uppercase mb-1"
-                      style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+                      style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
                     >
                       Sample Workout · {selectedTime ?? 30} min
                     </p>
@@ -161,7 +163,7 @@ export default function DemoBodyPage() {
                   <button
                     onClick={() => setPreviewSlug(null)}
                     className="text-lg leading-none transition-opacity hover:opacity-60"
-                    style={{ color: "#5A5248" }}
+                    style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
                   >
                     ✕
                   </button>
@@ -172,16 +174,16 @@ export default function DemoBodyPage() {
                     <div
                       key={ex.name}
                       className="px-5 py-4 flex items-center justify-between"
-                      style={{ backgroundColor: "#0E0E0E", border: "1px solid #1E1E1E" }}
+                      style={{ backgroundColor: "#111111", border: "1px solid #252525", borderRadius: "8px" }}
                     >
                       <div>
-                        <p className="text-sm font-bold uppercase" style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}>
+                        <p className="text-sm font-bold uppercase" style={{ fontFamily: "var(--font-inter)", fontWeight: 600, color: "#E8E2D8" }}>
                           {ex.name}
                         </p>
-                        <p className="text-xs mt-0.5" style={{ color: "#5A5248" }}>{ex.muscles}</p>
+                        <p className="text-xs mt-0.5" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>{ex.muscles}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-xs font-bold" style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}>
+                        <p className="text-xs font-bold" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>
                           {ex.sets} × {ex.reps}
                         </p>
                       </div>
@@ -189,12 +191,22 @@ export default function DemoBodyPage() {
                   ))}
                 </div>
 
-                <p className="text-xs" style={{ color: "#5A5248" }}>{SAMPLE_WORKOUT.restNote}</p>
+                <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>{SAMPLE_WORKOUT.restNote}</p>
 
                 <Link
                   href="/login"
                   className="w-full py-4 text-sm font-bold uppercase tracking-widest text-center transition-opacity hover:opacity-90"
-                  style={{ backgroundColor: "#C45B28", color: "#0A0A0A", fontFamily: "var(--font-oswald)" }}
+                  style={{
+                    backgroundColor: "#C45B28",
+                    color: "#0A0A0A",
+                    borderRadius: "8px",
+                    fontFamily: "var(--font-inter)",
+                    fontWeight: 600,
+                    minHeight: "48px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
                 >
                   Sign Up to Start This Workout
                 </Link>
@@ -225,24 +237,25 @@ function DemoCategoryCard({
       onClick={onClick}
       className="flex flex-col gap-3 px-7 py-6 text-left transition-all duration-150 active:scale-[0.98]"
       style={{
-        backgroundColor: hovered ? "#161616" : "#111111",
-        border: `1px solid ${hovered ? "#C45B28" : "#1E1E1E"}`,
+        backgroundColor: "#161616",
+        border: `1px solid ${hovered ? "#C45B28" : "#252525"}`,
+        borderRadius: "12px",
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
       <h3
         className="text-xl font-bold uppercase tracking-wide"
-        style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+        style={{ fontFamily: "var(--font-inter)", fontWeight: 600, color: "#E8E2D8" }}
       >
         {title}
       </h3>
-      <p className="text-sm leading-relaxed" style={{ color: "#7A7268" }}>
+      <p className="text-sm leading-relaxed" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
         {desc}
       </p>
       <span
         className="text-xs font-semibold uppercase tracking-widest mt-1 self-start"
-        style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+        style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
       >
         Preview Workout &rsaquo;
       </span>

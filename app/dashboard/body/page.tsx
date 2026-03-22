@@ -116,7 +116,7 @@ export default function BodyPage() {
           <Link
             href="/dashboard"
             className="flex items-center justify-center w-9 h-9 transition-opacity hover:opacity-60"
-            style={{ border: "1px solid #2A2A2A", color: "#7A7268" }}
+            style={{ border: "1px solid #252525", color: "#9A9A9A" }}
             aria-label="Back to dashboard"
           >
             <svg viewBox="0 0 20 20" fill="none" width={16} height={16}>
@@ -132,7 +132,7 @@ export default function BodyPage() {
           <div>
             <p
               className="text-xs font-semibold tracking-[0.25em] uppercase mb-0.5"
-              style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
             >
               Pillar
             </p>
@@ -149,7 +149,7 @@ export default function BodyPage() {
         <section>
           <p
             className="text-xs font-semibold tracking-[0.25em] uppercase mb-5"
-            style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
           >
             How much time do you have?
           </p>
@@ -160,12 +160,14 @@ export default function BodyPage() {
                 <button
                   key={value}
                   onClick={() => setSelectedTime(active ? null : value)}
-                  className="px-8 py-3 text-sm font-bold uppercase tracking-widest transition-all duration-150 active:scale-95"
+                  className="px-8 py-3 text-sm uppercase tracking-widest transition-all duration-150 active:scale-95"
                   style={{
-                    fontFamily: "var(--font-oswald)",
-                    backgroundColor: active ? "#C45B28" : "#141414",
+                    fontFamily: "var(--font-inter)",
+                    fontWeight: 600,
+                    backgroundColor: active ? "#C45B28" : "#161616",
                     color: active ? "#0A0A0A" : "#E8E2D8",
-                    border: `1px solid ${active ? "#C45B28" : "#2A2A2A"}`,
+                    border: `1px solid ${active ? "#C45B28" : "#252525"}`,
+                    borderRadius: "8px",
                   }}
                 >
                   {label}
@@ -178,11 +180,11 @@ export default function BodyPage() {
         <div>
           <h2
             className="text-2xl font-bold uppercase mb-1"
-            style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+            style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
           >
             Choose Your Discipline.
           </h2>
-          <p className="text-sm" style={{ color: "#7A7268" }}>
+          <p className="text-sm" style={{ color: "#9A9A9A" }}>
             {fallback
               ? "Select your interests in Settings to personalize this page."
               : "Pick the training style that fits where you are today."}
@@ -193,11 +195,11 @@ export default function BodyPage() {
         <Link
           href="/dashboard/body/history"
           className="flex items-center justify-between px-6 py-4 transition-opacity hover:opacity-80"
-          style={{ backgroundColor: "#111111", border: "1px solid #1E1E1E" }}
+          style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
         >
           <span
             className="text-sm font-bold uppercase tracking-wide"
-            style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+            style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
           >
             Workout History
           </span>
@@ -246,31 +248,43 @@ function CategoryCard({
     : `/dashboard/body/${slug}`;
 
   return (
-    <Link
-      href={href}
-      className="flex flex-col gap-3 px-7 py-6 transition-all duration-150 active:scale-[0.98]"
+    <div
+      className="flex flex-col gap-3 px-7 py-6 transition-all duration-150"
       style={{
-        backgroundColor: hovered ? "#161616" : "#111111",
-        border: `1px solid ${hovered ? "#C45B28" : "#1E1E1E"}`,
+        backgroundColor: "#161616",
+        border: `1px solid ${hovered ? "#C45B28" : "#252525"}`,
+        borderRadius: "12px",
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
       <h3
         className="text-xl font-bold uppercase tracking-wide"
-        style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+        style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
       >
         {title}
       </h3>
-      <p className="text-sm leading-relaxed" style={{ color: "#7A7268" }}>
+      <p className="text-sm leading-relaxed" style={{ color: "#9A9A9A" }}>
         {desc}
       </p>
-      <span
-        className="text-xs font-semibold uppercase tracking-widest mt-1 self-start"
-        style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
-      >
-        View Workouts &rsaquo;
-      </span>
-    </Link>
+      <div className="flex items-center gap-4 mt-1">
+        <Link
+          href={href}
+          className="text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-70"
+          style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+        >
+          View Workouts &rsaquo;
+        </Link>
+        {slug === "running" && (
+          <Link
+            href="/dashboard/body/run"
+            className="text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-70"
+            style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+          >
+            GPS Tracker &rsaquo;
+          </Link>
+        )}
+      </div>
+    </div>
   );
 }

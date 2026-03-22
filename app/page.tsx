@@ -10,34 +10,34 @@ function PhoneFrame({ title, children }: { title: string; children: React.ReactN
     <div
       className="flex flex-col rounded-[2rem] overflow-hidden flex-shrink-0 w-[200px]"
       style={{
-        backgroundColor: "#0D0D0D",
-        border: "1px solid #2A2A2A",
+        backgroundColor: "#161616",
+        border: "1px solid #252525",
         boxShadow: "0 24px 60px rgba(0,0,0,0.6)",
       }}
     >
       {/* Phone chrome */}
-      <div className="flex items-center justify-center pt-4 pb-2 px-6" style={{ backgroundColor: "#111111" }}>
-        <div className="w-16 h-1 rounded-full" style={{ backgroundColor: "#2A2A2A" }} />
+      <div className="flex items-center justify-center pt-4 pb-2 px-6" style={{ backgroundColor: "#161616" }}>
+        <div className="w-16 h-1 rounded-full" style={{ backgroundColor: "#252525" }} />
       </div>
       {/* Screen */}
-      <div className="flex flex-col flex-1 px-4 py-4 gap-3" style={{ backgroundColor: "#0D0D0D" }}>
+      <div className="flex flex-col flex-1 px-4 py-4 gap-3" style={{ backgroundColor: "#161616" }}>
         <p
           className="text-[10px] font-semibold tracking-[0.2em] uppercase"
-          style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+          style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
         >
           Build My Groundwork
         </p>
         <p
           className="text-sm font-bold uppercase leading-tight"
-          style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+          style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
         >
           {title}
         </p>
         {children}
       </div>
       {/* Home bar */}
-      <div className="flex items-center justify-center pb-4 pt-2" style={{ backgroundColor: "#111111" }}>
-        <div className="w-10 h-1 rounded-full" style={{ backgroundColor: "#2A2A2A" }} />
+      <div className="flex items-center justify-center pb-4 pt-2" style={{ backgroundColor: "#161616" }}>
+        <div className="w-10 h-1 rounded-full" style={{ backgroundColor: "#252525" }} />
       </div>
     </div>
   );
@@ -45,7 +45,7 @@ function PhoneFrame({ title, children }: { title: string; children: React.ReactN
 
 function MockBar({ pct, color }: { pct: number; color: string }) {
   return (
-    <div className="h-1.5 w-full rounded-full" style={{ backgroundColor: "#1E1E1E" }}>
+    <div className="h-1.5 w-full rounded-full" style={{ backgroundColor: "#252525" }}>
       <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: color }} />
     </div>
   );
@@ -53,7 +53,7 @@ function MockBar({ pct, color }: { pct: number; color: string }) {
 
 function MockCard({ children }: { children: React.ReactNode }) {
   return (
-    <div className="px-3 py-2.5 rounded" style={{ backgroundColor: "#141414", border: "1px solid #1E1E1E" }}>
+    <div className="px-3 py-2.5 rounded" style={{ backgroundColor: "#161616", border: "1px solid #252525" }}>
       {children}
     </div>
   );
@@ -85,14 +85,14 @@ export default function LandingPage() {
         <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-8 py-6 z-20">
           <p
             className="text-xs font-semibold tracking-[0.3em] uppercase"
-            style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
           >
             Build My Groundwork
           </p>
           <Link
             href="/login"
             className="text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-70"
-            style={{ color: "#7A7268", fontFamily: "var(--font-oswald)" }}
+            style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
           >
             Sign In
           </Link>
@@ -113,7 +113,7 @@ export default function LandingPage() {
 
         <p
           className="text-xs font-semibold tracking-[0.3em] uppercase mb-6"
-          style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+          style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
         >
           For Superintendents · Foremen · Project Managers
         </p>
@@ -129,28 +129,40 @@ export default function LandingPage() {
           <span style={{ color: "#C45B28" }}>Who&apos;s building you?</span>
         </h1>
 
-        <p className="text-base sm:text-lg max-w-xl mb-10 leading-relaxed" style={{ color: "#7A7268" }}>
+        <p className="text-base sm:text-lg max-w-xl mb-10 leading-relaxed" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
           The all-in-one wellness platform built specifically for construction leaders.
           Fitness. Mental health. Leadership.{" "}
-          <span style={{ color: "#A09890" }}>One app. Ten minutes a day.</span>
+          <span style={{ color: "#9A9A9A" }}>One app. Ten minutes a day.</span>
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 items-center">
           <Link
             href="/login"
-            className="px-10 py-4 text-sm font-bold uppercase tracking-widest transition-all duration-150 hover:opacity-90 active:scale-95"
-            style={{ backgroundColor: "#C45B28", color: "#0A0A0A", fontFamily: "var(--font-oswald)" }}
+            className="px-10 py-4 text-sm font-semibold uppercase tracking-widest transition-all duration-150 hover:opacity-90 active:scale-95"
+            style={{
+              backgroundColor: "#C45B28",
+              color: "#0A0A0A",
+              fontFamily: "var(--font-inter)",
+              fontWeight: 600,
+              borderRadius: "8px",
+              minHeight: "48px",
+              display: "flex",
+              alignItems: "center",
+            }}
           >
             Start Free
           </Link>
           <button
             onClick={scrollToHow}
-            className="px-10 py-4 text-sm font-bold uppercase tracking-widest transition-all duration-150 hover:opacity-70 active:scale-95"
+            className="px-10 py-4 text-sm font-semibold uppercase tracking-widest transition-all duration-150 hover:opacity-70 active:scale-95"
             style={{
-              border: "1px solid #2A2A2A",
-              color: "#7A7268",
-              fontFamily: "var(--font-oswald)",
+              border: "1px solid #252525",
+              color: "#9A9A9A",
+              fontFamily: "var(--font-inter)",
+              fontWeight: 600,
               backgroundColor: "transparent",
+              borderRadius: "8px",
+              minHeight: "48px",
             }}
           >
             See How It Works
@@ -168,13 +180,13 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto">
           <p
             className="text-xs font-semibold tracking-[0.3em] uppercase mb-4"
-            style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
           >
             How It Works
           </p>
           <h2
             className="text-3xl sm:text-4xl font-bold uppercase mb-16 max-w-xl leading-tight"
-            style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+            style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
           >
             Three moments. That&apos;s all it takes.
           </h2>
@@ -205,26 +217,26 @@ export default function LandingPage() {
                 className="flex flex-col gap-4 px-8 py-10 relative"
                 style={{
                   borderTop: "1px solid #1E1E1E",
-                  borderLeft: i > 0 ? "1px solid #1E1E1E" : undefined,
+                  borderLeft: "4px solid #1E3A5F",
                 }}
               >
                 <span
                   className="text-5xl font-bold leading-none"
-                  style={{ fontFamily: "var(--font-oswald)", color: "#1E1E1E" }}
+                  style={{ fontFamily: "var(--font-inter)", color: "#1E1E1E" }}
                 >
                   {step}
                 </span>
                 <div>
                   <h3
                     className="text-xl font-bold uppercase mb-1"
-                    style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+                    style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
                   >
                     {title}
                   </h3>
-                  <p className="text-xs mb-3" style={{ color: "#C45B28", fontFamily: "var(--font-oswald)", letterSpacing: "0.1em" }}>
+                  <p className="text-xs mb-3" style={{ color: "#C45B28", fontFamily: "var(--font-inter)", letterSpacing: "0.1em" }}>
                     {time}
                   </p>
-                  <p className="text-sm leading-relaxed" style={{ color: "#7A7268" }}>
+                  <p className="text-sm leading-relaxed" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
                     {body}
                   </p>
                 </div>
@@ -239,13 +251,13 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto">
           <p
             className="text-xs font-semibold tracking-[0.3em] uppercase mb-4"
-            style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
           >
             Inside the App
           </p>
           <h2
             className="text-3xl sm:text-4xl font-bold uppercase mb-16 leading-tight"
-            style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+            style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
           >
             Every tool you need.<br />Nothing you don&apos;t.
           </h2>
@@ -256,18 +268,18 @@ export default function LandingPage() {
             {/* Dashboard */}
             <div className="snap-start flex-shrink-0">
               <PhoneFrame title="Good Morning, Mike.">
-                <p className="text-[9px]" style={{ color: "#5A5248" }}>Superintendent · Acme Construction</p>
+                <p className="text-[9px]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Superintendent · Acme Construction</p>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-2xl font-bold" style={{ fontFamily: "var(--font-oswald)", color: "#C45B28" }}>7</span>
+                  <span className="text-2xl font-bold" style={{ fontFamily: "var(--font-inter)", color: "#C45B28" }}>7</span>
                   <div>
-                    <p className="text-[9px] font-bold uppercase" style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}>Day Streak</p>
-                    <p className="text-[8px]" style={{ color: "#5A5248" }}>7 consecutive days</p>
+                    <p className="text-[9px] font-bold uppercase" style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}>Day Streak</p>
+                    <p className="text-[8px]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>7 consecutive days</p>
                   </div>
                 </div>
-                <p className="text-[8px] font-semibold tracking-widest uppercase mt-2 mb-1.5" style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}>Choose Your Pillar</p>
+                <p className="text-[8px] font-semibold tracking-widest uppercase mt-2 mb-1.5" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>Choose Your Pillar</p>
                 {["Body", "Mind", "Heart", "Lead"].map((p) => (
                   <MockCard key={p}>
-                    <p className="text-[10px] font-bold uppercase" style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}>{p}</p>
+                    <p className="text-[10px] font-bold uppercase" style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}>{p}</p>
                   </MockCard>
                 ))}
               </PhoneFrame>
@@ -276,17 +288,17 @@ export default function LandingPage() {
             {/* Body */}
             <div className="snap-start flex-shrink-0">
               <PhoneFrame title="Body">
-                <p className="text-[8px] font-semibold tracking-widest uppercase mb-1" style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}>How much time?</p>
+                <p className="text-[8px] font-semibold tracking-widest uppercase mb-1" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>How much time?</p>
                 <div className="flex gap-1.5 flex-wrap mb-2">
                   {["15 min", "30 min", "45 min", "1 hr"].map((t, i) => (
                     <span
                       key={t}
                       className="text-[8px] font-bold uppercase px-2 py-1"
                       style={{
-                        fontFamily: "var(--font-oswald)",
-                        backgroundColor: i === 1 ? "#C45B28" : "#141414",
-                        color: i === 1 ? "#0A0A0A" : "#7A7268",
-                        border: `1px solid ${i === 1 ? "#C45B28" : "#2A2A2A"}`,
+                        fontFamily: "var(--font-inter)",
+                        backgroundColor: i === 1 ? "#C45B28" : "#161616",
+                        color: i === 1 ? "#0A0A0A" : "#9A9A9A",
+                        border: `1px solid ${i === 1 ? "#C45B28" : "#252525"}`,
                       }}
                     >
                       {t}
@@ -295,7 +307,7 @@ export default function LandingPage() {
                 </div>
                 {["Running", "Weightlifting", "Calisthenics", "Rucking"].map((d) => (
                   <MockCard key={d}>
-                    <p className="text-[10px] font-bold uppercase" style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}>{d}</p>
+                    <p className="text-[10px] font-bold uppercase" style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}>{d}</p>
                   </MockCard>
                 ))}
               </PhoneFrame>
@@ -304,7 +316,7 @@ export default function LandingPage() {
             {/* Mind */}
             <div className="snap-start flex-shrink-0">
               <PhoneFrame title="Mind">
-                <p className="text-[8px] font-semibold tracking-widest uppercase mb-2" style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}>Daily Check-In</p>
+                <p className="text-[8px] font-semibold tracking-widest uppercase mb-2" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>Daily Check-In</p>
                 <div className="flex gap-1.5 flex-wrap mb-3">
                   {["Low", "Rough", "Mid", "Good", "High"].map((m, i) => {
                     const colors = ["#5A4A4A", "#7A5A28", "#5A5248", "#4A6A4A", "#2A5A3A"];
@@ -312,17 +324,17 @@ export default function LandingPage() {
                       <span
                         key={m}
                         className="text-[8px] font-bold uppercase px-2 py-1"
-                        style={{ fontFamily: "var(--font-oswald)", backgroundColor: colors[i], color: "#E8E2D8" }}
+                        style={{ fontFamily: "var(--font-inter)", backgroundColor: colors[i], color: "#E8E2D8" }}
                       >
                         {m}
                       </span>
                     );
                   })}
                 </div>
-                <p className="text-[8px] font-semibold tracking-widest uppercase mb-1.5" style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}>Stress Tools</p>
+                <p className="text-[8px] font-semibold tracking-widest uppercase mb-1.5" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>Stress Tools</p>
                 {["Box Breathing", "5-Minute Reset", "Shutdown Ritual"].map((t) => (
                   <MockCard key={t}>
-                    <p className="text-[10px] font-bold uppercase" style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}>{t}</p>
+                    <p className="text-[10px] font-bold uppercase" style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}>{t}</p>
                   </MockCard>
                 ))}
               </PhoneFrame>
@@ -331,26 +343,26 @@ export default function LandingPage() {
             {/* Heart */}
             <div className="snap-start flex-shrink-0">
               <PhoneFrame title="Heart">
-                <p className="text-[8px] font-semibold tracking-widest uppercase mb-1" style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}>Daily Journal</p>
+                <p className="text-[8px] font-semibold tracking-widest uppercase mb-1" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>Daily Journal</p>
                 <div
                   className="w-full h-14 rounded px-2 py-2 mb-3"
-                  style={{ backgroundColor: "#141414", border: "1px solid #1E1E1E" }}
+                  style={{ backgroundColor: "#161616", border: "1px solid #252525" }}
                 >
-                  <p className="text-[8px] leading-relaxed" style={{ color: "#3A3530" }}>
+                  <p className="text-[8px] leading-relaxed" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
                     What&apos;s on your mind today...
                   </p>
                 </div>
-                <p className="text-[8px] font-semibold tracking-widest uppercase mb-1.5" style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}>Gratitude</p>
+                <p className="text-[8px] font-semibold tracking-widest uppercase mb-1.5" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>Gratitude</p>
                 {[1, 2, 3].map((n) => (
                   <div
                     key={n}
                     className="w-full h-6 rounded mb-1.5"
-                    style={{ backgroundColor: "#141414", border: "1px solid #1E1E1E" }}
+                    style={{ backgroundColor: "#161616", border: "1px solid #252525" }}
                   />
                 ))}
                 <button
                   className="w-full py-1.5 text-[9px] font-bold uppercase tracking-widest mt-1"
-                  style={{ backgroundColor: "#C45B28", color: "#0A0A0A", fontFamily: "var(--font-oswald)" }}
+                  style={{ backgroundColor: "#C45B28", color: "#0A0A0A", fontFamily: "var(--font-inter)" }}
                 >
                   Save Entry
                 </button>
@@ -359,7 +371,7 @@ export default function LandingPage() {
 
           </div>
 
-          <p className="text-xs text-center mt-8" style={{ color: "#3A3530" }}>
+          <p className="text-xs text-center mt-8" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
             Scroll to see more →
           </p>
         </div>
@@ -371,13 +383,13 @@ export default function LandingPage() {
           <div className="max-w-2xl">
             <p
               className="text-xs font-semibold tracking-[0.3em] uppercase mb-4"
-              style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
             >
               Built Different
             </p>
             <h2
               className="text-3xl sm:text-4xl font-bold uppercase mb-12 leading-tight"
-              style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+              style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
             >
               Built for guys who measure their day in minutes, not hours.
             </h2>
@@ -401,11 +413,11 @@ export default function LandingPage() {
                   <div>
                     <p
                       className="text-lg font-bold uppercase mb-1"
-                      style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+                      style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
                     >
                       {lead}
                     </p>
-                    <p className="text-sm leading-relaxed" style={{ color: "#7A7268" }}>
+                    <p className="text-sm leading-relaxed" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
                       {body}
                     </p>
                   </div>
@@ -421,13 +433,13 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto">
           <p
             className="text-xs font-semibold tracking-[0.3em] uppercase mb-4"
-            style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
           >
             The Reality
           </p>
           <h2
             className="text-3xl sm:text-4xl font-bold uppercase mb-14 leading-tight max-w-lg"
-            style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+            style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
           >
             The industry has a problem nobody&apos;s talking about.
           </h2>
@@ -449,15 +461,15 @@ export default function LandingPage() {
               <div
                 key={stat}
                 className="flex flex-col gap-4 px-8 py-10"
-                style={{ backgroundColor: "#0D0D0D", border: "1px solid #1E1E1E" }}
+                style={{ backgroundColor: "#0D1B2A", border: "1px solid #1E3A5F", borderRadius: "12px" }}
               >
                 <span
                   className="text-5xl font-bold leading-none"
-                  style={{ fontFamily: "var(--font-oswald)", color: "#C45B28" }}
+                  style={{ fontFamily: "var(--font-inter)", color: "#C45B28" }}
                 >
                   {stat}
                 </span>
-                <p className="text-sm leading-relaxed" style={{ color: "#7A7268" }}>
+                <p className="text-sm leading-relaxed" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
                   {copy}
                 </p>
               </div>
@@ -467,27 +479,27 @@ export default function LandingPage() {
       </section>
 
       {/* ── 6. BUILT BY SOMEONE WHO GETS IT ──────────────────────────────────── */}
-      <section className="px-6 py-24" style={{ borderTop: "1px solid #1A1A1A" }}>
+      <section className="px-6 py-24" style={{ borderTop: "1px solid #1A1A1A", backgroundColor: "#050D18" }}>
         <div className="max-w-4xl mx-auto">
           <div className="max-w-2xl">
             <p
               className="text-xs font-semibold tracking-[0.3em] uppercase mb-4"
-              style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
             >
               The Origin
             </p>
             <div className="w-12 h-0.5 mb-8" style={{ backgroundColor: "#1E1E1E" }} />
             <blockquote
               className="text-xl sm:text-2xl font-bold uppercase leading-snug mb-8"
-              style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+              style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
             >
               &ldquo;Built by a superintendent with 7 years in the field. Not by a tech company guessing what you need.&rdquo;
             </blockquote>
-            <p className="text-sm leading-relaxed mb-4" style={{ color: "#7A7268" }}>
+            <p className="text-sm leading-relaxed mb-4" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
               This started because the industry keeps losing good people — to burnout, to addiction, to worse —
               and nobody&apos;s building anything real to stop it.
             </p>
-            <p className="text-sm leading-relaxed" style={{ color: "#7A7268" }}>
+            <p className="text-sm leading-relaxed" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
               Groundwork isn&apos;t a wellness app built for an office. It&apos;s built for the job.
               For the 5am start. The brutal week. The drive home where you don&apos;t know how to turn it off.
             </p>
@@ -504,20 +516,20 @@ export default function LandingPage() {
           <div className="w-12 h-0.5 mb-8" style={{ backgroundColor: "#C45B28" }} />
           <p
             className="text-xs font-semibold tracking-[0.3em] uppercase mb-4"
-            style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
           >
             Founding Member Access
           </p>
           <h2
             className="text-3xl sm:text-4xl font-bold uppercase mb-4 leading-tight"
-            style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+            style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
           >
             Limited to the first 100.
           </h2>
-          <p className="text-sm mb-2 leading-relaxed" style={{ color: "#7A7268" }}>
+          <p className="text-sm mb-2 leading-relaxed" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
             Free during beta. No credit card. Just access to every tool we build, and your voice in what comes next.
           </p>
-          <p className="text-xs mb-10" style={{ color: "#5A5248" }}>
+          <p className="text-xs mb-10" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
             Open to Superintendents, Foremen, and Project Managers only.
           </p>
 
@@ -525,11 +537,11 @@ export default function LandingPage() {
             <div className="w-full py-6 flex flex-col items-center gap-2">
               <p
                 className="text-xl font-bold uppercase"
-                style={{ fontFamily: "var(--font-oswald)", color: "#C45B28" }}
+                style={{ fontFamily: "var(--font-inter)", color: "#C45B28" }}
               >
                 You&apos;re in.
               </p>
-              <p className="text-sm" style={{ color: "#7A7268" }}>
+              <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
                 We&apos;ll be in touch before launch.
               </p>
             </div>
@@ -543,18 +555,23 @@ export default function LandingPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="flex-1 px-5 py-4 text-sm outline-none focus:ring-2 focus:ring-[#C45B28]"
                 style={{
-                  backgroundColor: "#141414",
-                  border: "1px solid #2A2A2A",
+                  backgroundColor: "#161616",
+                  border: "1px solid #252525",
+                  borderRadius: "8px",
                   color: "#E8E2D8",
+                  fontFamily: "var(--font-inter)",
                 }}
               />
               <button
                 type="submit"
-                className="px-8 py-4 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-95 whitespace-nowrap"
+                className="px-8 py-4 text-sm font-semibold uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-95 whitespace-nowrap"
                 style={{
                   backgroundColor: "#C45B28",
                   color: "#0A0A0A",
-                  fontFamily: "var(--font-oswald)",
+                  fontFamily: "var(--font-inter)",
+                  fontWeight: 600,
+                  borderRadius: "8px",
+                  minHeight: "48px",
                 }}
               >
                 Claim My Spot
@@ -562,12 +579,12 @@ export default function LandingPage() {
             </form>
           )}
 
-          <p className="text-xs mt-6" style={{ color: "#3A3530" }}>
+          <p className="text-xs mt-6" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
             Or{" "}
             <Link
               href="/login"
               className="underline transition-opacity hover:opacity-70"
-              style={{ color: "#7A7268" }}
+              style={{ color: "#9A9A9A" }}
             >
               sign up now and start using the app today
             </Link>
@@ -583,17 +600,17 @@ export default function LandingPage() {
       >
         <p
           className="text-xs font-semibold tracking-[0.2em] uppercase"
-          style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+          style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
         >
           Build My Groundwork
         </p>
-        <p className="text-xs" style={{ color: "#3A3530" }}>
+        <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
           © {new Date().getFullYear()} Groundwork. All rights reserved.
         </p>
         <Link
           href="/login"
           className="text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-70"
-          style={{ color: "#5A5248", fontFamily: "var(--font-oswald)" }}
+          style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
         >
           Sign In
         </Link>

@@ -585,7 +585,7 @@ export default function CategoryPage({
           <Link
             href="/dashboard/body"
             className="flex items-center justify-center w-9 h-9 transition-opacity hover:opacity-60"
-            style={{ border: "1px solid #2A2A2A", color: "#7A7268" }}
+            style={{ border: "1px solid #252525", color: "#9A9A9A" }}
             aria-label="Back to Body"
           >
             <svg viewBox="0 0 20 20" fill="none" width={16} height={16}>
@@ -595,7 +595,7 @@ export default function CategoryPage({
           <div>
             <p
               className="text-xs font-semibold tracking-[0.25em] uppercase mb-0.5"
-              style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
             >
               Body · {data.title}
             </p>
@@ -610,69 +610,76 @@ export default function CategoryPage({
 
         {/* Today's Workout */}
         <section>
-          <div style={{ backgroundColor: "#111111", border: "1px solid #1E1E1E" }}>
+          <div style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}>
             {/* Card header */}
             <div
               className="px-8 py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
-              style={{ borderBottom: "1px solid #1E1E1E" }}
+              style={{ borderBottom: "1px solid #252525" }}
             >
               <div>
                 <div className="flex items-center gap-3 flex-wrap mb-2">
                   <span
                     className="text-xs font-semibold uppercase tracking-widest px-2 py-0.5"
-                    style={{ color: "#C45B28", border: "1px solid #C45B28", fontFamily: "var(--font-oswald)" }}
+                    style={{ color: "#C45B28", border: "1px solid #C45B28", fontFamily: "var(--font-inter)" }}
                   >
                     {durationLabel(duration)}
                   </span>
                   <span
                     className="text-xs font-semibold uppercase tracking-widest px-2 py-0.5"
-                    style={{ color: "#7A7268", border: "1px solid #2A2A2A", fontFamily: "var(--font-oswald)" }}
+                    style={{ color: "#9A9A9A", border: "1px solid #252525", fontFamily: "var(--font-inter)" }}
                   >
                     {tier.exercises.length} Exercises
                   </span>
                 </div>
-                <p className="text-sm" style={{ color: "#7A7268" }}>{data.equipment}</p>
-                <p className="text-xs mt-1 italic" style={{ color: "#5A5248" }}>{tier.restNote}</p>
+                <p className="text-sm" style={{ color: "#9A9A9A" }}>{data.equipment}</p>
+                <p className="text-xs mt-1 italic" style={{ color: "#9A9A9A" }}>{tier.restNote}</p>
               </div>
             </div>
 
             {/* Exercise list */}
-            <div className="divide-y" style={{ borderColor: "#1A1A1A" }}>
+            <div className="divide-y" style={{ borderColor: "#252525" }}>
               {tier.exercises.map((ex, i) => (
                 <div key={`${ex.name}-${i}`} className="px-8 py-5 flex items-start gap-5">
                   <span
                     className="text-xs font-bold mt-0.5 w-5 shrink-0 text-right"
-                    style={{ color: "#3A3A3A", fontFamily: "var(--font-oswald)" }}
+                    style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
                   >
                     {String(i + 1).padStart(2, "0")}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-base font-semibold" style={{ color: "#E8E2D8" }}>{ex.name}</p>
-                    <p className="text-xs mt-0.5" style={{ color: "#7A7268" }}>{ex.muscles}</p>
+                    <p className="text-base font-semibold" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>{ex.name}</p>
+                    <p className="text-xs mt-0.5" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>{ex.muscles}</p>
                     {ex.note && (
-                      <p className="text-xs mt-1 italic" style={{ color: "#5A5248" }}>{ex.note}</p>
+                      <p className="text-xs mt-1 italic" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>{ex.note}</p>
                     )}
                   </div>
                   <div className="text-right shrink-0">
                     <p
                       className="text-lg font-bold"
-                      style={{ fontFamily: "var(--font-oswald)", color: "#C45B28" }}
+                      style={{ fontFamily: "var(--font-inter)", color: "#C45B28" }}
                     >
                       {ex.sets}&times;{ex.reps}
                     </p>
-                    <p className="text-xs" style={{ color: "#5A5248" }}>sets &times; reps</p>
+                    <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>sets &times; reps</p>
                   </div>
                 </div>
               ))}
             </div>
 
             {/* Workout footer */}
-            <div className="px-8 py-6 flex flex-col gap-4" style={{ borderTop: "1px solid #1E1E1E" }}>
+            <div className="px-8 py-6 flex flex-col gap-4" style={{ borderTop: "1px solid #252525" }}>
               {workoutState === "idle" && (
                 <button
                   onClick={() => { setElapsed(0); setWorkoutState("active"); }}
-                  className="w-full py-4 text-base font-bold uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-[0.99]"
-                  style={{ fontFamily: "var(--font-oswald)", backgroundColor: "#C45B28", color: "#0A0A0A" }}
+                  className="w-full text-base uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-[0.99]"
+                  style={{
+                    fontFamily: "var(--font-inter)",
+                    fontWeight: 600,
+                    backgroundColor: "#C45B28",
+                    color: "#0A0A0A",
+                    borderRadius: "8px",
+                    minHeight: "48px",
+                  }}
                 >
                   Start Workout
                 </button>
@@ -680,17 +687,30 @@ export default function CategoryPage({
               {workoutState === "active" && (
                 <>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#7A7268", fontFamily: "var(--font-oswald)" }}>
+                    <span
+                      className="text-xs font-semibold uppercase tracking-widest"
+                      style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                    >
                       Elapsed
                     </span>
-                    <span className="text-4xl font-bold tabular-nums" style={{ fontFamily: "var(--font-oswald)", color: "#C45B28" }}>
+                    <span
+                      className="text-4xl font-bold tabular-nums"
+                      style={{ fontFamily: "var(--font-inter)", color: "#C45B28" }}
+                    >
                       {formatTime(elapsed)}
                     </span>
                   </div>
                   <button
                     onClick={handleComplete}
-                    className="w-full py-4 text-base font-bold uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-[0.99]"
-                    style={{ fontFamily: "var(--font-oswald)", backgroundColor: "#C45B28", color: "#0A0A0A" }}
+                    className="w-full text-base uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-[0.99]"
+                    style={{
+                      fontFamily: "var(--font-inter)",
+                      fontWeight: 600,
+                      backgroundColor: "#C45B28",
+                      color: "#0A0A0A",
+                      borderRadius: "8px",
+                      minHeight: "48px",
+                    }}
                   >
                     Complete Workout
                   </button>
@@ -698,10 +718,13 @@ export default function CategoryPage({
               )}
               {workoutState === "logged" && (
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#4CAF50", fontFamily: "var(--font-oswald)" }}>
+                  <span
+                    className="text-xs font-semibold uppercase tracking-widest"
+                    style={{ color: "#4CAF50", fontFamily: "var(--font-inter)" }}
+                  >
                     Workout Logged
                   </span>
-                  <span className="text-sm" style={{ color: "#5A5248" }}>
+                  <span className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
                     {formatTime(elapsed)} · {tier.exercises.length} exercises
                   </span>
                 </div>
@@ -714,7 +737,7 @@ export default function CategoryPage({
         <section>
           <p
             className="text-xs font-semibold tracking-[0.25em] uppercase mb-4"
-            style={{ color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
           >
             Programs
           </p>
@@ -724,29 +747,36 @@ export default function CategoryPage({
                 key={program.title}
                 className="px-8 py-6 flex flex-col gap-3"
                 style={{
-                  backgroundColor: i === 0 ? "#131313" : "#0E0E0E",
-                  border: `1px solid ${i === 0 ? "#C45B28" : "#1E1E1E"}`,
+                  backgroundColor: "#161616",
+                  border: `1px solid ${i === 0 ? "#C45B28" : "#252525"}`,
+                  borderRadius: "12px",
                 }}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-3 flex-wrap">
-                    <h3 className="text-xl font-bold uppercase" style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}>
+                    <h3
+                      className="text-xl font-bold uppercase"
+                      style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
+                    >
                       {program.title}
                     </h3>
                     {i === 0 && (
                       <span
                         className="text-xs font-semibold uppercase tracking-widest px-2 py-0.5"
-                        style={{ backgroundColor: "#1E0E06", color: "#C45B28", fontFamily: "var(--font-oswald)" }}
+                        style={{ backgroundColor: "#1E0E06", color: "#C45B28", fontFamily: "var(--font-inter)" }}
                       >
                         Recommended
                       </span>
                     )}
                   </div>
-                  <span className="text-sm font-semibold shrink-0" style={{ color: "#3A3A3A", fontFamily: "var(--font-oswald)" }}>
+                  <span
+                    className="text-sm font-semibold shrink-0"
+                    style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                  >
                     {program.weeks}W
                   </span>
                 </div>
-                <p className="text-sm" style={{ color: "#7A7268" }}>{program.description}</p>
+                <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>{program.description}</p>
               </div>
             ))}
           </div>
