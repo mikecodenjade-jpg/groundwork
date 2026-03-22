@@ -4,6 +4,12 @@ import { useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
+/* Hide default Mapbox branding — we add our own minimal attribution below */
+const HIDE_BRANDING_CSS = `
+.mapboxgl-ctrl-logo { display: none !important; }
+.mapboxgl-ctrl-attrib { display: none !important; }
+`;
+
 type Coord = { lat: number; lng: number };
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
@@ -16,11 +22,13 @@ console.log("[RunMap] NEXT_PUBLIC_MAPBOX_TOKEN:", MAPBOX_TOKEN ? `${MAPBOX_TOKEN
 
 export default function RunMap({
   coords,
+  center,
   height = "400px",
   interactive = true,
   summary,
 }: {
   coords?: Coord[];
+  center?: [number, number]; // [lng, lat] override for default center
   height?: string;
   interactive?: boolean;
   summary?: { distance: string; time: string; pace: string } | null;
@@ -43,7 +51,7 @@ export default function RunMap({
     const map = new mapboxgl.Map({
       container: containerRef.current,
       style: STYLE,
-      center: hasRoute ? [coords[0].lng, coords[0].lat] : DALLAS,
+      center: hasRoute ? [coords[0].lng, coords[0].lat] : (center ?? DALLAS),
       zoom: hasRoute ? 14 : 12,
       interactive,
       attributionControl: false,
@@ -143,25 +151,38 @@ export default function RunMap({
       map.remove();
       mapRef.current = null;
     };
-  }, [coords, interactive, hasRoute]);
+  }, [coords, center, interactive, hasRoute]);
 
   return (
-    <div className="relative w-full overflow-hidden" style={{ height, borderRadius: "12px" }}>
-      <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+    <div className="w-full">
+      {/* Inject CSS to hide default Mapbox branding */}
+      <style dangerouslySetInnerHTML={{ __html: HIDE_BRANDING_CSS }} />
 
-      {/* Summary overlay */}
-      {summary && (
-        <div
-          className="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-around px-4 py-3"
-          style={{
-            background: "linear-gradient(transparent, rgba(10,10,10,0.92) 30%)",
-          }}
-        >
-          <OverlayStat label="Distance" value={summary.distance} />
-          <OverlayStat label="Time" value={summary.time} />
-          <OverlayStat label="Pace" value={summary.pace} />
-        </div>
-      )}
+      <div className="relative w-full overflow-hidden" style={{ height, borderRadius: "12px" }}>
+        <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+
+        {/* Summary overlay */}
+        {summary && (
+          <div
+            className="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-around px-4 py-3"
+            style={{
+              background: "linear-gradient(transparent, rgba(10,10,10,0.92) 30%)",
+            }}
+          >
+            <OverlayStat label="Distance" value={summary.distance} />
+            <OverlayStat label="Time" value={summary.time} />
+            <OverlayStat label="Pace" value={summary.pace} />
+          </div>
+        )}
+      </div>
+
+      {/* Minimal custom attribution */}
+      <p
+        className="text-right mt-1"
+        style={{ fontSize: "10px", color: "#555", fontFamily: "var(--font-inter)" }}
+      >
+        © Mapbox
+      </p>
     </div>
   );
 }

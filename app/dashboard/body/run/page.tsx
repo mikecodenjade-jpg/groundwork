@@ -81,12 +81,26 @@ export default function RunPage() {
   const [history, setHistory] = useState<RunLog[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [expandedRun, setExpandedRun] = useState<string | null>(null);
+  const [userCenter, setUserCenter] = useState<[number, number] | undefined>(undefined);
+
+  // Get user's current location for the idle map
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setUserCenter([pos.coords.longitude, pos.coords.latitude]),
+      () => {}, // fail silently — Dallas fallback in RunMap
+      { enableHighAccuracy: true, timeout: 5000 }
+    );
+  }, []);
 
   const watchIdRef = useRef<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const coordsRef = useRef<Coord[]>([]);
   const distanceRef = useRef(0);
   const elapsedRef = useRef(0);
+  const gpsReadingCount = useRef(0);
+  const lastGpsTime = useRef<number>(0);
+  const recentSegments = useRef<number[]>([]); // last 5 segment distances for smoothing
 
   // Keep refs in sync with state for use in stop handler
   useEffect(() => { distanceRef.current = distanceMiles; }, [distanceMiles]);
@@ -121,6 +135,9 @@ export default function RunPage() {
     coordsRef.current = [];
     distanceRef.current = 0;
     elapsedRef.current = 0;
+    gpsReadingCount.current = 0;
+    lastGpsTime.current = Date.now();
+    recentSegments.current = [];
     setPhase("running");
 
     // Timer
@@ -131,18 +148,44 @@ export default function RunPage() {
     // GPS
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
+        gpsReadingCount.current += 1;
+
         const next: Coord = {
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
         };
+
+        // (a) Ignore first 3 GPS readings — GPS hasn't settled yet
+        if (gpsReadingCount.current <= 3) {
+          coordsRef.current.push(next);
+          return;
+        }
+
         const prev = coordsRef.current[coordsRef.current.length - 1];
         if (prev) {
           const seg = haversineDistance(prev, next);
+          const now = Date.now();
+          const dtHours = (now - lastGpsTime.current) / 3_600_000;
+
+          // (c) Filter out GPS points where implied speed > 15 mph
+          if (dtHours > 0 && seg / dtHours > 15) {
+            lastGpsTime.current = now;
+            return; // discard this point entirely
+          }
+
           // Filter out GPS noise: ignore jumps > 0.1 mile per reading
           if (seg < 0.1) {
             distanceRef.current += seg;
             setDistanceMiles(distanceRef.current);
+
+            // (d) Track last 5 segments for pace smoothing
+            recentSegments.current.push(seg);
+            if (recentSegments.current.length > 5) {
+              recentSegments.current.shift();
+            }
           }
+
+          lastGpsTime.current = now;
         }
         coordsRef.current.push(next);
       },
@@ -217,7 +260,11 @@ export default function RunPage() {
     setPhase("idle");
   }
 
-  const pace = calcPace(distanceMiles, elapsed);
+  // (e) Show "Calibrating..." for first 10 seconds; (b) require >= 0.01 mi
+  const pace =
+    phase === "running" && elapsed < 10
+      ? "Calibrating..."
+      : calcPace(distanceMiles, elapsed);
 
   return (
     <main
@@ -277,9 +324,9 @@ export default function RunPage() {
               className="text-xs font-semibold tracking-[0.25em] uppercase"
               style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
             >
-              Map Preview — Dallas, TX
+              Your Location
             </p>
-            <RunMap height="400px" interactive />
+            <RunMap height="400px" interactive center={userCenter} />
           </section>
         )}
 
