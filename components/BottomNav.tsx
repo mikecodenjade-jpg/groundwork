@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const TABS = [
   {
     label: "Home",
+    subtitle: "BM",
     href: "/dashboard",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" width={24} height={24}>
@@ -19,20 +20,39 @@ const TABS = [
     ),
   },
   {
-    label: "Body",
+    label: "Train",
+    subtitle: "PB",
     href: "/dashboard/body",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" width={24} height={24}>
-        <rect x="1" y="10" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="1.8" />
-        <rect x="5" y="11" width="2" height="2" rx="0.25" fill="currentColor" />
-        <rect x="7" y="11.5" width="10" height="1" fill="currentColor" />
-        <rect x="17" y="11" width="2" height="2" rx="0.25" fill="currentColor" />
-        <rect x="19" y="10" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="1.8" />
+        <path
+          d="M6 4v16M18 4v16M8 12h8M3 8h3M18 8h3M3 16h3M18 16h3"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+      </svg>
+    ),
+  },
+  {
+    label: "Fuel",
+    subtitle: "FL",
+    href: "/dashboard/nutrition",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" width={24} height={24}>
+        <path
+          d="M12 2C8 6 7 9 9 12c-2-1-3-3-2-5C5 9 4 12 6 15c1 2 3 3 6 3s5-1 6-3c2-3 1-6-1-8-1 2-2 3-3 3 1-2 0-4-2-8z"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinejoin="round"
+          fill="none"
+        />
       </svg>
     ),
   },
   {
     label: "Mind",
+    subtitle: "MN",
     href: "/dashboard/mind",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" width={24} height={24}>
@@ -44,13 +64,13 @@ const TABS = [
         />
         <line x1="12" y1="5" x2="12" y2="17" stroke="currentColor" strokeWidth="1.2" />
         <path d="M12 8.5C10.5 8.5 9 9.5 9 11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-        <path d="M12 12C13.5 12 15 11 15 9.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
       </svg>
     ),
   },
   {
-    label: "Social",
-    href: "/dashboard/heart",
+    label: "Crew",
+    subtitle: "CR",
+    href: "/dashboard/crew",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" width={24} height={24}>
         <circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.8" />
@@ -70,63 +90,41 @@ const TABS = [
       </svg>
     ),
   },
-  {
-    label: "Learn",
-    href: "/dashboard/lead",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" width={24} height={24}>
-        <path
-          d="M4 4H14C14 4 15 4 15 5V19C15 20 14 20 14 20H4V4Z"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M15 6H18C19 6 20 7 20 7V19C20 20 19 20 19 20H14"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinejoin="round"
-        />
-        <line x1="7" y1="8" x2="12" y2="8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-        <line x1="7" y1="11" x2="12" y2="11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-        <line x1="7" y1="14" x2="10" y2="14" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-      </svg>
-    ),
-  },
 ];
 
 function isActive(href: string, pathname: string): boolean {
   if (href === "/dashboard") return pathname === "/dashboard";
 
-  // Body covers: /dashboard/body, /dashboard/library, /dashboard/nutrition, /dashboard/body/*
+  // Train covers: /dashboard/body, /dashboard/library, /dashboard/programs
   if (href === "/dashboard/body") {
     return (
       pathname.startsWith("/dashboard/body") ||
       pathname.startsWith("/dashboard/library") ||
-      pathname.startsWith("/dashboard/nutrition")
+      pathname.startsWith("/dashboard/programs")
     );
   }
 
-  // Mind covers: /dashboard/mind, /dashboard/content
+  // Fuel covers: /dashboard/nutrition
+  if (href === "/dashboard/nutrition") {
+    return pathname.startsWith("/dashboard/nutrition");
+  }
+
+  // Mind covers: /dashboard/mind, /dashboard/content, /dashboard/meditate
   if (href === "/dashboard/mind") {
     return (
       pathname.startsWith("/dashboard/mind") ||
-      pathname.startsWith("/dashboard/content")
+      pathname.startsWith("/dashboard/content") ||
+      pathname.startsWith("/dashboard/meditate")
     );
   }
 
-  // Social covers: /dashboard/heart, /dashboard/challenges, /dashboard/crew
-  if (href === "/dashboard/heart") {
+  // Crew covers: /dashboard/heart, /dashboard/challenges, /dashboard/crew
+  if (href === "/dashboard/crew") {
     return (
       pathname.startsWith("/dashboard/heart") ||
-      pathname.startsWith("/dashboard/challenges") ||
-      pathname.startsWith("/dashboard/crew")
+      pathname.startsWith("/dashboard/crew") ||
+      pathname.startsWith("/dashboard/challenges")
     );
-  }
-
-  // Learn covers: /dashboard/lead, /dashboard/mind/content, /dashboard/library (content library)
-  if (href === "/dashboard/lead") {
-    return pathname.startsWith("/dashboard/lead");
   }
 
   return pathname.startsWith(href);
@@ -139,8 +137,8 @@ export default function BottomNav() {
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 flex items-stretch"
       style={{
-        backgroundColor: "#111111",
-        borderTop: "1px solid #1E1E1E",
+        backgroundColor: "#111827",
+        borderTop: "1px solid #1f2937",
         height: "64px",
       }}
     >
@@ -152,7 +150,7 @@ export default function BottomNav() {
             href={href}
             className="flex flex-1 flex-col items-center justify-center gap-1"
             style={{
-              color: active ? "#C45B28" : "#666666",
+              color: active ? "#f97316" : "#4b5563",
               transition: "color 0.2s ease",
               minWidth: 48,
               minHeight: 48,
@@ -169,7 +167,7 @@ export default function BottomNav() {
                 width: active ? 16 : 0,
                 height: 3,
                 borderRadius: 1.5,
-                backgroundColor: "#C45B28",
+                backgroundColor: "#f97316",
                 transition: "width 0.2s ease",
               }}
             />

@@ -73,11 +73,16 @@ const QUICK_FOODS: FoodEntry[] = [
 ];
 
 const FAST_FOOD = [
-  { place: "Chick-fil-A",  item: "Grilled Nuggets (12-count)",       name: "Chick-fil-A Grilled Nuggets",    cal: 380, protein: 47, carbs:  9, fat:  9 },
-  { place: "Whataburger",  item: "Grilled Chicken (no bun)",         name: "Whataburger Grilled Chicken",    cal: 310, protein: 34, carbs:  6, fat: 16 },
-  { place: "Chipotle",     item: "Bowl — Double Protein, No Rice",   name: "Chipotle Double Protein Bowl",   cal: 520, protein: 62, carbs: 28, fat: 18 },
-  { place: "McDonald's",   item: "Egg McMuffin",                     name: "McDonald's Egg McMuffin",        cal: 300, protein: 17, carbs: 30, fat: 12 },
-  { place: "Subway",       item: "Rotisserie Chicken (6-inch)",      name: "Subway Rotisserie Chicken",      cal: 440, protein: 36, carbs: 48, fat:  8 },
+  { place: "Chick-fil-A",    item: "Grilled Nuggets (12-count)",          name: "Chick-fil-A Grilled Nuggets",          cal: 380, protein: 47, carbs:  9, fat:  9 },
+  { place: "Whataburger",    item: "Grilled Chicken Sandwich (no bun)",   name: "Whataburger Grilled Chicken",          cal: 310, protein: 34, carbs:  6, fat: 16 },
+  { place: "Chipotle",       item: "Bowl — Double Chicken, No Rice",      name: "Chipotle Double Chicken Bowl",         cal: 520, protein: 62, carbs: 28, fat: 18 },
+  { place: "McDonald's",     item: "Egg McMuffin",                        name: "McDonald's Egg McMuffin",              cal: 300, protein: 17, carbs: 30, fat: 12 },
+  { place: "Subway",         item: "Rotisserie Chicken (6-inch)",         name: "Subway Rotisserie Chicken",            cal: 440, protein: 36, carbs: 48, fat:  8 },
+  { place: "Wendy's",        item: "Grilled Chicken Sandwich (no bun)",   name: "Wendy's Grilled Chicken",              cal: 290, protein: 34, carbs:  4, fat: 14 },
+  { place: "Taco Bell",      item: "Power Menu Bowl — Chicken",           name: "Taco Bell Power Menu Bowl",            cal: 470, protein: 26, carbs: 50, fat: 16 },
+  { place: "Sonic",          item: "Grilled Chicken Sandwich",            name: "Sonic Grilled Chicken",                cal: 340, protein: 33, carbs: 38, fat:  7 },
+  { place: "Raising Cane's", item: "3 Chicken Fingers",                   name: "Raising Cane's Chicken Fingers",       cal: 340, protein: 29, carbs: 23, fat: 14 },
+  { place: "Popeyes",        item: "Blackened Chicken Tenders (3-piece)", name: "Popeyes Blackened Chicken Tenders",    cal: 170, protein: 28, carbs:  4, fat:  5 },
 ];
 
 // ─── OpenFoodFacts types ──────────────────────────────────────────────────────
@@ -421,6 +426,7 @@ function BarcodeScanner({
   const videoRef   = useRef<HTMLVideoElement>(null);
   const streamRef  = useRef<MediaStream | null>(null);
   const frameRef   = useRef<number | null>(null);
+  const zxingControlsRef = useRef<{ stop: () => void } | null>(null);
   const [phase, setPhase]               = useState<ScanPhase>("starting");
   const [product, setProduct]           = useState<FoodEntry | null>(null);
   const [errMsg, setErrMsg]             = useState("");
@@ -431,6 +437,7 @@ function BarcodeScanner({
 
   const stopStream = useCallback(() => {
     if (frameRef.current !== null) { cancelAnimationFrame(frameRef.current); frameRef.current = null; }
+    if (zxingControlsRef.current) { zxingControlsRef.current.stop(); zxingControlsRef.current = null; }
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
   }, []);
@@ -470,6 +477,24 @@ function BarcodeScanner({
     setBarcodeLoading(false);
   }, []);
 
+  const startZXing = useCallback(async (videoEl: HTMLVideoElement) => {
+    try {
+      const { BrowserMultiFormatReader } = await import("@zxing/browser");
+      const codeReader = new BrowserMultiFormatReader();
+      const controls = await codeReader.decodeFromVideoElement(videoEl, (result) => {
+        if (result) {
+          controls.stop();
+          zxingControlsRef.current = null;
+          stopStream();
+          lookupBarcode(result.getText());
+        }
+      });
+      zxingControlsRef.current = controls;
+    } catch {
+      // ZXing failed silently — user can still enter manually
+    }
+  }, [lookupBarcode, stopStream]);
+
   const startCamera = useCallback(async () => {
     setPhase("starting");
     try {
@@ -481,7 +506,11 @@ function BarcodeScanner({
       await video.play();
       setPhase("scanning");
 
-      if (!hasBarcodeDetector) return;
+      if (!hasBarcodeDetector) {
+        // Use ZXing as fallback for iOS Safari and other browsers
+        startZXing(video);
+        return;
+      }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const detector = new (window as any).BarcodeDetector({
@@ -506,7 +535,7 @@ function BarcodeScanner({
         : "Could not start camera on this device.");
       setPhase("manual");
     }
-  }, [hasBarcodeDetector, lookupBarcode, stopStream]);
+  }, [hasBarcodeDetector, lookupBarcode, stopStream, startZXing]);
 
   useEffect(() => {
     startCamera();
@@ -549,7 +578,7 @@ function BarcodeScanner({
               </div>
             </div>
             <p className="text-sm text-center" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-              {hasBarcodeDetector ? "Point the barcode inside the orange box" : "Barcode detection not supported in this browser. Enter manually below."}
+              Point the barcode inside the orange box
             </p>
             <button onClick={() => setPhase("manual")} className="text-xs font-semibold uppercase tracking-widest text-center transition-opacity hover:opacity-70"
               style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
@@ -757,7 +786,6 @@ export default function NutritionPage() {
   const [customCarbs,    setCustomCarbs]    = useState("");
   const [customFat,      setCustomFat]      = useState("");
   const [saving,         setSaving]         = useState(false);
-  const [water,          setWater]          = useState(0);
   const [fastFoodPicker, setFastFoodPicker] = useState<number | null>(null);
   const [showHistory,    setShowHistory]    = useState(false);
   const [historyLogs,    setHistoryLogs]    = useState<FoodLog[]>([]);
@@ -1360,39 +1388,11 @@ export default function NutritionPage() {
             );
           })}
 
-          {/* ── Water Tracker ────────────────────────────────────────────── */}
-          <section className="px-6 py-6 flex flex-col gap-5" style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}>
-            <div className="flex items-baseline justify-between">
-              <p className="text-xs font-semibold tracking-[0.25em] uppercase" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>Water</p>
-              <span className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>{water} / 8 glasses</span>
-            </div>
-            <div className="flex gap-3 flex-wrap">
-              {Array.from({ length: 8 }, (_, i) => {
-                const filled = i < water;
-                return (
-                  <button key={i} onClick={() => setWater(filled ? i : i + 1)} className="transition-all duration-150 active:scale-95" aria-label={`Glass ${i + 1}`}>
-                    <svg viewBox="0 0 28 36" width={36} height={44} fill="none">
-                      <path d="M5 3h18l-2.5 30H7.5L5 3z" fill={filled ? "#0D1B2A" : "none"} stroke={filled ? "#2A5A8F" : "#2A2A2A"} strokeWidth="1.5" strokeLinejoin="round" />
-                      {filled && <path d="M7.8 17h12.4l-1.8 16H9.6L7.8 17z" fill="#1E3A5F" opacity="0.9" />}
-                      <line x1="5" y1="3" x2="23" y2="3" stroke={filled ? "#2A5A8F" : "#2A2A2A"} strokeWidth="1.5" strokeLinecap="round" />
-                    </svg>
-                  </button>
-                );
-              })}
-            </div>
-            {water > 0 && (
-              <div className="h-1.5 w-full" style={{ backgroundColor: "#252525", borderRadius: "4px" }}>
-                <div className="h-full transition-all duration-500" style={{ width: `${(water / 8) * 100}%`, backgroundColor: "#1E3A5F", borderRadius: "4px" }} />
-              </div>
-            )}
-            {water === 8 && <p className="text-xs font-semibold" style={{ color: "#5A8A70", fontFamily: "var(--font-inter)" }}>Goal reached. Well done.</p>}
-          </section>
-
           {/* ── Jobsite Eating Guide ─────────────────────────────────────── */}
           <section className="flex flex-col gap-4">
             <div>
-              <p className="text-xs font-semibold tracking-[0.25em] uppercase mb-1" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>Jobsite Eating Guide</p>
-              <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Best options when you&apos;re stuck in a drive-through. Tap Add to log it.</p>
+              <p className="text-xs font-semibold tracking-[0.25em] uppercase mb-1" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>JOBSITE-APPROVED OPTIONS</p>
+              <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>High-protein drive-through picks for when you&apos;re stuck near the jobsite. Tap Add to log it.</p>
             </div>
             <div className="flex flex-col gap-3">
               {FAST_FOOD.map((ff, idx) => {

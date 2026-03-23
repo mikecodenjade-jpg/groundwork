@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { getProgramBySlug } from "@/lib/programs";
+import { getProgramBySlug, getWeeks } from "@/lib/programs";
+import { todayQuote } from "@/lib/quotes";
 import BottomNav from "@/components/BottomNav";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -354,10 +355,14 @@ export default function DashboardPage() {
   });
   const [weekly, setWeekly] = useState({ done: 0, total: 7 });
   const [workout, setWorkout] = useState<{ slug: string; name: string } | null>(null);
+  const [selectedTime, setSelectedTime] = useState<15 | 30 | 45 | 60 | null>(null);
+  const [totalWorkouts, setTotalWorkouts] = useState(0);
   const [activeProgram, setActiveProgram] = useState<{
     slug: string;
     name: string;
     currentWeek: number;
+    phaseName: string;
+    totalWeeks: number | null;
   } | null>(null);
   const [insights, setInsights] = useState<WellnessInsight[]>([]);
   const [snapshot, setSnapshot] = useState<SnapshotData | null>(null);
@@ -374,6 +379,7 @@ export default function DashboardPage() {
   } | null>(null);
 
   const reset = todayReset();
+  const dailyQuote = todayQuote();
   const leadAction = todayLeadershipAction();
 
   useEffect(() => {
@@ -466,6 +472,7 @@ export default function DashboardPage() {
       const workoutDates = (workoutsRes.data ?? []).map((r) => r.created_at);
       const moodDates = (moodsRes.data ?? []).map((r) => r.created_at);
       setStreak(calcStreak([...workoutDates, ...moodDates]));
+      setTotalWorkouts((workoutsRes.data ?? []).length);
       setWeekly(calcWeeklyDays([...workoutDates, ...moodDates]));
 
       // ── Daily score ──
@@ -487,7 +494,7 @@ export default function DashboardPage() {
         (sum, h) => sum + (h.amount_ml ?? 0),
         0
       );
-      const waterGlasses = Math.round((totalMl / 240) * 10) / 10;
+      const waterGlasses = Math.round(totalMl / 29.574);
       const lastSleep = (sleepRes.data ?? [])[0];
       const latestMood = (moodsRes.data ?? [])[0];
 
@@ -507,12 +514,16 @@ export default function DashboardPage() {
         const e = enrollmentsRes.data[0];
         const prog = getProgramBySlug(e.program_slug);
         if (prog) {
-          const totalWeeks = prog.totalWeeks ?? Infinity;
-          if (e.current_week <= totalWeeks) {
+          const progTotalWeeks = prog.totalWeeks ?? null;
+          if (progTotalWeeks == null || e.current_week <= progTotalWeeks) {
+            const weeks = getWeeks(e.program_slug);
+            const weekData = weeks.find(w => w.num === e.current_week);
             setActiveProgram({
               slug: e.program_slug,
               name: prog.name,
               currentWeek: e.current_week,
+              phaseName: weekData?.phase ?? "",
+              totalWeeks: progTotalWeeks,
             });
           }
         }
@@ -731,6 +742,39 @@ export default function DashboardPage() {
           </div>
         </section>
 
+        {/* ─── Mindset of the Day ──────────────────────────────────────── */}
+        <section>
+          <div
+            className="px-6 py-5 flex flex-col gap-2"
+            style={{
+              backgroundColor: "#161616",
+              border: "1px solid #252525",
+              borderRadius: "12px",
+            }}
+          >
+            <p
+              className="text-[10px] font-semibold tracking-[0.25em] uppercase"
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+            >
+              Mindset of the Day
+            </p>
+            <p
+              className="text-base font-bold leading-snug"
+              style={{ color: "#E8E2D8", fontFamily: "var(--font-oswald)" }}
+            >
+              &ldquo;{dailyQuote.text}&rdquo;
+            </p>
+            {dailyQuote.author && (
+              <p
+                className="text-xs"
+                style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+              >
+                &mdash; {dailyQuote.author}
+              </p>
+            )}
+          </div>
+        </section>
+
         {/* ─── 2. Daily Snapshot Cards ─────────────────────────────────────────── */}
         <section>
           <p
@@ -786,9 +830,9 @@ export default function DashboardPage() {
               value={
                 loading
                   ? "\u2013"
-                  : `${snapshot?.waterGlasses ?? 0} / 8`
+                  : `${snapshot?.waterGlasses ?? 0} / 96`
               }
-              sub="glasses"
+              sub="oz today"
               icon={
                 <svg viewBox="0 0 24 24" fill="none" width={20} height={20}>
                   <path
@@ -945,6 +989,146 @@ export default function DashboardPage() {
           </section>
         )}
 
+        {/* ─── How Much Time Do You Have? ─────────────────────────────── */}
+        <section>
+          <p
+            className="text-xs font-semibold tracking-[0.25em] uppercase mb-3"
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+          >
+            How Much Time Do You Have?
+          </p>
+          <div className="flex gap-3">
+            {([15, 30, 45, 60] as const).map((mins) => (
+              <button
+                key={mins}
+                onClick={() => setSelectedTime(selectedTime === mins ? null : mins)}
+                className="flex-1 transition-all duration-150 active:scale-95"
+                style={{
+                  backgroundColor: selectedTime === mins ? "#C45B28" : "#161616",
+                  color: selectedTime === mins ? "#0A0A0A" : "#9A9A9A",
+                  border: `1px solid ${selectedTime === mins ? "#C45B28" : "#252525"}`,
+                  borderRadius: "8px",
+                  fontFamily: "var(--font-inter)",
+                  fontWeight: 700,
+                  fontSize: "0.875rem",
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  minHeight: "52px",
+                }}
+              >
+                {mins}m
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* ─── Today's Blueprint ───────────────────────────────────────── */}
+        {selectedTime && (
+          <section>
+            <p
+              className="text-xs font-semibold tracking-[0.25em] uppercase mb-3"
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+            >
+              Today&apos;s Blueprint
+            </p>
+            <div
+              className="flex gap-3 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+              style={{ WebkitOverflowScrolling: "touch" }}
+            >
+              {[
+                {
+                  label: "Work",
+                  value: loading ? "Loading\u2026" : (workout?.name ?? "Bodyweight"),
+                  meta: `${selectedTime} min`,
+                  href: `/dashboard/body`,
+                  accent: "#C45B28",
+                  bg: "#1A0A00",
+                  icon: (
+                    <svg viewBox="0 0 24 24" fill="none" width={20} height={20}>
+                      <path d="M6 4v16M18 4v16M8 12h8M3 8h3M18 8h3M3 16h3M18 16h3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                    </svg>
+                  ),
+                },
+                {
+                  label: "Fuel",
+                  value: "Hit Protein Goal",
+                  meta: "Track macros",
+                  href: "/dashboard/nutrition",
+                  accent: "#22c55e",
+                  bg: "#001A0A",
+                  icon: (
+                    <svg viewBox="0 0 24 24" fill="none" width={20} height={20}>
+                      <path d="M11 9H9V2H7V9H5V2H3V9C3 11.12 4.66 12.84 6.75 12.97V22H9.25V12.97C11.34 12.84 13 11.12 13 9V2H11V9ZM16 6V14H18.5V22H21V2C18.24 2 16 4.24 16 6Z" fill="currentColor" />
+                    </svg>
+                  ),
+                },
+                {
+                  label: "Mind",
+                  value: reset.title,
+                  meta: reset.duration,
+                  href: "/dashboard/mind",
+                  accent: "#8B5CF6",
+                  bg: "#1A0A2A",
+                  icon: (
+                    <svg viewBox="0 0 24 24" fill="none" width={20} height={20}>
+                      <path d="M12 4C8.5 4 6 6.5 6 10C6 12 7 13.5 8.5 14.5V17H15.5V14.5C17 13.5 18 12 18 10C18 6.5 15.5 4 12 4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                    </svg>
+                  ),
+                },
+                {
+                  label: "Time",
+                  value: `${selectedTime} Min Block`,
+                  meta: "Scheduled",
+                  href: "/dashboard/body",
+                  accent: "#1E6A9A",
+                  bg: "#001A2A",
+                  icon: (
+                    <svg viewBox="0 0 24 24" fill="none" width={20} height={20}>
+                      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+                      <path d="M12 7v5l3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  ),
+                },
+              ].map(({ label, value, meta, href, accent, bg, icon }) => (
+                <Link
+                  key={label}
+                  href={href}
+                  className="flex flex-col gap-3 p-4 transition-all duration-150 hover:opacity-90 active:scale-[0.98] shrink-0"
+                  style={{
+                    backgroundColor: bg,
+                    border: `1px solid ${accent}33`,
+                    borderRadius: "12px",
+                    minWidth: "140px",
+                    width: "140px",
+                  }}
+                >
+                  <div style={{ color: accent }}>{icon}</div>
+                  <div className="flex flex-col gap-0.5">
+                    <span
+                      className="text-[10px] font-semibold uppercase tracking-widest"
+                      style={{ color: accent, fontFamily: "var(--font-inter)" }}
+                    >
+                      {label}
+                    </span>
+                    <span
+                      className="text-sm font-bold leading-tight"
+                      style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
+                    >
+                      {value}
+                    </span>
+                    <span
+                      className="text-xs"
+                      style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                    >
+                      {meta}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* ─── 3. Quick Actions ─────────────────────────────────────────────────── */}
         <section>
           <p
@@ -1062,39 +1246,76 @@ export default function DashboardPage() {
         {activeProgram && (
           <Link
             href={`/dashboard/body/programs/${activeProgram.slug}/week/${activeProgram.currentWeek}`}
-            className="flex items-center justify-between px-6 py-5 transition-opacity hover:opacity-90 active:scale-[0.99]"
+            className="flex flex-col gap-3 px-6 py-5 transition-opacity hover:opacity-90 active:scale-[0.99]"
             style={{
               backgroundColor: "#161616",
               border: "1px solid #C45B28",
               borderRadius: "12px",
             }}
           >
-            <div className="flex flex-col gap-0.5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex flex-col gap-0.5">
+                <span
+                  className="text-xs font-semibold uppercase tracking-widest"
+                  style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+                >
+                  Continue Training
+                </span>
+                <span
+                  className="text-base font-bold"
+                  style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
+                >
+                  {activeProgram.name}
+                </span>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span
+                    className="text-xs"
+                    style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                  >
+                    Week {activeProgram.currentWeek}
+                  </span>
+                  {activeProgram.phaseName && (
+                    <>
+                      <span style={{ color: "#3A3A3A", fontFamily: "var(--font-inter)", fontSize: "10px" }}>&bull;</span>
+                      <span
+                        className="text-xs font-semibold"
+                        style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+                      >
+                        {activeProgram.phaseName}
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
               <span
-                className="text-xs font-semibold uppercase tracking-widest"
+                className="text-sm font-semibold uppercase tracking-widest shrink-0"
                 style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
               >
-                Continue Program
-              </span>
-              <span
-                className="text-base font-bold"
-                style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
-              >
-                {activeProgram.name}
-              </span>
-              <span
-                className="text-xs"
-                style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
-              >
-                Week {activeProgram.currentWeek}
+                Go &rsaquo;
               </span>
             </div>
-            <span
-              className="text-sm font-semibold uppercase tracking-widest"
-              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
-            >
-              Go &rsaquo;
-            </span>
+            {activeProgram.totalWeeks != null && (
+              <div className="flex flex-col gap-1.5">
+                <div
+                  className="w-full rounded-full overflow-hidden"
+                  style={{ height: "4px", backgroundColor: "#252525" }}
+                >
+                  <div
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{
+                      backgroundColor: "#C45B28",
+                      width: `${Math.min(100, (activeProgram.currentWeek / activeProgram.totalWeeks) * 100)}%`,
+                    }}
+                  />
+                </div>
+                <span
+                  className="text-[10px] uppercase tracking-widest"
+                  style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                >
+                  Week {activeProgram.currentWeek} of {activeProgram.totalWeeks}
+                </span>
+              </div>
+            )}
           </Link>
         )}
 
@@ -1381,6 +1602,45 @@ export default function DashboardPage() {
           >
             Your Progress
           </p>
+
+          {/* 4-stat row */}
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { label: "Day Streak", value: loading ? "\u2013" : String(streak), unit: "days", color: "#C45B28" },
+              { label: "Workouts", value: loading ? "\u2013" : String(totalWorkouts), unit: "logged", color: "#22c55e" },
+              { label: "Weight", value: loading ? "\u2013" : (measurementSummary?.latestWeight != null ? `${measurementSummary.latestWeight.toFixed(0)}` : "\u2014"), unit: "lbs", color: "#E8E2D8" },
+              { label: "Energy", value: loading ? "\u2013" : String(dailyScore), unit: "%", color: "#f97316" },
+            ].map(({ label, value, unit, color }) => (
+              <div
+                key={label}
+                className="flex flex-col items-center justify-center py-4 gap-0.5"
+                style={{
+                  backgroundColor: "#161616",
+                  border: "1px solid #252525",
+                  borderRadius: "10px",
+                }}
+              >
+                <span
+                  className="text-xl font-bold leading-none"
+                  style={{ fontFamily: "var(--font-oswald)", color }}
+                >
+                  {value}
+                </span>
+                <span
+                  className="text-[9px] font-semibold uppercase tracking-widest text-center"
+                  style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                >
+                  {label}
+                </span>
+                <span
+                  className="text-[9px] uppercase tracking-widest"
+                  style={{ color: "#3A3A3A", fontFamily: "var(--font-inter)" }}
+                >
+                  {unit}
+                </span>
+              </div>
+            ))}
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             <Link

@@ -9,21 +9,21 @@ import { queueAction, registerSync, cacheData, getCachedData } from "@/lib/offli
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const MOODS = [
-  { label: "Locked In",  value: "locked_in",  color: "#2A6A4A" },
-  { label: "Solid",      value: "solid",       color: "#3A5A3A" },
-  { label: "Off",        value: "off",         color: "#5A5248" },
-  { label: "Burned Out", value: "burned_out",  color: "#7A5228" },
-  { label: "In Trouble", value: "in_trouble",  color: "#5A1A1A" },
+  { label: "HIGH — Stressed", value: "high_stressed", color: "#5A1A1A" },
+  { label: "LOW",              value: "low",           color: "#7A5228" },
+  { label: "MID — Holding",   value: "mid_holding",   color: "#5A5248" },
+  { label: "GOOD — Solid",    value: "good_solid",    color: "#3A5A3A" },
+  { label: "OK — Locked",     value: "ok_locked",     color: "#2A6A4A" },
 ];
 
 const SOURCES = ["Work", "Family", "Money", "Health", "Sleep"];
 
 const MOOD_MESSAGES: Record<string, string> = {
-  locked_in:  "That's the standard. Lock it in and go.",
-  solid:      "Good base. Push the edge today.",
-  off:        "Noted. That's real — it matters. What's driving it?",
-  burned_out: "Acknowledged. Rest isn't quitting. What's the source?",
-  in_trouble: "Takes guts to say that. You're not alone — what's weighing on you?",
+  high_stressed: "That pressure is real. Let's get you reset — what's the source?",
+  low:           "Acknowledged. Something's off. Don't push through blind — what's driving it?",
+  mid_holding:   "Holding is fine. But holding forever isn't. What do you need today?",
+  good_solid:    "Good base. You're in a position to lead. Push the edge.",
+  ok_locked:     "That's the standard. Lock it in and go — today counts.",
 };
 
 type Phase = "mood" | "source" | "done";
@@ -32,25 +32,25 @@ const TOOLS = [
   {
     title: "Stress Reset",
     duration: "5 min",
-    desc: "A quick guided sequence to drop cortisol and reset your nervous system between tasks or after a hard conversation.",
-    tag: "Breathing + Grounding",
+    desc: "After a hard day on the site. A guided grounding sequence to drop cortisol and reset your system before you walk in the door.",
+    tag: "Grounding",
   },
   {
     title: "Box Breathing",
     duration: "4 min",
-    desc: "Inhale, hold, exhale, hold — four counts each. Used by special forces to stay sharp under pressure. Works on a jobsite too.",
+    desc: "Combat-proven. Works anywhere. 4 seconds in — 4 hold — 4 out — 4 hold. Special forces use this. So can you.",
     tag: "Breathwork",
   },
   {
     title: "Sleep Protocol",
     duration: "10 min",
-    desc: "A wind-down routine built around the realities of late nights and early starts. Better sleep, better decisions.",
+    desc: "Stop thinking about tomorrow's RFIs. A wind-down system built for construction schedules — early starts, late nights, and brains that won't shut off.",
     tag: "Recovery",
   },
   {
     title: "Time Blocking",
     duration: "Daily",
-    desc: "Structure your day before the day structures you. A simple system for leaders who are pulled in every direction.",
+    desc: "Find the time you didn't know you had. Stop letting the day manage you — take back control with a simple block system built for busy leaders.",
     tag: "Planning",
   },
 ];
@@ -278,14 +278,14 @@ export default function MindPage() {
               style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
             >
               {phase === "mood"
-                ? "How are you right now — really?"
+                ? "How are you doing today — really?"
                 : phase === "source"
                 ? "What's the source?"
                 : "Checked in."}
             </h2>
             {phase === "mood" && (
               <p className="text-sm mt-1" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-                One tap. Under 10 seconds.
+                No judgment. Just honesty with yourself.
               </p>
             )}
           </div>
@@ -523,8 +523,8 @@ export default function MindPage() {
           </div>
         </section>
 
-        {/* Professional Support */}
-        <section className="pb-28">
+        {/* Root Cause — Not Band-Aids */}
+        <section>
           <p
             className="text-xs font-semibold tracking-[0.25em] uppercase mb-4"
             style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
@@ -540,59 +540,154 @@ export default function MindPage() {
             }}
           >
             <p
-              className="text-lg font-bold uppercase"
-              style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
+              className="text-sm font-bold uppercase tracking-widest"
+              style={{ color: "#5B9BD5", fontFamily: "var(--font-inter)" }}
             >
-              You don&apos;t have to carry it alone.
+              Root Cause — Not Band-Aids
+            </p>
+            <p
+              className="text-lg font-bold uppercase leading-snug"
+              style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+            >
+              Fix the Problem. Don&apos;t Wait for a Crisis.
+            </p>
+            <p
+              className="text-sm leading-relaxed"
+              style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+            >
+              Connect with mental health professionals who understand construction. No stigma.
+              No judgment. Stress, burnout, substance use, relationships — fix the root cause,
+              not the symptom.
+            </p>
+            <a
+              href="https://www.ciasp.com/find-help"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 px-8 py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90"
+              style={{
+                fontFamily: "var(--font-inter)",
+                fontWeight: 600,
+                backgroundColor: "#1E3A5F",
+                color: "#E8E2D8",
+                border: "1px solid #2E5A8F",
+                borderRadius: "8px",
+                minHeight: "48px",
+              }}
+            >
+              Find a Professional →
+            </a>
+            <p
+              className="text-xs"
+              style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+            >
+              Construction Industry Alliance for Suicide Prevention
+            </p>
+          </div>
+        </section>
+
+        {/* If You're Struggling — Crisis Section */}
+        <section className="pb-28">
+          <div
+            className="px-8 py-7 flex flex-col gap-5"
+            style={{
+              backgroundColor: "#1A0808",
+              border: "2px solid #5A1A1A",
+              borderRadius: "12px",
+            }}
+          >
+            <p
+              className="text-sm font-bold uppercase tracking-widest"
+              style={{ color: "#DC2626", fontFamily: "var(--font-inter)" }}
+            >
+              If You&apos;re Struggling
+            </p>
+            <p
+              className="text-xl font-bold uppercase leading-snug"
+              style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+            >
+              You&apos;re Not Alone.
             </p>
             <p
               className="text-sm leading-relaxed"
               style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
             >
               Construction has one of the highest suicide rates of any industry — more than
-              four times the national average. The pressure is real. The weight is real. And
-              reaching out is one of the strongest things a leader can do.
+              four times the national average. If you&apos;re in crisis, or know someone who is,
+              reach out right now.
             </p>
             <p
-              className="text-sm leading-relaxed"
-              style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+              className="text-sm leading-relaxed font-semibold"
+              style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
             >
-              If you or someone on your crew is struggling, the{" "}
-              <strong style={{ color: "#E8E2D8" }}>988 Suicide &amp; Crisis Lifeline</strong>{" "}
-              is free, confidential, and available 24/7.
+              It takes more strength to ask for help than to suffer in silence.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col gap-3">
               <a
                 href="tel:988"
                 className="flex items-center justify-center gap-2 px-8 py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90"
                 style={{
                   fontFamily: "var(--font-inter)",
                   fontWeight: 600,
-                  backgroundColor: "#C45B28",
-                  color: "#0A0A0A",
+                  backgroundColor: "#DC2626",
+                  color: "#fff",
                   borderRadius: "8px",
-                  minHeight: "48px",
+                  minHeight: "56px",
                 }}
               >
                 <svg viewBox="0 0 20 20" fill="currentColor" width={16} height={16}>
                   <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
                 </svg>
-                Call 988
+                988 — Call Now
               </a>
               <a
                 href="sms:988"
-                className="flex items-center justify-center px-8 py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-70"
+                className="flex items-center justify-center px-8 py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-80"
                 style={{
                   fontFamily: "var(--font-inter)",
                   fontWeight: 600,
-                  color: "#C45B28",
-                  border: "1px solid #C45B28",
+                  color: "#DC2626",
+                  border: "2px solid #5A1A1A",
                   borderRadius: "8px",
                   minHeight: "48px",
                 }}
               >
                 Text 988
               </a>
+              <div
+                className="flex items-center justify-between px-5 py-4"
+                style={{
+                  backgroundColor: "#0A0A0A",
+                  border: "1px solid #252525",
+                  borderRadius: "8px",
+                }}
+              >
+                <div>
+                  <p
+                    className="text-xs font-bold uppercase"
+                    style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
+                  >
+                    Crisis Text Line
+                  </p>
+                  <p
+                    className="text-xs mt-0.5"
+                    style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                  >
+                    Text <strong style={{ color: "#E8E2D8" }}>HOME</strong> to <strong style={{ color: "#E8E2D8" }}>741741</strong>
+                  </p>
+                </div>
+                <a
+                  href="sms:741741?body=HOME"
+                  className="text-xs font-bold uppercase tracking-widest px-4 py-2 transition-opacity hover:opacity-80"
+                  style={{
+                    fontFamily: "var(--font-inter)",
+                    color: "#9A9A9A",
+                    border: "1px solid #252525",
+                    borderRadius: "8px",
+                  }}
+                >
+                  Text
+                </a>
+              </div>
             </div>
             <p
               className="text-xs"
