@@ -337,6 +337,34 @@ export default function BodyPage() {
           </Link>
 
           <Link
+            href="/dashboard/body/sleep"
+            className="flex items-center justify-between px-6 py-4 transition-opacity hover:opacity-80"
+            style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
+          >
+            <span
+              className="text-sm font-bold uppercase tracking-wide"
+              style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
+            >
+              Sleep Dashboard
+            </span>
+            <span style={{ color: "#C45B28" }}>&rsaquo;</span>
+          </Link>
+
+          <Link
+            href="/dashboard/body/devices"
+            className="flex items-center justify-between px-6 py-4 transition-opacity hover:opacity-80"
+            style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
+          >
+            <span
+              className="text-sm font-bold uppercase tracking-wide"
+              style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
+            >
+              Connected Devices
+            </span>
+            <span style={{ color: "#C45B28" }}>&rsaquo;</span>
+          </Link>
+
+          <Link
             href="/dashboard/body/injury"
             className="flex items-center justify-between px-6 py-4 transition-opacity hover:opacity-80"
             style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
