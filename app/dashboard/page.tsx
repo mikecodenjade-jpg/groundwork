@@ -404,7 +404,7 @@ export default function DashboardPage() {
               step="Train"
               accent="#C45B28"
               title={loading ? "Loading…" : (workout?.name ?? "Bodyweight Workout")}
-              meta="10 min"
+              meta="30 min"
               loading={loading}
             />
             <div style={{ borderTop: "1px solid #252525" }} />
