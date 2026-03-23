@@ -245,7 +245,7 @@ export default function VoiceTracker() {
     recognition.maxAlternatives = 1;
     recognition.continuous = false;
 
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
+    recognition.onresult = (event: any) => {
       const text = event.results[0][0].transcript;
       setTranscript(text);
       const result = parseSpeech(text);
@@ -253,7 +253,7 @@ export default function VoiceTracker() {
       setPhase("parsed");
     };
 
-    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+    recognition.onerror = (event: any) => {
       if (event.error === "no-speech") {
         setErrorMsg("No speech detected. Try again.");
       } else if (event.error === "not-allowed") {
