@@ -565,6 +565,88 @@ export default function DashboardPage() {
           </div>
         </section>
 
+        {/* Crew & Challenges */}
+        <section>
+          <p
+            className="text-xs font-semibold tracking-[0.25em] uppercase mb-3"
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+          >
+            Crew
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <Link
+              href="/dashboard/challenges"
+              className="flex items-center gap-3 px-4 py-4 transition-all duration-150 hover:opacity-80"
+              style={{
+                backgroundColor: "#161616",
+                border: "1px solid #252525",
+                borderRadius: "12px",
+              }}
+            >
+              <div
+                className="w-9 h-9 shrink-0 flex items-center justify-center"
+                style={{
+                  backgroundColor: "#1A0A00",
+                  border: "1px solid #3A1A00",
+                  borderRadius: "8px",
+                  color: "#C45B28",
+                }}
+              >
+                <svg viewBox="0 0 24 24" fill="none" width={18} height={18}>
+                  <path d="M12 4L14.5 9H20L15.5 12.5L17.5 18L12 14.5L6.5 18L8.5 12.5L4 9H9.5L12 4Z"
+                    stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-bold uppercase leading-tight"
+                  style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                  Challenges
+                </p>
+                <p className="text-[11px]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                  Team competitions
+                </p>
+              </div>
+            </Link>
+            <Link
+              href="/dashboard/crew"
+              className="flex items-center gap-3 px-4 py-4 transition-all duration-150 hover:opacity-80"
+              style={{
+                backgroundColor: "#161616",
+                border: "1px solid #252525",
+                borderRadius: "12px",
+              }}
+            >
+              <div
+                className="w-9 h-9 shrink-0 flex items-center justify-center"
+                style={{
+                  backgroundColor: "#001A1A",
+                  border: "1px solid #003A3A",
+                  borderRadius: "8px",
+                  color: "#2AB5B5",
+                }}
+              >
+                <svg viewBox="0 0 24 24" fill="none" width={18} height={18}>
+                  <circle cx="9" cy="7" r="3" stroke="currentColor" strokeWidth="1.8" />
+                  <circle cx="17" cy="9" r="2.5" stroke="currentColor" strokeWidth="1.6" />
+                  <path d="M3 19C3 16.2 5.7 14 9 14C12.3 14 15 16.2 15 19"
+                    stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                  <path d="M17 14C19.2 14 21 15.8 21 18"
+                    stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-bold uppercase leading-tight"
+                  style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                  Crew Wall
+                </p>
+                <p className="text-[11px]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                  Share & connect
+                </p>
+              </div>
+            </Link>
+          </div>
+        </section>
+
       </div>
       {/* Floating Ask Coach button */}
       <Link

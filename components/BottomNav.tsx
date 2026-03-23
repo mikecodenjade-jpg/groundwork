@@ -97,6 +97,19 @@ export default function BottomNav() {
         pathname.startsWith("/dashboard/nutrition")
       );
     }
+    if (href === "/dashboard/mind") {
+      return (
+        pathname.startsWith("/dashboard/mind") ||
+        pathname.startsWith("/dashboard/content")
+      );
+    }
+    if (href === "/dashboard/lead") {
+      return (
+        pathname.startsWith("/dashboard/lead") ||
+        pathname.startsWith("/dashboard/challenges") ||
+        pathname.startsWith("/dashboard/crew")
+      );
+    }
     return pathname.startsWith(href);
   }
 

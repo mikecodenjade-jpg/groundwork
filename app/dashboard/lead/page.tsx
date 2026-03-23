@@ -82,6 +82,88 @@ export default function LeadPage() {
           </div>
         </header>
 
+        {/* Crew Hub */}
+        <section>
+          <p
+            className="text-xs font-semibold tracking-[0.25em] uppercase mb-4"
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+          >
+            Crew Hub
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <Link
+              href="/dashboard/challenges"
+              className="flex flex-col gap-3 px-5 py-5 transition-all duration-150 hover:opacity-80"
+              style={{
+                backgroundColor: "#161616",
+                border: "1px solid #252525",
+                borderRadius: "12px",
+              }}
+            >
+              <div
+                className="w-10 h-10 flex items-center justify-center"
+                style={{
+                  backgroundColor: "#1A0A00",
+                  border: "1px solid #3A1A00",
+                  borderRadius: "8px",
+                  color: "#C45B28",
+                }}
+              >
+                <svg viewBox="0 0 24 24" fill="none" width={20} height={20}>
+                  <path d="M12 4L14.5 9H20L15.5 12.5L17.5 18L12 14.5L6.5 18L8.5 12.5L4 9H9.5L12 4Z"
+                    stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-bold uppercase leading-tight"
+                  style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                  Team Challenges
+                </p>
+                <p className="text-xs mt-1" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                  Compete with your crew
+                </p>
+              </div>
+            </Link>
+            <Link
+              href="/dashboard/crew"
+              className="flex flex-col gap-3 px-5 py-5 transition-all duration-150 hover:opacity-80"
+              style={{
+                backgroundColor: "#161616",
+                border: "1px solid #252525",
+                borderRadius: "12px",
+              }}
+            >
+              <div
+                className="w-10 h-10 flex items-center justify-center"
+                style={{
+                  backgroundColor: "#001A1A",
+                  border: "1px solid #003A3A",
+                  borderRadius: "8px",
+                  color: "#2AB5B5",
+                }}
+              >
+                <svg viewBox="0 0 24 24" fill="none" width={20} height={20}>
+                  <circle cx="9" cy="7" r="3" stroke="currentColor" strokeWidth="1.8" />
+                  <circle cx="17" cy="9" r="2.5" stroke="currentColor" strokeWidth="1.6" />
+                  <path d="M3 19C3 16.2 5.7 14 9 14C12.3 14 15 16.2 15 19"
+                    stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                  <path d="M17 14C19.2 14 21 15.8 21 18"
+                    stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-bold uppercase leading-tight"
+                  style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                  Crew Wall
+                </p>
+                <p className="text-xs mt-1" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                  Share wins and grinds
+                </p>
+              </div>
+            </Link>
+          </div>
+        </section>
+
         {/* Daily Leadership Challenge */}
         <section style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}>
           <div className="px-8 py-6" style={{ borderBottom: "1px solid #252525" }}>

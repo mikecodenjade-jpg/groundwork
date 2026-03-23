@@ -5,6 +5,11 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import BottomNav from "@/components/BottomNav";
 import { supabase } from "@/lib/supabase";
 
+// ─── Supabase Edge Function constants ─────────────────────────────────────────
+
+const SUPABASE_URL = "https://kmnqpargwdxtozknswzk.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_i8P9CxBEKkCGsXMWFYNgFw__9piLHu1";
+
 // ─── Goal types & presets ─────────────────────────────────────────────────────
 
 type FitnessGoal = "lose_weight" | "maintain" | "build_muscle" | "performance";
@@ -100,6 +105,62 @@ function offToEntry(p: OFFProduct): FoodEntry | null {
   };
 }
 
+// ─── Edamam response mapping ──────────────────────────────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function edamamToEntries(data: any): FoodEntry[] {
+  const results: FoodEntry[] = [];
+
+  // Handle foods array
+  if (Array.isArray(data?.foods)) {
+    for (const f of data.foods) {
+      const label = f?.label?.trim();
+      if (!label) continue;
+      const n = f?.nutrients ?? {};
+      results.push({
+        name: f?.brand ? `${label} (${f.brand})` : label,
+        cal:     Math.round(n?.ENERC_KCAL ?? 0),
+        protein: Math.round(n?.PROCNT ?? 0),
+        carbs:   Math.round(n?.CHOCDF ?? 0),
+        fat:     Math.round(n?.FAT ?? 0),
+      });
+    }
+  }
+
+  // Handle hints array (Edamam format)
+  if (Array.isArray(data?.hints)) {
+    for (const h of data.hints) {
+      const f = h?.food;
+      const label = f?.label?.trim();
+      if (!label) continue;
+      const n = f?.nutrients ?? {};
+      const entry: FoodEntry = {
+        name: f?.brand ? `${label} (${f.brand})` : label,
+        cal:     Math.round(n?.ENERC_KCAL ?? 0),
+        protein: Math.round(n?.PROCNT ?? 0),
+        carbs:   Math.round(n?.CHOCDF ?? 0),
+        fat:     Math.round(n?.FAT ?? 0),
+      };
+      // Avoid duplicates by name
+      if (!results.some((r) => r.name === entry.name)) {
+        results.push(entry);
+      }
+    }
+  }
+
+  return results;
+}
+
+// ─── Weekly trends data type ──────────────────────────────────────────────────
+
+type WeeklyDay = {
+  date: string;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+};
+
 // ─── DB log type ──────────────────────────────────────────────────────────────
 
 type FoodLog = {
@@ -107,6 +168,21 @@ type FoodLog = {
   calories: number; protein_g: number; carb_g: number; fat_g: number;
   logged_at: string;
 };
+
+type HydrationLog = {
+  id: string;
+  amount_ml: number;
+  logged_at: string;
+};
+
+const WATER_QUICK_ADD = [
+  { label: "8 oz", ml: 237 },
+  { label: "12 oz", ml: 355 },
+  { label: "16 oz", ml: 473 },
+  { label: "24 oz", ml: 710 },
+  { label: "32 oz", ml: 946 },
+];
+const DAILY_GOAL_ML = 2840; // ~96 oz / 12 cups
 
 function coerceLog(d: Record<string, unknown>): FoodLog {
   return {
@@ -135,6 +211,11 @@ function detectMealType(): MealType {
   if (hour < 11) return "breakfast";
   if (hour < 15) return "lunch";
   return "dinner";
+}
+
+function shortDayLabel(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-US", { weekday: "short" });
 }
 
 // ─── Calorie Ring ─────────────────────────────────────────────────────────────
@@ -387,6 +468,32 @@ function BarcodeScanner({
     setBarcodeLoading(true);
     setPhase("loading");
     try {
+      // Try nutrition-search edge function first (Edamam barcode lookup)
+      const edamamRes = await fetch(`${SUPABASE_URL}/functions/v1/nutrition-search`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ barcode: code.trim() }),
+      });
+
+      if (edamamRes.ok) {
+        const edamamData = await edamamRes.json();
+        const entries = edamamToEntries(edamamData);
+        if (entries.length > 0) {
+          setProduct(entries[0]);
+          setPhase("confirm");
+          setBarcodeLoading(false);
+          return;
+        }
+      }
+    } catch {
+      // Edge function failed, fall back to OpenFoodFacts
+    }
+
+    // Fallback: OpenFoodFacts
+    try {
       const res  = await fetch(`https://world.openfoodfacts.org/api/v0/product/${encodeURIComponent(code.trim())}.json`);
       const data = await res.json() as { status: number; product?: OFFProduct };
       if (data.status === 1 && data.product) {
@@ -394,7 +501,7 @@ function BarcodeScanner({
         if (entry) { setProduct(entry); setPhase("confirm"); }
         else       { setErrMsg("Product found but missing name or nutrition data."); setPhase("error"); }
       } else {
-        setErrMsg("Product not found in the OpenFoodFacts database.");
+        setErrMsg("Product not found in any database.");
         setPhase("error");
       }
     } catch {
@@ -582,6 +689,100 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+// ─── Weekly Trends Chart ──────────────────────────────────────────────────────
+
+function WeeklyTrendsChart({ data, goalCalories }: { data: WeeklyDay[]; goalCalories: number }) {
+  const CHART_W = 600;
+  const CHART_H = 200;
+  const BAR_GAP = 12;
+  const LABEL_H = 24;
+  const TOP_PAD = 24;
+
+  // Use last 7 days, or fill with zeros
+  const days = data.length > 0 ? data.slice(-7) : [];
+  const barCount = Math.max(days.length, 7);
+  const barWidth = (CHART_W - BAR_GAP * (barCount + 1)) / barCount;
+
+  const maxVal = Math.max(goalCalories, ...days.map((d) => d.calories ?? 0), 1);
+  const chartArea = CHART_H - LABEL_H - TOP_PAD;
+
+  const hasData = days.some((d) => (d.calories ?? 0) > 0);
+
+  if (!hasData && days.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-10 gap-3">
+        <svg width={48} height={48} viewBox="0 0 48 48" fill="none">
+          <rect x="6" y="28" width="8" height="12" rx="2" fill="#252525" />
+          <rect x="20" y="20" width="8" height="20" rx="2" fill="#252525" />
+          <rect x="34" y="12" width="8" height="28" rx="2" fill="#252525" />
+        </svg>
+        <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>No data yet</p>
+        <p className="text-xs" style={{ color: "#5A5A5A", fontFamily: "var(--font-inter)" }}>Log your meals to see weekly trends</p>
+      </div>
+    );
+  }
+
+  const goalY = TOP_PAD + chartArea - (goalCalories / maxVal) * chartArea;
+
+  return (
+    <div className="w-full overflow-x-auto" style={{ scrollbarWidth: "thin", scrollbarColor: "#252525 transparent" }}>
+      <svg
+        viewBox={`0 0 ${CHART_W} ${CHART_H}`}
+        width="100%"
+        preserveAspectRatio="xMidYMid meet"
+        style={{ minWidth: 320, maxWidth: "100%" }}
+      >
+        {/* Goal line */}
+        <line
+          x1={0} y1={goalY} x2={CHART_W} y2={goalY}
+          stroke="#252525" strokeWidth="1.5" strokeDasharray="6 4"
+        />
+        <text x={CHART_W - 4} y={goalY - 6} textAnchor="end"
+          fill="#9A9A9A" fontSize="10" fontFamily="var(--font-inter)">
+          Goal: {goalCalories}
+        </text>
+
+        {/* Bars */}
+        {days.map((day, i) => {
+          const cal = day.calories ?? 0;
+          const barH = cal > 0 ? Math.max(4, (cal / maxVal) * chartArea) : 4;
+          const x = BAR_GAP + i * (barWidth + BAR_GAP);
+          const y = TOP_PAD + chartArea - barH;
+
+          return (
+            <g key={day.date || i}>
+              {/* Bar */}
+              <rect
+                x={x} y={y} width={barWidth} height={barH}
+                rx={4} fill={cal > 0 ? "#C45B28" : "#252525"}
+                opacity={cal > 0 ? 1 : 0.4}
+              />
+              {/* Calorie value above bar */}
+              {cal > 0 && (
+                <text
+                  x={x + barWidth / 2} y={y - 6}
+                  textAnchor="middle" fill="#E8E2D8" fontSize="11"
+                  fontFamily="var(--font-inter)" fontWeight="600"
+                >
+                  {cal}
+                </text>
+              )}
+              {/* Day label below */}
+              <text
+                x={x + barWidth / 2} y={CHART_H - 4}
+                textAnchor="middle" fill="#9A9A9A" fontSize="11"
+                fontFamily="var(--font-inter)"
+              >
+                {day.date ? shortDayLabel(day.date) : ""}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function NutritionPage() {
@@ -612,6 +813,15 @@ export default function NutritionPage() {
   const [scannerMeal,    setScannerMeal]    = useState<MealType | null>(null);
   const [toast,          setToast]          = useState<{ msg: string; type: "ok" | "err" } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Weekly trends state
+  const [showWeeklyTrends, setShowWeeklyTrends] = useState(false);
+  const [weeklyData,       setWeeklyData]       = useState<WeeklyDay[]>([]);
+  const [weeklyLoading,    setWeeklyLoading]    = useState(false);
+  const [weeklyGoal,       setWeeklyGoal]       = useState<number>(DEFAULT_GOALS.calories);
+
+  const [hydrationLogs, setHydrationLogs] = useState<HydrationLog[]>([]);
+  const [hydrationLoading, setHydrationLoading] = useState(false);
 
   function flash(msg: string, type: "ok" | "err" = "ok") {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -646,18 +856,54 @@ export default function NutritionPage() {
     const saved = profileRes.data?.nutrition_goals as NutritionGoals | null;
     if (saved?.calories) setGoals({ ...DEFAULT_GOALS, ...saved });
 
+    // Load today's hydration
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const { data: hydData } = await supabase
+      .from("hydration_logs")
+      .select("id, amount_ml, logged_at")
+      .eq("user_id", user.id)
+      .gte("logged_at", todayStart.toISOString())
+      .order("logged_at", { ascending: false });
+    setHydrationLogs((hydData ?? []) as HydrationLog[]);
+
     setLoading(false);
   }, []);
 
   useEffect(() => { fetchTodayLogs(); }, [fetchTodayLogs]);
 
-  // ── Debounced OpenFoodFacts search ────────────────────────────────────────
+  // ── Debounced food search via Edamam edge function ─────────────────────────
 
   useEffect(() => {
     const q = search.trim();
     if (!q) { setApiResults([]); setApiLoading(false); return; }
     setApiLoading(true);
     const timer = setTimeout(async () => {
+      try {
+        // Try nutrition-search edge function (Edamam) first
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/nutrition-search`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ query: q }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const entries = edamamToEntries(data);
+          if (entries.length > 0) {
+            setApiResults(entries.slice(0, 10));
+            setApiLoading(false);
+            return;
+          }
+        }
+      } catch {
+        // Edge function failed, fall back to OpenFoodFacts
+      }
+
+      // Fallback: OpenFoodFacts
       try {
         const res  = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=10`);
         const data = await res.json() as { products?: OFFProduct[] };
@@ -667,6 +913,39 @@ export default function NutritionPage() {
     }, 300);
     return () => clearTimeout(timer);
   }, [search]);
+
+  // ── Fetch weekly trends from edge function ─────────────────────────────────
+
+  const fetchWeeklyTrends = useCallback(async () => {
+    setWeeklyLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/nutrition-daily-summary`, {
+        headers: {
+          "Authorization": `Bearer ${session?.access_token ?? SUPABASE_ANON_KEY}`,
+        },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data?.weekly)) {
+          setWeeklyData(data.weekly.map((d: Partial<WeeklyDay>) => ({
+            date: d?.date ?? "",
+            calories: d?.calories ?? 0,
+            protein_g: d?.protein_g ?? 0,
+            carbs_g: d?.carbs_g ?? 0,
+            fat_g: d?.fat_g ?? 0,
+          })));
+        }
+        if (data?.goals?.calories) {
+          setWeeklyGoal(data.goals.calories);
+        }
+      }
+    } catch {
+      // Silently fail — chart will show empty state
+    }
+    setWeeklyLoading(false);
+  }, []);
 
   // ── Derived totals (reactive — no refetch needed) ─────────────────────────
 
@@ -774,6 +1053,15 @@ export default function NutritionPage() {
     return map;
   }, new Map());
 
+  // ── Weekly trends toggle ────────────────────────────────────────────────
+
+  function toggleWeeklyTrends() {
+    if (!showWeeklyTrends) {
+      fetchWeeklyTrends();
+    }
+    setShowWeeklyTrends((v) => !v);
+  }
+
   // ── Meal section helpers ──────────────────────────────────────────────────
 
   function toggleMeal(type: MealType) {
@@ -789,6 +1077,19 @@ export default function NutritionPage() {
   const q = search.toLowerCase().trim();
   const filteredQuick    = q ? QUICK_FOODS.filter((f) => f.name.toLowerCase().includes(q)) : QUICK_FOODS;
   const filteredFastFood = FAST_FOOD.filter((f) => q === "" || f.place.toLowerCase().includes(q) || f.item.toLowerCase().includes(q));
+
+  async function logWater(ml: number) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    setHydrationLoading(true);
+    const { data } = await supabase
+      .from("hydration_logs")
+      .insert({ user_id: user.id, amount_ml: ml, logged_at: new Date().toISOString() })
+      .select("id, amount_ml, logged_at")
+      .single();
+    if (data) setHydrationLogs((prev) => [data as HydrationLog, ...prev]);
+    setHydrationLoading(false);
+  }
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -864,6 +1165,48 @@ export default function NutritionPage() {
                     </span>
                   </div>
                 </div>
+              </div>
+            )}
+          </section>
+
+          {/* ── Weekly Trends ─────────────────────────────────────────────── */}
+          <section className="flex flex-col gap-0">
+            <button
+              onClick={toggleWeeklyTrends}
+              className="flex items-center justify-between px-5 py-4 transition-opacity hover:opacity-80"
+              style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: showWeeklyTrends ? "12px 12px 0 0" : "12px" }}
+            >
+              <div className="flex items-center gap-3">
+                <svg viewBox="0 0 20 20" fill="none" width={14} height={14}>
+                  <rect x="2" y="12" width="3" height="6" rx="1" fill="#C45B28" />
+                  <rect x="7" y="8" width="3" height="10" rx="1" fill="#C45B28" />
+                  <rect x="12" y="4" width="3" height="14" rx="1" fill="#C45B28" />
+                  <rect x="17" y="10" width="3" height="8" rx="1" fill="#C45B28" opacity="0.5" />
+                </svg>
+                <span className="text-sm font-bold uppercase tracking-wide" style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}>
+                  Weekly Trends
+                </span>
+              </div>
+              <svg viewBox="0 0 20 20" fill="none" width={16} height={16}
+                style={{ color: "#9A9A9A", transform: showWeeklyTrends ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>
+                <path d="M5 8l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+
+            {showWeeklyTrends && (
+              <div
+                className="px-5 py-5 flex flex-col gap-4"
+                style={{ backgroundColor: "#161616", border: "1px solid #252525", borderTop: "none", borderRadius: "0 0 12px 12px" }}
+              >
+                <p className="text-xs font-semibold tracking-[0.25em] uppercase" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>
+                  Calorie Intake — Last 7 Days
+                </p>
+
+                {weeklyLoading ? (
+                  <div className="h-48 animate-pulse" style={{ backgroundColor: "#252525", borderRadius: "8px" }} />
+                ) : (
+                  <WeeklyTrendsChart data={weeklyData} goalCalories={weeklyGoal} />
+                )}
               </div>
             )}
           </section>
@@ -1004,13 +1347,13 @@ export default function NutritionPage() {
                           {q !== "" && (
                             <>
                               <SectionLabel>Search Results</SectionLabel>
-                              {apiLoading && <p className="px-3 py-2 text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Searching OpenFoodFacts...</p>}
+                              {apiLoading && <p className="px-3 py-2 text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Searching Edamam...</p>}
                               {!apiLoading && apiResults.map((food) => (
                                 <FoodRow key={food.name} food={food} saving={saving} onAdd={() => addFood(type, food)}
-                                  sub={`Per 100g · P: ${food.protein}g · C: ${food.carbs}g · F: ${food.fat}g`} />
+                                  sub={`P: ${food.protein}g · C: ${food.carbs}g · F: ${food.fat}g`} />
                               ))}
                               {!apiLoading && apiResults.length === 0 && (
-                                <p className="px-3 py-1.5 text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>No results from OpenFoodFacts.</p>
+                                <p className="px-3 py-1.5 text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>No results found.</p>
                               )}
                             </>
                           )}
@@ -1195,6 +1538,97 @@ export default function NutritionPage() {
               </div>
             )}
           </section>
+
+        {/* Hydration */}
+        <section>
+          <p className="text-xs font-semibold tracking-[0.25em] uppercase mb-4"
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>
+            Hydration
+          </p>
+          <div style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}>
+            {/* Summary */}
+            <div className="px-6 py-5" style={{ borderBottom: "1px solid #252525" }}>
+              {(() => {
+                const totalMl = hydrationLogs.reduce((s, l) => s + l.amount_ml, 0);
+                const totalOz = Math.round(totalMl / 29.574);
+                const goalOz = Math.round(DAILY_GOAL_ML / 29.574);
+                const pct = Math.min(100, Math.round((totalMl / DAILY_GOAL_ML) * 100));
+                return (
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-end justify-between">
+                      <div>
+                        <span className="text-3xl font-bold" style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}>
+                          {totalOz}
+                        </span>
+                        <span className="text-sm ml-1" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                          / {goalOz} oz
+                        </span>
+                      </div>
+                      <span className="text-sm font-semibold" style={{ color: pct >= 100 ? "#4CAF50" : "#C45B28", fontFamily: "var(--font-inter)" }}>
+                        {pct}%
+                      </span>
+                    </div>
+                    <div style={{ backgroundColor: "#252525", borderRadius: "4px", height: "6px" }}>
+                      <div style={{
+                        backgroundColor: pct >= 100 ? "#4CAF50" : "#C45B28",
+                        width: `${pct}%`,
+                        height: "100%",
+                        borderRadius: "4px",
+                        transition: "width 0.3s ease",
+                      }} />
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+            {/* Quick add buttons */}
+            <div className="px-6 py-5">
+              <p className="text-xs font-semibold uppercase tracking-widest mb-3"
+                style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                Quick Add
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {WATER_QUICK_ADD.map(({ label, ml }) => (
+                  <button
+                    key={ml}
+                    onClick={() => logWater(ml)}
+                    disabled={hydrationLoading}
+                    className="px-4 py-2 text-sm font-bold uppercase tracking-widest transition-all active:scale-95"
+                    style={{
+                      backgroundColor: "#0A0A0A",
+                      border: "1px solid #252525",
+                      borderRadius: "8px",
+                      color: "#E8E2D8",
+                      fontFamily: "var(--font-inter)",
+                      opacity: hydrationLoading ? 0.5 : 1,
+                    }}
+                  >
+                    + {label}
+                  </button>
+                ))}
+              </div>
+              {/* Recent logs */}
+              {hydrationLogs.length > 0 && (
+                <div className="mt-4 flex flex-col gap-1.5">
+                  <p className="text-xs font-semibold uppercase tracking-widest mb-1"
+                    style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                    Today&apos;s Log
+                  </p>
+                  {hydrationLogs.slice(0, 5).map((log) => (
+                    <div key={log.id} className="flex items-center justify-between">
+                      <span className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                        {new Date(log.logged_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                      </span>
+                      <span className="text-sm font-semibold" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                        +{Math.round(log.amount_ml / 29.574)} oz
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
 
         </div>
         <BottomNav />

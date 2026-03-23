@@ -54,6 +54,21 @@ const TOOLS = [
   },
 ];
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type CheckinRow = {
+  id: string;
+  mood: string;
+  source: string | null;
+  created_at: string;
+};
+
+type SentimentRow = {
+  entry_id: string;
+  sentiment_score: number;
+  dominant_emotion: string;
+};
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 type ToolName = "Stress Reset" | "Box Breathing" | "Sleep Protocol" | "Time Blocking";
@@ -63,6 +78,46 @@ export default function MindPage() {
   const [selectedMood, setSelectedMood] = useState<(typeof MOODS)[number] | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState<ToolName | null>(null);
+  const [recentCheckins, setRecentCheckins] = useState<CheckinRow[]>([]);
+  const [sentimentMap, setSentimentMap] = useState<Record<string, SentimentRow>>({});
+  const [checkinsLoaded, setCheckinsLoaded] = useState(false);
+
+  // Load recent check-ins on mount
+  useEffect(() => {
+    async function loadRecent() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: checkins } = await supabase
+        .from("mood_checkins")
+        .select("id, mood, source, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (checkins && checkins.length > 0) {
+        setRecentCheckins(checkins);
+
+        const checkinIds = checkins.map((c) => c.id);
+        const { data: sentiments } = await supabase
+          .from("sentiment_analysis_logs")
+          .select("entry_id, sentiment_score, dominant_emotion")
+          .in("entry_id", checkinIds);
+
+        if (sentiments) {
+          const map: Record<string, SentimentRow> = {};
+          sentiments.forEach((s) => {
+            map[s.entry_id] = s;
+          });
+          setSentimentMap(map);
+        }
+      }
+      setCheckinsLoaded(true);
+    }
+    loadRecent();
+  }, []);
 
   async function handleMoodSelect(mood: (typeof MOODS)[number]) {
     setSelectedMood(mood);
@@ -81,7 +136,21 @@ export default function MindPage() {
       .select("id")
       .single();
 
-    if (data?.id) setSavedId(data.id);
+    if (data?.id) {
+      setSavedId(data.id);
+
+      // Fire-and-forget sentiment analysis
+      supabase.functions
+        .invoke("analyze-sentiment", {
+          body: {
+            text: `Mood: ${mood.label}`,
+            user_id: user.id,
+            entry_type: "mood_checkin",
+            entry_id: data.id,
+          },
+        })
+        .catch(() => {});
+    }
     setPhase("source");
   }
 
@@ -90,6 +159,22 @@ export default function MindPage() {
       await supabase.from("mood_checkins").update({ source }).eq("id", savedId);
     }
     setPhase("done");
+
+    // Fire-and-forget sentiment analysis
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user && selectedMood) {
+        supabase.functions
+          .invoke("analyze-sentiment", {
+            body: {
+              text: `Mood: ${selectedMood.label}. Source of stress: ${source}`,
+              user_id: user.id,
+              entry_type: "mood_checkin",
+              entry_id: savedId,
+            },
+          })
+          .catch(() => {});
+      }
+    });
   }
 
   function reset() {
@@ -298,6 +383,97 @@ export default function MindPage() {
           </div>
         </section>
 
+        {/* Recent Check-Ins */}
+        {checkinsLoaded && recentCheckins.length > 0 && (
+          <section>
+            <p
+              className="text-xs font-semibold tracking-[0.25em] uppercase mb-4"
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+            >
+              Recent Check-Ins
+            </p>
+            <div
+              className="flex flex-col"
+              style={{
+                backgroundColor: "#161616",
+                border: "1px solid #252525",
+                borderRadius: "12px",
+                overflow: "hidden",
+              }}
+            >
+              {recentCheckins.map((checkin, idx) => {
+                const moodDef = MOODS.find(
+                  (m) => m.label === checkin.mood
+                );
+                const sentiment = sentimentMap[checkin.id];
+                const timeAgo = formatTimeAgo(checkin.created_at);
+
+                return (
+                  <div key={checkin.id}>
+                    {idx > 0 && (
+                      <div style={{ borderTop: "1px solid #252525" }} />
+                    )}
+                    <div className="flex items-center gap-3 px-6 py-4">
+                      {/* Mood dot */}
+                      <div
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{
+                          backgroundColor: moodDef?.color ?? "#9A9A9A",
+                        }}
+                      />
+                      {/* Mood + source */}
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className="text-sm font-semibold truncate"
+                          style={{
+                            color: "#E8E2D8",
+                            fontFamily: "var(--font-inter)",
+                          }}
+                        >
+                          {checkin.mood}
+                          {checkin.source && (
+                            <span
+                              style={{ color: "#9A9A9A", fontWeight: 400 }}
+                            >
+                              {" "}
+                              &middot; {checkin.source}
+                            </span>
+                          )}
+                        </p>
+                        <p
+                          className="text-xs"
+                          style={{
+                            color: "#9A9A9A",
+                            fontFamily: "var(--font-inter)",
+                          }}
+                        >
+                          {timeAgo}
+                        </p>
+                      </div>
+                      {/* Sentiment pill */}
+                      {sentiment && (
+                        <SentimentPill score={sentiment.sentiment_score} />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-3">
+              <Link
+                href="/dashboard/mind/trends"
+                className="text-sm font-semibold transition-opacity hover:opacity-70"
+                style={{
+                  color: "#C45B28",
+                  fontFamily: "var(--font-inter)",
+                }}
+              >
+                View Mood Trends →
+              </Link>
+            </div>
+          </section>
+        )}
+
         {/* Tools */}
         <section>
           <p
@@ -402,6 +578,57 @@ export default function MindPage() {
       {activeTool === "Sleep Protocol" && <SleepProtocolOverlay onClose={() => setActiveTool(null)} />}
       {activeTool === "Time Blocking" && <TimeBlockingOverlay onClose={() => setActiveTool(null)} />}
     </main>
+  );
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatTimeAgo(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diffMs = now - then;
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return "Just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHrs = Math.floor(diffMin / 60);
+  if (diffHrs < 24) return `${diffHrs}h ago`;
+  const diffDays = Math.floor(diffHrs / 24);
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return new Date(dateStr).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+// ─── Sentiment Pill ───────────────────────────────────────────────────────────
+
+function SentimentPill({ score }: { score: number }) {
+  let bg: string;
+  let label: string;
+
+  if (score > 0.2) {
+    bg = "#2A6A4A";
+    label = "+";
+  } else if (score < -0.2) {
+    bg = "#5A1A1A";
+    label = "-";
+  } else {
+    bg = "#5A5248";
+    label = "~";
+  }
+
+  return (
+    <span
+      className="flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold shrink-0"
+      style={{
+        backgroundColor: bg,
+        color: "#E8E2D8",
+        fontFamily: "var(--font-inter)",
+      }}
+    >
+      {label}
+    </span>
   );
 }
 
