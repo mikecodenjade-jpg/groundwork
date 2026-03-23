@@ -1159,6 +1159,31 @@ export default function NutritionPage() {
             </div>
           </section>
 
+          {/* ── Empty Meals Prompt ─────────────────────────────────────────── */}
+          {!loading && todayLogs.length === 0 && (
+            <div
+              className="flex items-center gap-4 px-5 py-4 animate-fade-up"
+              style={{
+                backgroundColor: "#161616",
+                border: "1px solid #252525",
+                borderRadius: "12px",
+              }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" width={24} height={24} style={{ color: "#C45B28", flexShrink: 0 }}>
+                <path d="M12 3v6M12 21v-6M3 12h6M21 12h-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.5" />
+              </svg>
+              <div>
+                <p className="text-sm font-semibold" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                  Nothing logged yet today. Fuel up!
+                </p>
+                <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                  Track your first meal to hit your protein goals.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* ── Meal Sections ────────────────────────────────────────────── */}
           {MEALS.map(({ type, label }) => {
             const logs      = logsForMeal(type);

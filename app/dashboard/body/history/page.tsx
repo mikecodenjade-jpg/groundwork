@@ -96,19 +96,26 @@ export default function WorkoutHistoryPage() {
             ))}
           </div>
         ) : logs.length === 0 ? (
-          <div className="py-20 flex flex-col items-center text-center gap-4">
-            <p
+          <div className="py-20 flex flex-col items-center text-center gap-4 animate-fade-up">
+            <svg viewBox="0 0 48 48" fill="none" width={40} height={40} style={{ color: "#252525" }}>
+              <rect x="2" y="18" width="8" height="12" rx="1.5" stroke="currentColor" strokeWidth="2.5" />
+              <rect x="10" y="20" width="4" height="8" rx="0.5" fill="currentColor" />
+              <rect x="14" y="22" width="20" height="4" fill="currentColor" />
+              <rect x="34" y="20" width="4" height="8" rx="0.5" fill="currentColor" />
+              <rect x="38" y="18" width="8" height="12" rx="1.5" stroke="currentColor" strokeWidth="2.5" />
+            </svg>
+            <h3
               className="text-2xl font-bold uppercase"
               style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
             >
-              No workouts logged yet
-            </p>
+              No workouts logged yet.
+            </h3>
             <p className="text-sm max-w-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-              Complete your first workout and it will show up here.
+              Start your first session and build that foundation.
             </p>
             <Link
               href="/dashboard/body"
-              className="mt-2 px-8 py-3 text-sm font-semibold uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-95"
+              className="mt-2 px-8 py-3 text-sm font-semibold uppercase tracking-widest transition-opacity hover:opacity-90 press-scale"
               style={{
                 backgroundColor: "#C45B28",
                 color: "#0A0A0A",
@@ -116,7 +123,7 @@ export default function WorkoutHistoryPage() {
                 fontFamily: "var(--font-inter)",
               }}
             >
-              Start a Workout
+              Let&apos;s Get Moving &rarr;
             </Link>
           </div>
         ) : (

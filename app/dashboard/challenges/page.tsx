@@ -500,24 +500,32 @@ export default function ChallengesPage() {
 
         {/* ─── Empty state ────────────────────────────────────────────────── */}
         {!loading && challenges.length === 0 && (
-          <div
-            className="flex flex-col items-center justify-center py-16 text-center"
-            style={{ color: "#9A9A9A" }}
-          >
-            <svg viewBox="0 0 48 48" fill="none" width={48} height={48} className="mb-4 opacity-40">
-              <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="2" />
-              <path d="M16 24H32" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              <path d="M24 16V32" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <div className="py-20 flex flex-col items-center text-center gap-4 animate-fade-up">
+            <svg viewBox="0 0 48 48" fill="none" width={40} height={40} style={{ color: "#252525" }}>
+              <path d="M24 4L28 16H40L30 24L34 36L24 28L14 36L18 24L8 16H20L24 4Z" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" />
+              <circle cx="24" cy="20" r="4" stroke="currentColor" strokeWidth="1.5" opacity="0.5" />
             </svg>
-            <p
-              className="text-lg font-bold uppercase mb-1"
+            <h3
+              className="text-2xl font-bold uppercase"
               style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
             >
-              No Challenges Yet
+              No active challenges.
+            </h3>
+            <p className="text-sm max-w-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+              Start one for your crew and build some momentum.
             </p>
-            <p className="text-sm" style={{ fontFamily: "var(--font-inter)" }}>
-              Be the first to create a challenge for your crew.
-            </p>
+            <button
+              onClick={() => setShowForm(true)}
+              className="mt-2 px-8 py-3 text-sm font-semibold uppercase tracking-widest transition-opacity hover:opacity-90 press-scale"
+              style={{
+                backgroundColor: "#C45B28",
+                color: "#0A0A0A",
+                borderRadius: "8px",
+                fontFamily: "var(--font-inter)",
+              }}
+            >
+              Create a Challenge &rarr;
+            </button>
           </div>
         )}
 

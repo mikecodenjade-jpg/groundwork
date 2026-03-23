@@ -23,9 +23,112 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  font-size: 16px;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
 }
 
+/* ─── Keyframe Animations ─────────────────────────────────────────────────── */
+
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateX(-50%) translateY(12px); }
-  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes confettiBurst {
+  0%   { opacity: 1; transform: scale(0) rotate(0deg); }
+  50%  { opacity: 1; transform: scale(1.2) rotate(180deg); }
+  100% { opacity: 0; transform: scale(1) rotate(360deg); }
+}
+
+@keyframes checkmark {
+  0%   { stroke-dashoffset: 36; }
+  100% { stroke-dashoffset: 0; }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(40px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ─── Utility Animation Classes ───────────────────────────────────────────── */
+
+.animate-fade-up {
+  animation: fadeInUp 0.3s ease-out both;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out both;
+}
+
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+
+.card-hover {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  border-color: #353535;
+}
+
+/* ─── Micro-Interactions ──────────────────────────────────────────────────── */
+
+.press-scale {
+  transition: transform 0.1s ease;
+}
+.press-scale:active {
+  transform: scale(0.97);
+}
+
+.success-checkmark svg {
+  animation: scaleIn 0.3s ease-out both;
+}
+.success-checkmark svg polyline,
+.success-checkmark svg path {
+  stroke-dasharray: 36;
+  stroke-dashoffset: 36;
+  animation: checkmark 0.4s ease-out 0.2s forwards;
+}
+
+/* ─── PWA Styles ──────────────────────────────────────────────────────────── */
+
+/* Safe area insets for notched devices */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Pull-to-refresh prevention on iOS (handled by JS) */
+html {
+  overscroll-behavior-y: none;
+}
+
+/* Offline indicator slide-down animation */
+@keyframes slideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+/* Minimum touch target utility class (48x48 per WCAG) */
+.touch-target {
+  min-height: 48px;
+  min-width: 48px;
+}
+
+/* Smooth scrolling */
+* {
+  scroll-behavior: smooth;
 }

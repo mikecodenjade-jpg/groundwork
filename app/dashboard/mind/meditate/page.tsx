@@ -342,8 +342,65 @@ export default function MeditatePage() {
               <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
                 Loading...
               </p>
+            ) : sessions.length === 0 && content.length === 0 ? (
+              /* Empty state when no sessions and no content */
+              <div className="py-20 flex flex-col items-center text-center gap-4 animate-fade-up">
+                <svg viewBox="0 0 48 48" fill="none" width={40} height={40} style={{ color: "#252525" }}>
+                  <circle cx="24" cy="24" r="18" stroke="currentColor" strokeWidth="2.5" />
+                  <circle cx="24" cy="24" r="8" stroke="currentColor" strokeWidth="2" />
+                  <path d="M24 6v4M24 38v4M6 24h4M38 24h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  <path d="M16 24c0-4.4 3.6-8 8-8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.5" />
+                </svg>
+                <h3
+                  className="text-2xl font-bold uppercase"
+                  style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+                >
+                  Take a breath.
+                </h3>
+                <p className="text-sm max-w-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                  Your first session is waiting. Two minutes is all it takes.
+                </p>
+                <button
+                  onClick={handleSelectUnguided}
+                  className="mt-2 px-8 py-3 text-sm font-semibold uppercase tracking-widest transition-opacity hover:opacity-90 press-scale"
+                  style={{
+                    backgroundColor: "#C45B28",
+                    color: "#0A0A0A",
+                    borderRadius: "8px",
+                    fontFamily: "var(--font-inter)",
+                  }}
+                >
+                  Start Box Breathing &rarr;
+                </button>
+              </div>
             ) : (
               <>
+                {/* Prompt for first-timers who have content but no sessions */}
+                {sessions.length === 0 && (
+                  <div
+                    className="px-5 py-4 flex items-center gap-4 animate-fade-up"
+                    style={{
+                      backgroundColor: "#161616",
+                      border: "1px solid #252525",
+                      borderRadius: "12px",
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" width={24} height={24} style={{ color: "#C45B28", flexShrink: 0 }}>
+                      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
+                      <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1" opacity="0.4" />
+                      <path d="M12 3v2M12 19v2M3 12h2M19 12h2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                    </svg>
+                    <div>
+                      <p className="text-sm font-semibold" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                        Take a breath.
+                      </p>
+                      <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                        Your first session is waiting. Two minutes is all it takes.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Unguided Timer Card */}
                 <section
                   style={{

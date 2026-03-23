@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useEffect, useRef, useCallback } from "react";
 import BottomNav from "@/components/BottomNav";
 import { supabase } from "@/lib/supabase";
+import { queueAction, registerSync, cacheData, getCachedData } from "@/lib/offline-cache";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -90,6 +91,14 @@ export default function MindPage() {
       } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Offline: show cached check-ins immediately
+      if (!navigator.onLine) {
+        const cached = getCachedData<CheckinRow[]>("recent-mood-checkins");
+        if (cached) setRecentCheckins(cached);
+        setCheckinsLoaded(true);
+        return;
+      }
+
       const { data: checkins } = await supabase
         .from("mood_checkins")
         .select("id, mood, source, created_at")
@@ -99,6 +108,7 @@ export default function MindPage() {
 
       if (checkins && checkins.length > 0) {
         setRecentCheckins(checkins);
+        cacheData("recent-mood-checkins", checkins);
 
         const checkinIds = checkins.map((c) => c.id);
         const { data: sentiments } = await supabase
@@ -120,12 +130,36 @@ export default function MindPage() {
   }, []);
 
   async function handleMoodSelect(mood: (typeof MOODS)[number]) {
+    // Haptic feedback — short tap on mobile devices
+    if (typeof navigator !== "undefined" && navigator.vibrate) {
+      navigator.vibrate(10);
+    }
+
     setSelectedMood(mood);
 
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
+      setPhase("source");
+      return;
+    }
+
+    // Offline: queue the check-in for background sync
+    if (!navigator.onLine) {
+      await queueAction({
+        url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/mood_checkins`,
+        method: "POST",
+        body: JSON.stringify({ user_id: user.id, mood: mood.label }),
+        headers: {
+          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
+          Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token ?? ""}`,
+          "Content-Type": "application/json",
+          Prefer: "return=representation",
+        },
+        tag: "sync-logs",
+      });
+      await registerSync("sync-logs");
       setPhase("source");
       return;
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { getProgramBySlug } from "@/lib/programs";
@@ -11,6 +11,7 @@ import BottomNav from "@/components/BottomNav";
 type Profile = {
   full_name: string | null;
   interests: string[] | null;
+  nutrition_goals: { calories?: number; protein?: number; carbs?: number; fat?: number } | null;
 };
 
 type DailyScore = {
@@ -28,6 +29,44 @@ type WellnessInsight = {
   priority: number;
   action_label?: string;
   action_link?: string;
+};
+
+type SnapshotData = {
+  steps: number;
+  calories: number;
+  caloriesGoal: number;
+  waterGlasses: number;
+  sleepHours: number;
+  sleepMinutes: number;
+  sleepQuality: number | null;
+  mood: string | null;
+};
+
+type Challenge = {
+  id: string;
+  title: string;
+  challenge_type: string;
+  target: number;
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+  description: string | null;
+};
+
+type ActivityItem = {
+  id: string;
+  type: "workout" | "meal" | "mood" | "journal" | "sleep";
+  label: string;
+  detail: string;
+  timestamp: string;
+};
+
+type WeeklyTrends = {
+  workouts: number[];
+  moods: number[];
+  sleep: number[];
+  calories: number[];
+  labels: string[];
 };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -72,6 +111,21 @@ const LEADERSHIP_ACTIONS = [
   "Acknowledge one win your crew had this week.",
   "Make one decision you've been putting off.",
 ];
+
+const MOOD_MAP: Record<string, { emoji: string; color: string; score: number }> = {
+  locked_in: { emoji: "\uD83D\uDD25", color: "#4CAF50", score: 5 },
+  solid: { emoji: "\uD83D\uDCAA", color: "#8BC34A", score: 4 },
+  off: { emoji: "\uD83D\uDE10", color: "#FFC107", score: 3 },
+  burned_out: { emoji: "\uD83D\uDE29", color: "#FF9800", score: 2 },
+  in_trouble: { emoji: "\uD83D\uDEA8", color: "#F44336", score: 1 },
+};
+
+const CHALLENGE_UNITS: Record<string, string> = {
+  steps: "steps",
+  meditation: "min",
+  hydration: "ml",
+  workouts: "workouts",
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -158,10 +212,139 @@ function todayLeadershipAction(): string {
   return LEADERSHIP_ACTIONS[day % LEADERSHIP_ACTIONS.length];
 }
 
+function relativeTime(ts: string): string {
+  const diff = Date.now() - new Date(ts).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
+function buildWeeklyTrends(
+  workouts: { created_at: string }[],
+  moods: { mood: string; created_at: string }[],
+  sleepLogs: { date: string; duration_minutes: number }[],
+  mealLogs: { calories: number; date: string }[]
+): WeeklyTrends {
+  const labels: string[] = [];
+  const workoutCounts: number[] = [];
+  const moodScores: number[] = [];
+  const sleepHours: number[] = [];
+  const calorieSums: number[] = [];
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - i);
+    const dayStr = d.toLocaleDateString("en-CA");
+    labels.push(d.toLocaleDateString("en-US", { weekday: "narrow" }));
+
+    workoutCounts.push(
+      workouts.filter((w) => new Date(w.created_at).toLocaleDateString("en-CA") === dayStr).length
+    );
+
+    const dayMoods = moods.filter(
+      (m) => new Date(m.created_at).toLocaleDateString("en-CA") === dayStr
+    );
+    if (dayMoods.length > 0) {
+      const avg =
+        dayMoods.reduce((sum, m) => sum + (MOOD_MAP[m.mood]?.score ?? 3), 0) / dayMoods.length;
+      moodScores.push(avg);
+    } else {
+      moodScores.push(0);
+    }
+
+    const daySleep = sleepLogs.find((s) => s.date === dayStr);
+    sleepHours.push(daySleep ? daySleep.duration_minutes / 60 : 0);
+
+    const dayCals = mealLogs
+      .filter((m) => m.date === dayStr)
+      .reduce((sum, m) => sum + (m.calories ?? 0), 0);
+    calorieSums.push(dayCals);
+  }
+
+  return {
+    workouts: workoutCounts,
+    moods: moodScores,
+    sleep: sleepHours,
+    calories: calorieSums,
+    labels,
+  };
+}
+
+function buildActivityFeed(
+  workouts: { id: string; created_at: string }[],
+  meals: { id: string; name: string; calories: number; meal_type: string; logged_at: string }[],
+  moods: { id: string; mood: string; created_at: string }[],
+  journals: { id: string; created_at: string }[],
+  sleepLogs: { id: string; date: string; duration_minutes: number; quality_score: number }[]
+): ActivityItem[] {
+  const items: ActivityItem[] = [];
+
+  workouts.forEach((w) =>
+    items.push({
+      id: `w-${w.id}`,
+      type: "workout",
+      label: "Workout Logged",
+      detail: "Completed a training session",
+      timestamp: w.created_at,
+    })
+  );
+
+  meals.forEach((m) =>
+    items.push({
+      id: `m-${m.id}`,
+      type: "meal",
+      label: m.meal_type ? `${m.meal_type.charAt(0).toUpperCase() + m.meal_type.slice(1)}` : "Meal",
+      detail: `${m.name ?? "Meal"} - ${m.calories ?? 0} cal`,
+      timestamp: m.logged_at,
+    })
+  );
+
+  moods.forEach((m) =>
+    items.push({
+      id: `mo-${m.id}`,
+      type: "mood",
+      label: "Mood Check-in",
+      detail: m.mood ? m.mood.replace(/_/g, " ") : "recorded",
+      timestamp: m.created_at,
+    })
+  );
+
+  journals.forEach((j) =>
+    items.push({
+      id: `j-${j.id}`,
+      type: "journal",
+      label: "Journal Entry",
+      detail: "Wrote a reflection",
+      timestamp: j.created_at,
+    })
+  );
+
+  sleepLogs.forEach((s) => {
+    const hrs = Math.floor(s.duration_minutes / 60);
+    const mins = s.duration_minutes % 60;
+    items.push({
+      id: `s-${s.id}`,
+      type: "sleep",
+      label: "Sleep Logged",
+      detail: `${hrs}h ${mins}m - quality ${s.quality_score ?? "?"}`,
+      timestamp: s.date + "T08:00:00",
+    });
+  });
+
+  items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  return items.slice(0, 5);
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
   const [streak, setStreak] = useState(0);
   const [score, setScore] = useState<DailyScore>({
     workout: false,
@@ -171,13 +354,18 @@ export default function DashboardPage() {
   });
   const [weekly, setWeekly] = useState({ done: 0, total: 7 });
   const [workout, setWorkout] = useState<{ slug: string; name: string } | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [insights, setInsights] = useState<WellnessInsight[]>([]);
   const [activeProgram, setActiveProgram] = useState<{
     slug: string;
     name: string;
     currentWeek: number;
   } | null>(null);
+  const [insights, setInsights] = useState<WellnessInsight[]>([]);
+  const [snapshot, setSnapshot] = useState<SnapshotData | null>(null);
+  const [activeChallenges, setActiveChallenges] = useState<
+    { challenge: Challenge; myProgress: number }[]
+  >([]);
+  const [activityFeed, setActivityFeed] = useState<ActivityItem[]>([]);
+  const [weeklyTrends, setWeeklyTrends] = useState<WeeklyTrends | null>(null);
 
   const reset = todayReset();
   const leadAction = todayLeadershipAction();
@@ -192,53 +380,125 @@ export default function DashboardPage() {
         return;
       }
 
+      const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
       const todayISO = todayStart.toISOString();
+      const todayStr = todayStart.toISOString().slice(0, 10);
 
-      const [profileRes, workoutsRes, moodsRes, journalsRes, mealsRes] = await Promise.all([
-        supabase.from("user_profiles").select("full_name, interests").eq("id", user.id).single(),
-        supabase.from("workout_logs").select("created_at").eq("user_id", user.id),
-        supabase.from("mood_checkins").select("created_at").eq("user_id", user.id),
+      const [
+        profileRes,
+        workoutsRes,
+        moodsRes,
+        journalsRes,
+        mealsRes,
+        hydrationRes,
+        sleepRes,
+        enrollmentsRes,
+        participantsRes,
+      ] = await Promise.all([
+        supabase
+          .from("user_profiles")
+          .select("full_name, interests, nutrition_goals")
+          .eq("id", user.id)
+          .single(),
+        supabase
+          .from("workout_logs")
+          .select("id, created_at")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(50),
+        supabase
+          .from("mood_checkins")
+          .select("id, mood, created_at")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(20),
         supabase
           .from("journal_entries")
-          .select("created_at")
+          .select("id, created_at")
           .eq("user_id", user.id)
-          .gte("created_at", todayISO),
+          .order("created_at", { ascending: false })
+          .limit(10),
         supabase
           .from("meal_logs")
-          .select("created_at")
+          .select("id, name, calories, meal_type, logged_at, date")
           .eq("user_id", user.id)
-          .gte("created_at", todayISO),
+          .gte("logged_at", sevenDaysAgo)
+          .order("logged_at", { ascending: false })
+          .limit(50),
+        supabase
+          .from("hydration_logs")
+          .select("id, amount_ml, logged_at")
+          .eq("user_id", user.id)
+          .gte("logged_at", todayISO)
+          .order("logged_at", { ascending: false }),
+        supabase
+          .from("sleep_logs")
+          .select("id, date, duration_minutes, quality_score")
+          .eq("user_id", user.id)
+          .order("date", { ascending: false })
+          .limit(7),
+        supabase
+          .from("program_enrollments")
+          .select("program_slug, current_week, status")
+          .eq("user_id", user.id)
+          .eq("status", "active")
+          .limit(1),
+        supabase
+          .from("challenge_participants")
+          .select("challenge_id, current_value")
+          .eq("user_id", user.id),
       ]);
 
+      // ── Profile ──
       const p = profileRes.data as Profile | null;
       if (p) setProfile(p);
       setWorkout(suggestWorkout(p?.interests ?? null));
 
+      // ── Streak & weekly ──
       const workoutDates = (workoutsRes.data ?? []).map((r) => r.created_at);
       const moodDates = (moodsRes.data ?? []).map((r) => r.created_at);
-
       setStreak(calcStreak([...workoutDates, ...moodDates]));
       setWeekly(calcWeeklyDays([...workoutDates, ...moodDates]));
 
+      // ── Daily score ──
       setScore({
         workout: workoutDates.some((d) => d >= todayISO),
         checkin: moodDates.some((d) => d >= todayISO),
-        journal: (journalsRes.data ?? []).length > 0,
-        meal: (mealsRes.data ?? []).length > 0,
+        journal: (journalsRes.data ?? []).some((j) => j.created_at >= todayISO),
+        meal: (mealsRes.data ?? []).some((m) => m.logged_at >= todayISO),
       });
 
-      // Check for active program enrollment
-      const { data: enrollments } = await supabase
-        .from("program_enrollments")
-        .select("program_slug, current_week, status")
-        .eq("user_id", user.id)
-        .eq("status", "active")
-        .limit(1);
+      // ── Snapshot ──
+      const todayWorkouts = (workoutsRes.data ?? []).filter(
+        (w) => w.created_at >= todayISO
+      ).length;
+      const todayMeals = (mealsRes.data ?? []).filter((m) => m.date === todayStr);
+      const todayCalories = todayMeals.reduce((sum, m) => sum + (m.calories ?? 0), 0);
+      const caloriesGoal = p?.nutrition_goals?.calories ?? 2400;
+      const totalMl = (hydrationRes.data ?? []).reduce(
+        (sum, h) => sum + (h.amount_ml ?? 0),
+        0
+      );
+      const waterGlasses = Math.round((totalMl / 240) * 10) / 10;
+      const lastSleep = (sleepRes.data ?? [])[0];
+      const latestMood = (moodsRes.data ?? [])[0];
 
-      if (enrollments && enrollments.length > 0) {
-        const e = enrollments[0];
+      setSnapshot({
+        steps: todayWorkouts * 2000,
+        calories: todayCalories,
+        caloriesGoal,
+        waterGlasses,
+        sleepHours: lastSleep ? Math.floor(lastSleep.duration_minutes / 60) : 0,
+        sleepMinutes: lastSleep ? lastSleep.duration_minutes % 60 : 0,
+        sleepQuality: lastSleep?.quality_score ?? null,
+        mood: latestMood?.mood ?? null,
+      });
+
+      // ── Active program ──
+      if (enrollmentsRes.data && enrollmentsRes.data.length > 0) {
+        const e = enrollmentsRes.data[0];
         const prog = getProgramBySlug(e.program_slug);
         if (prog) {
           const totalWeeks = prog.totalWeeks ?? Infinity;
@@ -252,7 +512,65 @@ export default function DashboardPage() {
         }
       }
 
-      // Load wellness insights (fire-and-forget, non-blocking)
+      // ── Challenges ──
+      const participants = participantsRes.data ?? [];
+      if (participants.length > 0) {
+        const challengeIds = participants.map((cp) => cp.challenge_id);
+        const { data: challengeData } = await supabase
+          .from("team_challenges")
+          .select("*")
+          .in("id", challengeIds)
+          .eq("is_active", true);
+
+        if (challengeData && challengeData.length > 0) {
+          const merged = challengeData.map((c: Challenge) => {
+            const cp = participants.find((p) => p.challenge_id === c.id);
+            return { challenge: c, myProgress: cp?.current_value ?? 0 };
+          });
+          setActiveChallenges(merged);
+        }
+      }
+
+      // ── Activity feed ──
+      setActivityFeed(
+        buildActivityFeed(
+          workoutsRes.data ?? [],
+          (mealsRes.data ?? []).map((m) => ({
+            id: m.id,
+            name: m.name,
+            calories: m.calories,
+            meal_type: m.meal_type,
+            logged_at: m.logged_at,
+          })),
+          (moodsRes.data ?? []).map((m) => ({
+            id: m.id,
+            mood: m.mood,
+            created_at: m.created_at,
+          })),
+          journalsRes.data ?? [],
+          (sleepRes.data ?? []).map((s) => ({
+            id: s.id,
+            date: s.date,
+            duration_minutes: s.duration_minutes,
+            quality_score: s.quality_score,
+          }))
+        )
+      );
+
+      // ── Weekly trends ──
+      setWeeklyTrends(
+        buildWeeklyTrends(
+          workoutsRes.data ?? [],
+          (moodsRes.data ?? []).map((m) => ({ mood: m.mood, created_at: m.created_at })),
+          (sleepRes.data ?? []).map((s) => ({
+            date: s.date,
+            duration_minutes: s.duration_minutes,
+          })),
+          (mealsRes.data ?? []).map((m) => ({ calories: m.calories, date: m.date }))
+        )
+      );
+
+      // ── Wellness insights (fire-and-forget) ──
       supabase.functions
         .invoke("wellness-insights", { body: { user_id: user.id } })
         .then(({ data: insightsData }) => {
@@ -277,7 +595,7 @@ export default function DashboardPage() {
       className="min-h-screen flex flex-col px-6 py-10"
       style={{ backgroundColor: "#0A0A0A", color: "#E8E2D8" }}
     >
-      {/* Header */}
+      {/* ─── 1. Welcome Header ─────────────────────────────────────────────────── */}
       <header className="flex items-center justify-between max-w-2xl w-full mx-auto mb-10">
         <p
           className="text-xs font-semibold tracking-[0.3em] uppercase"
@@ -304,7 +622,6 @@ export default function DashboardPage() {
       </header>
 
       <div className="max-w-2xl w-full mx-auto flex flex-col gap-8 pb-28">
-
         {/* Greeting + Streak */}
         <section className="flex flex-col gap-1">
           <p
@@ -314,7 +631,6 @@ export default function DashboardPage() {
             {todayLabel()}
           </p>
 
-          {/* Welcome message for brand-new users */}
           {!loading && streak === 0 && dailyScore === 0 ? (
             <>
               <h1
@@ -324,7 +640,10 @@ export default function DashboardPage() {
                 Welcome to Groundwork
                 {profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}.
               </h1>
-              <p className="text-sm mt-2" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+              <p
+                className="text-sm mt-2"
+                style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+              >
                 Your first day starts now. Hit the button below to get moving.
               </p>
             </>
@@ -338,16 +657,21 @@ export default function DashboardPage() {
             </h1>
           )}
 
+          {/* Streak badge */}
           <div className="mt-4 flex items-center gap-3">
             <div
               className="flex items-center gap-2 px-4 py-2"
-              style={{ backgroundColor: "#0D1B2A", border: "1px solid #1E3A5F", borderRadius: "8px" }}
+              style={{
+                backgroundColor: "#0D1B2A",
+                border: "1px solid #1E3A5F",
+                borderRadius: "8px",
+              }}
             >
               <span
                 className="text-2xl font-bold leading-none"
                 style={{ fontFamily: "var(--font-oswald)", color: "#C45B28" }}
               >
-                {loading ? "–" : streak}
+                {loading ? "\u2013" : streak}
               </span>
               <span
                 className="text-xs font-semibold uppercase tracking-widest"
@@ -356,7 +680,10 @@ export default function DashboardPage() {
                 Day Streak
               </span>
             </div>
-            <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+            <p
+              className="text-xs"
+              style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+            >
               {loading
                 ? ""
                 : streak === 0
@@ -368,7 +695,230 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* Continue Program card */}
+        {/* ─── 2. Daily Snapshot Cards ─────────────────────────────────────────── */}
+        <section>
+          <p
+            className="text-xs font-semibold tracking-[0.25em] uppercase mb-4"
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+          >
+            Daily Snapshot
+          </p>
+          <div
+            className="flex gap-3 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+            style={{ WebkitOverflowScrolling: "touch" }}
+          >
+            <SnapshotCard
+              title="Steps Today"
+              value={
+                loading
+                  ? "\u2013"
+                  : snapshot && snapshot.steps > 0
+                  ? `~${snapshot.steps.toLocaleString()}`
+                  : "\u2014"
+              }
+              sub="(est.)"
+              icon={
+                <svg viewBox="0 0 24 24" fill="none" width={20} height={20}>
+                  <path
+                    d="M13 5.5C13 4.12 14.12 3 15.5 3S18 4.12 18 5.5 16.88 8 15.5 8 13 6.88 13 5.5ZM9.8 8.9L7 23H9.1L10.9 15L13 17V23H15V15.5L12.9 13.5L13.5 10.5C14.8 12 16.8 13 19 13V11C17.1 11 15.5 10 14.7 8.6L13.7 7C13.3 6.4 12.7 6 12 6C11.7 6 11.5 6.1 11.2 6.1L6 8.3V13H8V9.6L9.8 8.9Z"
+                    fill="currentColor"
+                  />
+                </svg>
+              }
+              color="#C45B28"
+            />
+            <SnapshotCard
+              title="Calories"
+              value={
+                loading
+                  ? "\u2013"
+                  : `${snapshot?.calories ?? 0} / ${snapshot?.caloriesGoal ?? 2400}`
+              }
+              sub="cal"
+              icon={
+                <svg viewBox="0 0 24 24" fill="none" width={20} height={20}>
+                  <path
+                    d="M11 9H9V2H7V9H5V2H3V9C3 11.12 4.66 12.84 6.75 12.97V22H9.25V12.97C11.34 12.84 13 11.12 13 9V2H11V9ZM16 6V14H18.5V22H21V2C18.24 2 16 4.24 16 6Z"
+                    fill="currentColor"
+                  />
+                </svg>
+              }
+              color="#4CAF50"
+            />
+            <SnapshotCard
+              title="Water"
+              value={
+                loading
+                  ? "\u2013"
+                  : `${snapshot?.waterGlasses ?? 0} / 8`
+              }
+              sub="glasses"
+              icon={
+                <svg viewBox="0 0 24 24" fill="none" width={20} height={20}>
+                  <path
+                    d="M12 2C6 12 4 15 4 18C4 22 7.58 24 12 24C16.42 24 20 22 20 18C20 15 18 12 12 2Z"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    fill="none"
+                  />
+                </svg>
+              }
+              color="#1E6A9A"
+            />
+            <SnapshotCard
+              title="Sleep"
+              value={
+                loading
+                  ? "\u2013"
+                  : snapshot && (snapshot.sleepHours > 0 || snapshot.sleepMinutes > 0)
+                  ? `${snapshot.sleepHours}h ${snapshot.sleepMinutes}m`
+                  : "\u2014"
+              }
+              sub={
+                snapshot?.sleepQuality != null
+                  ? `Quality: ${snapshot.sleepQuality}`
+                  : ""
+              }
+              icon={
+                <svg viewBox="0 0 24 24" fill="none" width={20} height={20}>
+                  <path
+                    d="M12 3C7.03 3 3 7.03 3 12C3 16.97 7.03 21 12 21C16.97 21 21 16.97 21 12C21 11.54 20.96 11.08 20.9 10.64C19.92 12.01 18.32 12.9 16.5 12.9C13.46 12.9 11 10.44 11 7.4C11 5.58 11.9 3.98 13.26 3C12.86 3.03 12.43 3 12 3Z"
+                    fill="currentColor"
+                  />
+                </svg>
+              }
+              color="#2A5A8A"
+            />
+            <SnapshotCard
+              title="Mood"
+              value={
+                loading
+                  ? "\u2013"
+                  : snapshot?.mood
+                  ? `${MOOD_MAP[snapshot.mood]?.emoji ?? ""} ${snapshot.mood.replace(/_/g, " ")}`
+                  : "\u2014"
+              }
+              sub=""
+              icon={
+                <svg viewBox="0 0 24 24" fill="none" width={20} height={20}>
+                  <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+                  <path
+                    d="M8 14C8 14 9.5 16 12 16C14.5 16 16 14 16 14"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                  <circle cx="9" cy="10" r="1" fill="currentColor" />
+                  <circle cx="15" cy="10" r="1" fill="currentColor" />
+                </svg>
+              }
+              color={snapshot?.mood ? (MOOD_MAP[snapshot.mood]?.color ?? "#9A9A9A") : "#9A9A9A"}
+            />
+          </div>
+        </section>
+
+        {/* ─── 3. Quick Actions ─────────────────────────────────────────────────── */}
+        <section>
+          <p
+            className="text-xs font-semibold tracking-[0.25em] uppercase mb-4"
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+          >
+            Quick Actions
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <QuickActionBtn
+              label="Log Meal"
+              href="/dashboard/nutrition"
+              color="#C45B28"
+              bg="#1A0A00"
+              icon={
+                <svg viewBox="0 0 24 24" fill="none" width={22} height={22}>
+                  <path
+                    d="M11 9H9V2H7V9H5V2H3V9C3 11.12 4.66 12.84 6.75 12.97V22H9.25V12.97C11.34 12.84 13 11.12 13 9V2H11V9ZM16 6V14H18.5V22H21V2C18.24 2 16 4.24 16 6Z"
+                    fill="currentColor"
+                  />
+                </svg>
+              }
+            />
+            <QuickActionBtn
+              label="Log Water"
+              href="/dashboard/nutrition"
+              color="#1E6A9A"
+              bg="#001A2A"
+              icon={
+                <svg viewBox="0 0 24 24" fill="none" width={22} height={22}>
+                  <path
+                    d="M12 2C6 12 4 15 4 18C4 22 7.58 24 12 24C16.42 24 20 22 20 18C20 15 18 12 12 2Z"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    fill="none"
+                  />
+                </svg>
+              }
+            />
+            <QuickActionBtn
+              label="Mood Check-in"
+              href="/dashboard/mind"
+              color="#5A3A7A"
+              bg="#1A0A2A"
+              icon={
+                <svg viewBox="0 0 24 24" fill="none" width={22} height={22}>
+                  <path
+                    d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 5C13.66 5 15 6.34 15 8C15 9.66 13.66 11 12 11C10.34 11 9 9.66 9 8C9 6.34 10.34 5 12 5ZM12 19.2C9.5 19.2 7.29 17.92 6 15.98C6.03 13.99 10 12.9 12 12.9C13.99 12.9 17.97 13.99 18 15.98C16.71 17.92 14.5 19.2 12 19.2Z"
+                    fill="currentColor"
+                  />
+                </svg>
+              }
+            />
+            <QuickActionBtn
+              label="Start Meditation"
+              href="/dashboard/mind/meditate"
+              color="#2A6A6A"
+              bg="#001A1A"
+              icon={
+                <svg viewBox="0 0 24 24" fill="none" width={22} height={22}>
+                  <path
+                    d="M12 2L14.09 8.26L20 9.27L15.55 13.97L16.91 20L12 16.9L7.09 20L8.45 13.97L4 9.27L9.91 8.26L12 2Z"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinejoin="round"
+                    fill="none"
+                  />
+                </svg>
+              }
+            />
+            <QuickActionBtn
+              label="Log Workout"
+              href="/dashboard/body"
+              color="#C45B28"
+              bg="#1A0A00"
+              icon={
+                <svg viewBox="0 0 24 24" fill="none" width={22} height={22}>
+                  <path
+                    d="M20.57 14.86L22 13.43L20.57 12L17 15.57L8.43 7L12 3.43L10.57 2L9.14 3.43L7.71 2L5.57 4.14L4.14 2.71L2.71 4.14L4.14 5.57L2 7.71L3.43 9.14L2 10.57L3.43 12L7 8.43L15.57 17L12 20.57L13.43 22L14.86 20.57L16.29 22L18.43 19.86L19.86 21.29L21.29 19.86L19.86 18.43L22 16.29L20.57 14.86Z"
+                    fill="currentColor"
+                  />
+                </svg>
+              }
+            />
+            <QuickActionBtn
+              label="View Sleep"
+              href="/dashboard/body/sleep"
+              color="#1E3A5F"
+              bg="#0D1B2A"
+              icon={
+                <svg viewBox="0 0 24 24" fill="none" width={22} height={22}>
+                  <path
+                    d="M12 3C7.03 3 3 7.03 3 12C3 16.97 7.03 21 12 21C16.97 21 21 16.97 21 12C21 11.54 20.96 11.08 20.9 10.64C19.92 12.01 18.32 12.9 16.5 12.9C13.46 12.9 11 10.44 11 7.4C11 5.58 11.9 3.98 13.26 3C12.86 3.03 12.43 3 12 3Z"
+                    fill="currentColor"
+                  />
+                </svg>
+              }
+            />
+          </div>
+        </section>
+
+        {/* ─── 4. Continue Program ─────────────────────────────────────────────── */}
         {activeProgram && (
           <Link
             href={`/dashboard/body/programs/${activeProgram.slug}/week/${activeProgram.currentWeek}`}
@@ -408,7 +958,221 @@ export default function DashboardPage() {
           </Link>
         )}
 
-        {/* Today's Plan — single card, 3 rows */}
+        {/* ─── 5. Wellness Insights ────────────────────────────────────────────── */}
+        {insights.length > 0 && (
+          <section className="flex flex-col gap-4">
+            <p
+              className="text-xs font-semibold tracking-[0.25em] uppercase"
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+            >
+              Wellness Insights
+            </p>
+            <div className="flex flex-col gap-3">
+              {insights.map((insight) => (
+                <div
+                  key={insight.id}
+                  className="px-6 py-5 flex flex-col gap-2"
+                  style={{
+                    backgroundColor: "#161616",
+                    border: "1px solid #252525",
+                    borderRadius: "12px",
+                  }}
+                >
+                  <p
+                    className="text-sm font-bold leading-snug"
+                    style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
+                  >
+                    {insight.title}
+                  </p>
+                  <p
+                    className="text-xs leading-relaxed"
+                    style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                  >
+                    {insight.body}
+                  </p>
+                  {insight.action_label && insight.action_link && (
+                    <Link
+                      href={insight.action_link}
+                      className="text-xs font-bold uppercase tracking-widest transition-opacity hover:opacity-70 mt-1"
+                      style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+                    >
+                      {insight.action_label} &rarr;
+                    </Link>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ─── 6. Active Challenges ────────────────────────────────────────────── */}
+        {activeChallenges.length > 0 && (
+          <section className="flex flex-col gap-4">
+            <p
+              className="text-xs font-semibold tracking-[0.25em] uppercase"
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+            >
+              Active Challenges
+            </p>
+            <div className="flex flex-col gap-3">
+              {activeChallenges.map(({ challenge, myProgress }) => {
+                const pct = Math.min(
+                  100,
+                  challenge.target > 0 ? (myProgress / challenge.target) * 100 : 0
+                );
+                const unit = CHALLENGE_UNITS[challenge.challenge_type] ?? "";
+                return (
+                  <Link
+                    key={challenge.id}
+                    href={`/dashboard/challenges/${challenge.id}`}
+                    className="px-6 py-5 flex flex-col gap-3 transition-opacity hover:opacity-90"
+                    style={{
+                      backgroundColor: "#161616",
+                      border: "1px solid #252525",
+                      borderRadius: "12px",
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col gap-0.5">
+                        <span
+                          className="text-sm font-bold"
+                          style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
+                        >
+                          {challenge.title}
+                        </span>
+                        <span
+                          className="text-[10px] uppercase tracking-widest"
+                          style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                        >
+                          {challenge.challenge_type}
+                        </span>
+                      </div>
+                      <span
+                        className="text-xs font-semibold"
+                        style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+                      >
+                        {myProgress} / {challenge.target} {unit}
+                      </span>
+                    </div>
+                    <div
+                      className="w-full rounded-full overflow-hidden"
+                      style={{ height: "6px", backgroundColor: "#252525" }}
+                    >
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          backgroundColor: "#C45B28",
+                          width: `${pct}%`,
+                        }}
+                      />
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ─── 7. Recent Activity Feed ─────────────────────────────────────────── */}
+        {activityFeed.length > 0 && (
+          <section className="flex flex-col gap-4">
+            <p
+              className="text-xs font-semibold tracking-[0.25em] uppercase"
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+            >
+              Recent Activity
+            </p>
+            <div className="flex flex-col gap-2">
+              {activityFeed.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-4 px-5 py-4"
+                  style={{
+                    backgroundColor: "#161616",
+                    border: "1px solid #252525",
+                    borderRadius: "12px",
+                  }}
+                >
+                  <ActivityIcon type={item.type} />
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className="text-sm font-semibold leading-snug truncate"
+                      style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
+                    >
+                      {item.label}
+                    </p>
+                    <p
+                      className="text-xs truncate"
+                      style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                    >
+                      {item.detail}
+                    </p>
+                  </div>
+                  <span
+                    className="text-[10px] shrink-0 uppercase tracking-widest"
+                    style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                  >
+                    {relativeTime(item.timestamp)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ─── 8. Weekly Trends ────────────────────────────────────────────────── */}
+        {weeklyTrends && (
+          <section className="flex flex-col gap-4">
+            <p
+              className="text-xs font-semibold tracking-[0.25em] uppercase"
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+            >
+              Weekly Trends
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <TrendCard
+                label="Workouts"
+                currentValue={`${weeklyTrends.workouts[6]}`}
+                values={weeklyTrends.workouts}
+                color="#C45B28"
+                unit="/day"
+              />
+              <TrendCard
+                label="Mood"
+                currentValue={
+                  weeklyTrends.moods[6] > 0 ? weeklyTrends.moods[6].toFixed(1) : "\u2014"
+                }
+                values={weeklyTrends.moods}
+                color="#5A6A9A"
+                unit="/5"
+              />
+              <TrendCard
+                label="Sleep"
+                currentValue={
+                  weeklyTrends.sleep[6] > 0
+                    ? `${weeklyTrends.sleep[6].toFixed(1)}h`
+                    : "\u2014"
+                }
+                values={weeklyTrends.sleep}
+                color="#2A5A8A"
+                unit=""
+              />
+              <TrendCard
+                label="Calories"
+                currentValue={
+                  weeklyTrends.calories[6] > 0
+                    ? weeklyTrends.calories[6].toLocaleString()
+                    : "\u2014"
+                }
+                values={weeklyTrends.calories}
+                color="#4A8A4A"
+                unit="cal"
+              />
+            </div>
+          </section>
+        )}
+
+        {/* ─── 9. Today's Plan ─────────────────────────────────────────────────── */}
         <section>
           <p
             className="text-xs font-semibold tracking-[0.25em] uppercase mb-4"
@@ -427,7 +1191,7 @@ export default function DashboardPage() {
             <PlanRow
               step="Train"
               accent="#C45B28"
-              title={loading ? "Loading…" : (workout?.name ?? "Bodyweight Workout")}
+              title={loading ? "Loading\u2026" : (workout?.name ?? "Bodyweight Workout")}
               meta="30 min"
               loading={loading}
             />
@@ -466,57 +1230,10 @@ export default function DashboardPage() {
             minHeight: "64px",
           }}
         >
-          Start Your Day →
+          Start Your Day &rarr;
         </Link>
 
-        {/* Wellness Insights */}
-        {insights.length > 0 && (
-          <section className="flex flex-col gap-4">
-            <p
-              className="text-xs font-semibold tracking-[0.25em] uppercase"
-              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
-            >
-              Wellness Insights
-            </p>
-            <div className="flex flex-col gap-3">
-              {insights.map((insight) => (
-                <div
-                  key={insight.id}
-                  className="px-6 py-5 flex flex-col gap-2"
-                  style={{
-                    backgroundColor: "#161616",
-                    border: "1px solid #252525",
-                    borderRadius: "12px",
-                  }}
-                >
-                  <p
-                    className="text-sm font-bold leading-snug"
-                    style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
-                  >
-                    {insight.title}
-                  </p>
-                  <p
-                    className="text-xs leading-relaxed"
-                    style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
-                  >
-                    {insight.body}
-                  </p>
-                  {insight.action_label && insight.action_link && (
-                    <Link
-                      href={insight.action_link}
-                      className="text-xs font-bold uppercase tracking-widest transition-opacity hover:opacity-70 mt-1"
-                      style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
-                    >
-                      {insight.action_label} →
-                    </Link>
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Your Progress */}
+        {/* ─── Your Progress ───────────────────────────────────────────────────── */}
         <section className="flex flex-col gap-4">
           <p
             className="text-xs font-semibold tracking-[0.25em] uppercase"
@@ -525,13 +1242,15 @@ export default function DashboardPage() {
             Your Progress
           </p>
 
-          {/* Score + Streak tiles */}
           <div className="grid grid-cols-2 gap-3">
-            {/* Daily score */}
             <Link
               href="/dashboard/badges"
               className="flex flex-col items-center justify-center py-6 gap-2 transition-opacity hover:opacity-90"
-              style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
+              style={{
+                backgroundColor: "#161616",
+                border: "1px solid #252525",
+                borderRadius: "12px",
+              }}
             >
               <span
                 className="text-4xl font-bold leading-none"
@@ -540,7 +1259,7 @@ export default function DashboardPage() {
                   color: loading ? "#252525" : dailyScore === 100 ? "#4CAF50" : "#C45B28",
                 }}
               >
-                {loading ? "–" : dailyScore}
+                {loading ? "\u2013" : dailyScore}
               </span>
               <span
                 className="text-[10px] font-semibold uppercase tracking-widest"
@@ -558,17 +1277,20 @@ export default function DashboardPage() {
               )}
             </Link>
 
-            {/* Streak */}
             <Link
               href="/dashboard/badges"
               className="flex flex-col items-center justify-center py-6 gap-1 transition-opacity hover:opacity-90"
-              style={{ backgroundColor: "#0D1B2A", border: "1px solid #1E3A5F", borderRadius: "12px" }}
+              style={{
+                backgroundColor: "#0D1B2A",
+                border: "1px solid #1E3A5F",
+                borderRadius: "12px",
+              }}
             >
               <span
                 className="text-4xl font-bold leading-none"
                 style={{ fontFamily: "var(--font-oswald)", color: "#C45B28" }}
               >
-                {loading ? "–" : streak}
+                {loading ? "\u2013" : streak}
               </span>
               <span
                 className="text-[10px] font-semibold uppercase tracking-widest"
@@ -590,7 +1312,11 @@ export default function DashboardPage() {
           {/* Weekly bar */}
           <div
             className="px-6 py-5 flex flex-col gap-3"
-            style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
+            style={{
+              backgroundColor: "#161616",
+              border: "1px solid #252525",
+              borderRadius: "12px",
+            }}
           >
             <div className="flex items-center justify-between">
               <span
@@ -603,7 +1329,7 @@ export default function DashboardPage() {
                 className="text-sm font-bold"
                 style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
               >
-                {loading ? "–/7" : `${weekly.done}/7 days`}
+                {loading ? "\u2013/7" : `${weekly.done}/7 days`}
               </span>
             </div>
             <div
@@ -636,7 +1362,7 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* Crew & Challenges */}
+        {/* ─── 10. Crew ────────────────────────────────────────────────────────── */}
         <section>
           <p
             className="text-xs font-semibold tracking-[0.25em] uppercase mb-3"
@@ -664,16 +1390,25 @@ export default function DashboardPage() {
                 }}
               >
                 <svg viewBox="0 0 24 24" fill="none" width={18} height={18}>
-                  <path d="M12 4L14.5 9H20L15.5 12.5L17.5 18L12 14.5L6.5 18L8.5 12.5L4 9H9.5L12 4Z"
-                    stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                  <path
+                    d="M12 4L14.5 9H20L15.5 12.5L17.5 18L12 14.5L6.5 18L8.5 12.5L4 9H9.5L12 4Z"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinejoin="round"
+                  />
                 </svg>
               </div>
               <div>
-                <p className="text-sm font-bold uppercase leading-tight"
-                  style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                <p
+                  className="text-sm font-bold uppercase leading-tight"
+                  style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
+                >
                   Challenges
                 </p>
-                <p className="text-[11px]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                <p
+                  className="text-[11px]"
+                  style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                >
                   Team competitions
                 </p>
               </div>
@@ -699,27 +1434,40 @@ export default function DashboardPage() {
                 <svg viewBox="0 0 24 24" fill="none" width={18} height={18}>
                   <circle cx="9" cy="7" r="3" stroke="currentColor" strokeWidth="1.8" />
                   <circle cx="17" cy="9" r="2.5" stroke="currentColor" strokeWidth="1.6" />
-                  <path d="M3 19C3 16.2 5.7 14 9 14C12.3 14 15 16.2 15 19"
-                    stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                  <path d="M17 14C19.2 14 21 15.8 21 18"
-                    stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                  <path
+                    d="M3 19C3 16.2 5.7 14 9 14C12.3 14 15 16.2 15 19"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M17 14C19.2 14 21 15.8 21 18"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                  />
                 </svg>
               </div>
               <div>
-                <p className="text-sm font-bold uppercase leading-tight"
-                  style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                <p
+                  className="text-sm font-bold uppercase leading-tight"
+                  style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
+                >
                   Crew Wall
                 </p>
-                <p className="text-[11px]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                <p
+                  className="text-[11px]"
+                  style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                >
                   Share & connect
                 </p>
               </div>
             </Link>
           </div>
         </section>
-
       </div>
-      {/* Floating Ask Coach button */}
+
+      {/* ─── 11. Ask Coach FAB ───────────────────────────────────────────────── */}
       <Link
         href="/dashboard/coach"
         aria-label="Ask Coach"
@@ -741,8 +1489,24 @@ export default function DashboardPage() {
             strokeWidth="1.8"
             strokeLinejoin="round"
           />
-          <line x1="8" y1="9" x2="16" y2="9" stroke="#0A0A0A" strokeWidth="1.4" strokeLinecap="round" />
-          <line x1="8" y1="12" x2="13" y2="12" stroke="#0A0A0A" strokeWidth="1.4" strokeLinecap="round" />
+          <line
+            x1="8"
+            y1="9"
+            x2="16"
+            y2="9"
+            stroke="#0A0A0A"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+          />
+          <line
+            x1="8"
+            y1="12"
+            x2="13"
+            y2="12"
+            stroke="#0A0A0A"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+          />
         </svg>
       </Link>
 
@@ -820,10 +1584,283 @@ function ScorePip({
       />
       <span
         className="text-[9px] uppercase tracking-widest"
-        style={{ color: done ? "#9A9A9A" : "#3A3A3A", fontFamily: "var(--font-inter)" }}
+        style={{
+          color: done ? "#9A9A9A" : "#3A3A3A",
+          fontFamily: "var(--font-inter)",
+        }}
       >
         +{points}
       </span>
+    </div>
+  );
+}
+
+function Sparkline({
+  values,
+  color,
+  width = 80,
+  height = 32,
+}: {
+  values: number[];
+  color: string;
+  width?: number;
+  height?: number;
+}) {
+  if (values.length === 0) return null;
+  const max = Math.max(...values, 1);
+  const min = Math.min(...values, 0);
+  const range = max - min || 1;
+  const pad = 2;
+  const plotW = width - pad * 2;
+  const plotH = height - pad * 2;
+
+  const points = values
+    .map((v, i) => {
+      const x = pad + (i / Math.max(values.length - 1, 1)) * plotW;
+      const y = pad + plotH - ((v - min) / range) * plotH;
+      return `${x},${y}`;
+    })
+    .join(" ");
+
+  return (
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
+      <polyline
+        points={points}
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function SnapshotCard({
+  title,
+  value,
+  sub,
+  icon,
+  color,
+}: {
+  title: string;
+  value: string;
+  sub: string;
+  icon: React.ReactNode;
+  color: string;
+}) {
+  return (
+    <div
+      className="shrink-0 flex flex-col items-center justify-center gap-2 px-4 py-4"
+      style={{
+        width: "140px",
+        minHeight: "120px",
+        backgroundColor: "#161616",
+        border: "1px solid #252525",
+        borderRadius: "12px",
+      }}
+    >
+      <div style={{ color }}>{icon}</div>
+      <span
+        className="text-sm font-bold text-center leading-tight"
+        style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
+      >
+        {value}
+      </span>
+      <span
+        className="text-[10px] uppercase tracking-widest text-center"
+        style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+      >
+        {title}
+      </span>
+      {sub && (
+        <span
+          className="text-[9px] text-center"
+          style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+        >
+          {sub}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function QuickActionBtn({
+  label,
+  href,
+  icon,
+  color,
+  bg,
+}: {
+  label: string;
+  href: string;
+  icon: React.ReactNode;
+  color: string;
+  bg: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center gap-3 px-4 py-4 transition-all duration-150 hover:opacity-80 active:scale-[0.98]"
+      style={{
+        backgroundColor: bg,
+        border: `1px solid ${color}33`,
+        borderRadius: "12px",
+        minHeight: "64px",
+        color,
+      }}
+    >
+      <div
+        className="w-10 h-10 shrink-0 flex items-center justify-center"
+        style={{
+          backgroundColor: `${color}18`,
+          borderRadius: "10px",
+        }}
+      >
+        {icon}
+      </div>
+      <span
+        className="text-sm font-bold leading-tight"
+        style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
+      >
+        {label}
+      </span>
+    </Link>
+  );
+}
+
+function TrendCard({
+  label,
+  currentValue,
+  values,
+  color,
+  unit,
+}: {
+  label: string;
+  currentValue: string;
+  values: number[];
+  color: string;
+  unit: string;
+}) {
+  return (
+    <div
+      className="flex flex-col gap-2 px-5 py-4"
+      style={{
+        backgroundColor: "#161616",
+        border: "1px solid #252525",
+        borderRadius: "12px",
+      }}
+    >
+      <span
+        className="text-[10px] uppercase tracking-widest font-semibold"
+        style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+      >
+        {label}
+      </span>
+      <div className="flex items-end justify-between gap-2">
+        <span
+          className="text-lg font-bold leading-none"
+          style={{ color, fontFamily: "var(--font-oswald)" }}
+        >
+          {currentValue}
+          {unit && (
+            <span
+              className="text-[10px] font-normal ml-0.5"
+              style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+            >
+              {unit}
+            </span>
+          )}
+        </span>
+        <Sparkline values={values} color={color} width={80} height={32} />
+      </div>
+    </div>
+  );
+}
+
+function ActivityIcon({ type }: { type: ActivityItem["type"] }) {
+  const configs: Record<
+    ActivityItem["type"],
+    { bg: string; color: string; icon: React.ReactNode }
+  > = {
+    workout: {
+      bg: "#1A0A00",
+      color: "#C45B28",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" width={16} height={16}>
+          <path
+            d="M20.57 14.86L22 13.43L20.57 12L17 15.57L8.43 7L12 3.43L10.57 2L9.14 3.43L7.71 2L5.57 4.14L4.14 2.71L2.71 4.14L4.14 5.57L2 7.71L3.43 9.14L2 10.57L3.43 12L7 8.43L15.57 17L12 20.57L13.43 22L14.86 20.57L16.29 22L18.43 19.86L19.86 21.29L21.29 19.86L19.86 18.43L22 16.29L20.57 14.86Z"
+            fill="currentColor"
+          />
+        </svg>
+      ),
+    },
+    meal: {
+      bg: "#0A1A0A",
+      color: "#4CAF50",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" width={16} height={16}>
+          <path
+            d="M11 9H9V2H7V9H5V2H3V9C3 11.12 4.66 12.84 6.75 12.97V22H9.25V12.97C11.34 12.84 13 11.12 13 9V2H11V9ZM16 6V14H18.5V22H21V2C18.24 2 16 4.24 16 6Z"
+            fill="currentColor"
+          />
+        </svg>
+      ),
+    },
+    mood: {
+      bg: "#1A0A2A",
+      color: "#5A3A7A",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" width={16} height={16}>
+          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+          <path
+            d="M8 14C8 14 9.5 16 12 16C14.5 16 16 14 16 14"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+          />
+          <circle cx="9" cy="10" r="1" fill="currentColor" />
+          <circle cx="15" cy="10" r="1" fill="currentColor" />
+        </svg>
+      ),
+    },
+    journal: {
+      bg: "#0A0A1A",
+      color: "#5A6A9A",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" width={16} height={16}>
+          <path
+            d="M3 17.25V21H6.75L17.81 9.94L14.06 6.19L3 17.25ZM20.71 7.04C21.1 6.65 21.1 6.02 20.71 5.63L18.37 3.29C17.98 2.9 17.35 2.9 16.96 3.29L15.13 5.12L18.88 8.87L20.71 7.04Z"
+            fill="currentColor"
+          />
+        </svg>
+      ),
+    },
+    sleep: {
+      bg: "#0D1B2A",
+      color: "#2A5A8A",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" width={16} height={16}>
+          <path
+            d="M12 3C7.03 3 3 7.03 3 12C3 16.97 7.03 21 12 21C16.97 21 21 16.97 21 12C21 11.54 20.96 11.08 20.9 10.64C19.92 12.01 18.32 12.9 16.5 12.9C13.46 12.9 11 10.44 11 7.4C11 5.58 11.9 3.98 13.26 3C12.86 3.03 12.43 3 12 3Z"
+            fill="currentColor"
+          />
+        </svg>
+      ),
+    },
+  };
+
+  const cfg = configs[type];
+  return (
+    <div
+      className="w-9 h-9 shrink-0 flex items-center justify-center"
+      style={{
+        backgroundColor: cfg.bg,
+        borderRadius: "8px",
+        color: cfg.color,
+      }}
+    >
+      {cfg.icon}
     </div>
   );
 }

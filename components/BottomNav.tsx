@@ -19,7 +19,7 @@ const TABS = [
     ),
   },
   {
-    label: "Train",
+    label: "Body",
     href: "/dashboard/body",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" width={24} height={24}>
@@ -49,69 +49,91 @@ const TABS = [
     ),
   },
   {
-    label: "Heart",
+    label: "Social",
     href: "/dashboard/heart",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" width={24} height={24}>
+        <circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.8" />
+        <circle cx="16" cy="9" r="2.5" stroke="currentColor" strokeWidth="1.5" />
         <path
-          d="M12 20C12 20 4 15 4 9.5C4 7 6 5 8.5 5C10 5 11.5 5.8 12 7C12.5 5.8 14 5 15.5 5C18 5 20 7 20 9.5C20 15 12 20 12 20Z"
+          d="M3 20C3 16.5 5.5 14 9 14C10.8 14 12.4 14.7 13.5 15.8"
           stroke="currentColor"
           strokeWidth="1.8"
-          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+        <path
+          d="M14 19C14 16.5 15.2 15 16 15C18.5 15 20 16.5 20 19"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
         />
       </svg>
     ),
   },
   {
-    label: "Lead",
+    label: "Learn",
     href: "/dashboard/lead",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" width={24} height={24}>
         <path
-          d="M5 4h4v7l-2-1.5L5 11V4Z"
+          d="M4 4H14C14 4 15 4 15 5V19C15 20 14 20 14 20H4V4Z"
           stroke="currentColor"
           strokeWidth="1.8"
           strokeLinejoin="round"
         />
         <path
-          d="M5 4h4c0 0 2 0 3.5 1s3.5 1 3.5 1v7c0 0-2 0-3.5-1S9 11 9 11"
+          d="M15 6H18C19 6 20 7 20 7V19C20 20 19 20 19 20H14"
           stroke="currentColor"
-          strokeWidth="1.8"
+          strokeWidth="1.5"
           strokeLinejoin="round"
         />
+        <line x1="7" y1="8" x2="12" y2="8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+        <line x1="7" y1="11" x2="12" y2="11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+        <line x1="7" y1="14" x2="10" y2="14" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
       </svg>
     ),
   },
 ];
 
+function isActive(href: string, pathname: string): boolean {
+  if (href === "/dashboard") return pathname === "/dashboard";
+
+  // Body covers: /dashboard/body, /dashboard/library, /dashboard/nutrition, /dashboard/body/*
+  if (href === "/dashboard/body") {
+    return (
+      pathname.startsWith("/dashboard/body") ||
+      pathname.startsWith("/dashboard/library") ||
+      pathname.startsWith("/dashboard/nutrition")
+    );
+  }
+
+  // Mind covers: /dashboard/mind, /dashboard/content
+  if (href === "/dashboard/mind") {
+    return (
+      pathname.startsWith("/dashboard/mind") ||
+      pathname.startsWith("/dashboard/content")
+    );
+  }
+
+  // Social covers: /dashboard/heart, /dashboard/challenges, /dashboard/crew
+  if (href === "/dashboard/heart") {
+    return (
+      pathname.startsWith("/dashboard/heart") ||
+      pathname.startsWith("/dashboard/challenges") ||
+      pathname.startsWith("/dashboard/crew")
+    );
+  }
+
+  // Learn covers: /dashboard/lead, /dashboard/mind/content, /dashboard/library (content library)
+  if (href === "/dashboard/lead") {
+    return pathname.startsWith("/dashboard/lead");
+  }
+
+  return pathname.startsWith(href);
+}
+
 export default function BottomNav() {
   const pathname = usePathname();
-
-  function isActive(href: string) {
-    if (href === "/dashboard") return pathname === "/dashboard";
-    // Train tab covers /dashboard/body, /dashboard/library, /dashboard/nutrition, /dashboard/body/run
-    if (href === "/dashboard/body") {
-      return (
-        pathname.startsWith("/dashboard/body") ||
-        pathname.startsWith("/dashboard/library") ||
-        pathname.startsWith("/dashboard/nutrition")
-      );
-    }
-    if (href === "/dashboard/mind") {
-      return (
-        pathname.startsWith("/dashboard/mind") ||
-        pathname.startsWith("/dashboard/content")
-      );
-    }
-    if (href === "/dashboard/lead") {
-      return (
-        pathname.startsWith("/dashboard/lead") ||
-        pathname.startsWith("/dashboard/challenges") ||
-        pathname.startsWith("/dashboard/crew")
-      );
-    }
-    return pathname.startsWith(href);
-  }
 
   return (
     <nav
@@ -123,19 +145,37 @@ export default function BottomNav() {
       }}
     >
       {TABS.map(({ label, href, icon }) => {
-        const active = isActive(href);
+        const active = isActive(href, pathname);
         return (
           <Link
             key={href}
             href={href}
-            className="flex flex-1 flex-col items-center justify-center gap-1 transition-opacity"
+            className="flex flex-1 flex-col items-center justify-center gap-1"
             style={{
               color: active ? "#C45B28" : "#666666",
+              transition: "color 0.2s ease",
               minWidth: 48,
               minHeight: 48,
+              position: "relative",
             }}
           >
-            {icon}
+            {/* Active indicator dot/line above icon */}
+            <div
+              style={{
+                position: "absolute",
+                top: 4,
+                left: "50%",
+                transform: "translateX(-50%)",
+                width: active ? 16 : 0,
+                height: 3,
+                borderRadius: 1.5,
+                backgroundColor: "#C45B28",
+                transition: "width 0.2s ease",
+              }}
+            />
+            <div style={{ marginTop: 4 }}>
+              {icon}
+            </div>
             <span
               className="text-[10px] font-semibold uppercase tracking-widest"
               style={{ fontFamily: "var(--font-inter)" }}
