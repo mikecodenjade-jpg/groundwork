@@ -28,6 +28,16 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ─── html5-qrcode overrides ──────────────────────────────────────────────── */
+/* Strip the default white UI chrome so only the video feed shows */
+#html5qr-reader { background: #161616 !important; border: none !important; }
+#html5qr-reader > img { display: none !important; }
+#html5qr-reader__dashboard { display: none !important; }
+#html5qr-reader__header_message { display: none !important; }
+#html5qr-reader__status_span { display: none !important; }
+#html5qr-reader__scan_region { border: none !important; background: transparent !important; }
+#html5qr-reader__scan_region video { width: 100% !important; height: 100% !important; object-fit: cover !important; border-radius: 12px !important; }
+
 @keyframes scaleIn {
   from { opacity: 0; transform: scale(0.95); }
   to   { opacity: 1; transform: scale(1); }

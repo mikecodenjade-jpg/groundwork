@@ -414,7 +414,7 @@ function GoalsModal({
 
 // ─── Barcode Scanner ──────────────────────────────────────────────────────────
 
-type ScanPhase = "starting" | "scanning" | "loading" | "confirm" | "error" | "manual";
+type ScanPhase = "camera" | "manual" | "loading" | "confirm" | "error";
 
 function BarcodeScanner({
   onDetected,
@@ -423,28 +423,31 @@ function BarcodeScanner({
   onDetected: (food: FoodEntry) => void;
   onClose: () => void;
 }) {
-  const videoRef   = useRef<HTMLVideoElement>(null);
-  const streamRef  = useRef<MediaStream | null>(null);
-  const frameRef   = useRef<number | null>(null);
-  const [phase, setPhase]               = useState<ScanPhase>("starting");
+  const [phase, setPhase]               = useState<ScanPhase>("camera");
   const [product, setProduct]           = useState<FoodEntry | null>(null);
   const [errMsg, setErrMsg]             = useState("");
   const [manualCode, setManualCode]     = useState("");
   const [barcodeLoading, setBarcodeLoading] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const scannerRef     = useRef<any>(null);
+  const scannerStarted = useRef(false);
 
-  const hasBarcodeDetector = typeof window !== "undefined" && "BarcodeDetector" in window;
-
-  const stopStream = useCallback(() => {
-    if (frameRef.current !== null) { cancelAnimationFrame(frameRef.current); frameRef.current = null; }
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
+  const stopScanner = useCallback(async () => {
+    if (scannerRef.current && scannerStarted.current) {
+      try {
+        await scannerRef.current.stop();
+        scannerRef.current.clear();
+      } catch { /* ignore */ }
+      scannerStarted.current = false;
+      scannerRef.current = null;
+    }
   }, []);
 
   const lookupBarcode = useCallback(async (code: string) => {
+    await stopScanner();
     setBarcodeLoading(true);
     setPhase("loading");
     try {
-      // Try nutrition-search edge function first
       const edRes = await fetch(`${SUPABASE_URL}/functions/v1/nutrition-search`, {
         method: "POST",
         headers: { "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
@@ -473,79 +476,49 @@ function BarcodeScanner({
       setPhase("error");
     }
     setBarcodeLoading(false);
-  }, []);
+  }, [stopScanner]);
 
-  const startZXing = useCallback(async (videoEl: HTMLVideoElement) => {
-    try {
-      const { BrowserMultiFormatReader } = await import("@zxing/browser");
-      const codeReader = new BrowserMultiFormatReader();
-      const tick = () => {
-        if (!videoEl || videoEl.readyState < 2 || videoEl.paused) {
-          frameRef.current = requestAnimationFrame(tick);
-          return;
-        }
-        try {
-          const result = codeReader.decode(videoEl);
-          stopStream();
-          lookupBarcode(result.getText());
-        } catch {
-          // No barcode found in this frame — try next
-          frameRef.current = requestAnimationFrame(tick);
-        }
-      };
-      frameRef.current = requestAnimationFrame(tick);
-    } catch {
-      // ZXing failed to load — user can still enter manually
-    }
-  }, [lookupBarcode, stopStream]);
-
-  const startCamera = useCallback(async () => {
-    setPhase("starting");
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } } });
-      streamRef.current = stream;
-      const video = videoRef.current;
-      if (!video) { stopStream(); return; }
-      video.srcObject = stream;
-      await video.play();
-      setPhase("scanning");
-
-      if (!hasBarcodeDetector) {
-        // Use ZXing as fallback for iOS Safari and other browsers
-        startZXing(video);
-        return;
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const detector = new (window as any).BarcodeDetector({
-        formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39", "code_93"],
-      });
-
-      const tick = async () => {
-        if (!videoRef.current || videoRef.current.readyState < 2) {
-          frameRef.current = requestAnimationFrame(tick); return;
-        }
-        try {
-          const codes = await detector.detect(videoRef.current) as { rawValue: string }[];
-          if (codes.length > 0) { stopStream(); await lookupBarcode(codes[0].rawValue); return; }
-        } catch { /* ignore */ }
-        frameRef.current = requestAnimationFrame(tick);
-      };
-      frameRef.current = requestAnimationFrame(tick);
-    } catch (err) {
-      const name = (err as Error).name;
-      setErrMsg(name === "NotAllowedError"
-        ? "Camera access denied. Allow camera permissions and try again, or enter the barcode manually."
-        : "Could not start camera on this device.");
-      setPhase("manual");
-    }
-  }, [hasBarcodeDetector, lookupBarcode, stopStream, startZXing]);
-
+  // Start scanner whenever phase becomes "camera"
   useEffect(() => {
-    startCamera();
-    return () => stopStream();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (phase !== "camera") return;
+    let cancelled = false;
+
+    const startScanner = async () => {
+      try {
+        const { Html5Qrcode } = await import("html5-qrcode");
+        if (cancelled) return;
+        const scanner = new Html5Qrcode("html5qr-reader");
+        scannerRef.current = scanner;
+        await scanner.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 220, height: 120 } },
+          (decodedText: string) => {
+            if (!cancelled) lookupBarcode(decodedText);
+          },
+          () => { /* per-frame no-read — ignore */ }
+        );
+        if (!cancelled) scannerStarted.current = true;
+      } catch (err) {
+        if (cancelled) return;
+        const msg = String(err);
+        setErrMsg(
+          msg.includes("NotAllowed") || msg.includes("Permission") || msg.includes("denied")
+            ? "Camera access denied. Allow camera permissions and try again."
+            : "Could not start camera on this device."
+        );
+        setPhase("manual");
+      }
+    };
+
+    startScanner();
+    return () => {
+      cancelled = true;
+      stopScanner();
+    };
+  }, [phase, lookupBarcode, stopScanner]);
+
+  // Ensure scanner is stopped on unmount regardless of phase
+  useEffect(() => () => { stopScanner(); }, [stopScanner]);
 
   const inputStyle = { backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "8px", color: "#E8E2D8", fontFamily: "var(--font-inter)" };
   const primaryBtn = { backgroundColor: "#C45B28", color: "#0A0A0A", borderRadius: "8px", fontFamily: "var(--font-inter)", fontWeight: 600, minHeight: "48px" };
@@ -557,7 +530,7 @@ function BarcodeScanner({
           <p className="text-xs font-semibold tracking-[0.25em] uppercase mb-0.5" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>Nutrition</p>
           <p className="text-lg font-bold uppercase" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>Scan Barcode</p>
         </div>
-        <button onClick={() => { stopStream(); onClose(); }}
+        <button onClick={() => { stopScanner(); onClose(); }}
           className="flex items-center justify-center w-9 h-9 transition-opacity hover:opacity-60"
           style={{ border: "1px solid #252525", color: "#9A9A9A", borderRadius: "8px" }} aria-label="Close scanner">
           <svg viewBox="0 0 20 20" fill="none" width={16} height={16}>
@@ -567,29 +540,22 @@ function BarcodeScanner({
       </div>
 
       <div className="flex-1 overflow-y-auto px-5 py-6 flex flex-col gap-6">
-        {phase === "starting" && (
-          <div className="flex-1 flex items-center justify-center">
-            <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Starting camera...</p>
-          </div>
-        )}
-
-        {phase === "scanning" && (
-          <div className="flex flex-col gap-4">
-            <div className="relative w-full" style={{ aspectRatio: "4/3", maxHeight: "60vh" }}>
-              <video ref={videoRef} className="w-full h-full object-cover" style={{ borderRadius: "12px", backgroundColor: "#161616" }} muted playsInline />
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div style={{ width: 200, height: 120, border: "2px solid #C45B28", borderRadius: "8px", boxShadow: "0 0 0 9999px rgba(0,0,0,0.45)" }} />
-              </div>
-            </div>
-            <p className="text-sm text-center" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-              Point the barcode inside the orange box
-            </p>
-            <button onClick={() => setPhase("manual")} className="text-xs font-semibold uppercase tracking-widest text-center transition-opacity hover:opacity-70"
-              style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-              Enter barcode manually →
-            </button>
-          </div>
-        )}
+        {/* Camera reader div — always present in DOM when phase=camera so html5-qrcode can attach */}
+        <div style={{ display: phase === "camera" ? "flex" : "none" }} className="flex-col gap-4">
+          <div
+            id="html5qr-reader"
+            style={{ borderRadius: "12px", overflow: "hidden", width: "100%", minHeight: "260px", backgroundColor: "#161616" }}
+          />
+          <p className="text-sm text-center" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+            Point the barcode at the camera
+          </p>
+          <button
+            onClick={async () => { await stopScanner(); setPhase("manual"); }}
+            className="text-xs font-semibold uppercase tracking-widest text-center transition-opacity hover:opacity-70"
+            style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+            Enter barcode manually →
+          </button>
+        </div>
 
         {phase === "loading" && (
           <div className="flex-1 flex items-center justify-center">
@@ -613,10 +579,10 @@ function BarcodeScanner({
                   ))}
               </div>
             </div>
-            <button onClick={() => { stopStream(); onDetected(product); }} className="py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-[0.98]" style={primaryBtn}>
+            <button onClick={() => onDetected(product)} className="py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-[0.98]" style={primaryBtn}>
               Add to Meal
             </button>
-            <button onClick={() => { setProduct(null); startCamera(); }} className="text-xs font-semibold uppercase tracking-widest text-center transition-opacity hover:opacity-70" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+            <button onClick={() => { setProduct(null); setPhase("camera"); }} className="text-xs font-semibold uppercase tracking-widest text-center transition-opacity hover:opacity-70" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
               Scan Again
             </button>
           </div>
@@ -628,7 +594,7 @@ function BarcodeScanner({
               <p className="text-sm" style={{ color: "#E87070", fontFamily: "var(--font-inter)" }}>{errMsg}</p>
             </div>
             <button onClick={() => setPhase("manual")} className="py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90" style={primaryBtn}>Enter Manually</button>
-            <button onClick={() => { setErrMsg(""); startCamera(); }} className="text-xs font-semibold uppercase tracking-widest text-center transition-opacity hover:opacity-70" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Try Again</button>
+            <button onClick={() => { setErrMsg(""); setPhase("camera"); }} className="text-xs font-semibold uppercase tracking-widest text-center transition-opacity hover:opacity-70" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Try Again</button>
           </div>
         )}
 
@@ -643,7 +609,7 @@ function BarcodeScanner({
               className="py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90 disabled:opacity-40" style={primaryBtn}>
               {barcodeLoading ? "Looking up..." : "Look Up Product"}
             </button>
-            <button onClick={() => { setManualCode(""); startCamera(); }} className="text-xs font-semibold uppercase tracking-widest text-center transition-opacity hover:opacity-70" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+            <button onClick={() => { setManualCode(""); setPhase("camera"); }} className="text-xs font-semibold uppercase tracking-widest text-center transition-opacity hover:opacity-70" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
               ← Back to Camera
             </button>
           </div>
