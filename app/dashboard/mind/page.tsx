@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import BottomNav from "@/components/BottomNav";
 import { supabase } from "@/lib/supabase";
 
@@ -56,10 +56,13 @@ const TOOLS = [
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+type ToolName = "Stress Reset" | "Box Breathing" | "Sleep Protocol" | "Time Blocking";
+
 export default function MindPage() {
   const [phase, setPhase] = useState<Phase>("mood");
   const [selectedMood, setSelectedMood] = useState<(typeof MOODS)[number] | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
+  const [activeTool, setActiveTool] = useState<ToolName | null>(null);
 
   async function handleMoodSelect(mood: (typeof MOODS)[number]) {
     setSelectedMood(mood);
@@ -305,7 +308,7 @@ export default function MindPage() {
           </p>
           <div className="flex flex-col gap-4">
             {TOOLS.map((tool) => (
-              <ToolCard key={tool.title} {...tool} />
+              <ToolCard key={tool.title} {...tool} onStart={() => setActiveTool(tool.title as ToolName)} />
             ))}
           </div>
         </section>
@@ -392,6 +395,12 @@ export default function MindPage() {
 
       </div>
       <BottomNav />
+
+      {/* Tool Overlays */}
+      {activeTool === "Box Breathing" && <BoxBreathingOverlay onClose={() => setActiveTool(null)} />}
+      {activeTool === "Stress Reset" && <StressResetOverlay onClose={() => setActiveTool(null)} />}
+      {activeTool === "Sleep Protocol" && <SleepProtocolOverlay onClose={() => setActiveTool(null)} />}
+      {activeTool === "Time Blocking" && <TimeBlockingOverlay onClose={() => setActiveTool(null)} />}
     </main>
   );
 }
@@ -403,11 +412,13 @@ function ToolCard({
   duration,
   desc,
   tag,
+  onStart,
 }: {
   title: string;
   duration: string;
   desc: string;
   tag: string;
+  onStart: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
 
@@ -458,7 +469,8 @@ function ToolCard({
             {duration}
           </span>
           <button
-            className="text-xs font-bold uppercase tracking-widest px-5 py-2 transition-opacity hover:opacity-80"
+            onClick={onStart}
+            className="text-xs font-bold uppercase tracking-widest px-5 py-2 transition-opacity hover:opacity-80 active:scale-95"
             style={{
               fontFamily: "var(--font-inter)",
               fontWeight: 600,
@@ -473,5 +485,394 @@ function ToolCard({
         </div>
       </div>
     </div>
+  );
+}
+
+// ─── Overlay Shell ─────────────────────────────────────────────────────────────
+
+function OverlayShell({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: "#0A0A0A" }}>
+      <div className="flex items-center justify-between px-5 py-4 shrink-0" style={{ borderBottom: "1px solid #252525" }}>
+        <div>
+          <p className="text-xs font-semibold tracking-[0.25em] uppercase mb-0.5" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>Mind Tool</p>
+          <p className="text-lg font-bold uppercase" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>{title}</p>
+        </div>
+        <button onClick={onClose}
+          className="flex items-center justify-center w-9 h-9 transition-opacity hover:opacity-60"
+          style={{ border: "1px solid #252525", color: "#9A9A9A", borderRadius: "8px" }} aria-label="Close">
+          <svg viewBox="0 0 20 20" fill="none" width={16} height={16}>
+            <path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center px-6 py-10">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ─── Box Breathing Overlay ─────────────────────────────────────────────────────
+
+const BREATH_PHASES = [
+  { label: "Breathe In...", duration: 4 },
+  { label: "Hold...",       duration: 4 },
+  { label: "Breathe Out...", duration: 4 },
+  { label: "Hold...",       duration: 4 },
+] as const;
+
+const TOTAL_ROUNDS = 4;
+
+function BoxBreathingOverlay({ onClose }: { onClose: () => void }) {
+  const [started, setStarted]     = useState(false);
+  const [done, setDone]           = useState(false);
+  const [round, setRound]         = useState(1);
+  const [phaseIdx, setPhaseIdx]   = useState(0);
+  const [countdown, setCountdown] = useState(4);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const clearTimer = useCallback(() => {
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+  }, []);
+
+  useEffect(() => { return () => clearTimer(); }, [clearTimer]);
+
+  function begin() {
+    setStarted(true);
+    setRound(1);
+    setPhaseIdx(0);
+    setCountdown(BREATH_PHASES[0].duration);
+    runPhase(0, 1);
+  }
+
+  function runPhase(pIdx: number, r: number) {
+    clearTimer();
+    const dur = BREATH_PHASES[pIdx].duration;
+    setPhaseIdx(pIdx);
+    setCountdown(dur);
+    let remaining = dur;
+
+    timerRef.current = setInterval(() => {
+      remaining -= 1;
+      setCountdown(remaining);
+      if (remaining <= 0) {
+        clearTimer();
+        const nextPhase = pIdx + 1;
+        if (nextPhase < BREATH_PHASES.length) {
+          runPhase(nextPhase, r);
+        } else {
+          const nextRound = r + 1;
+          if (nextRound > TOTAL_ROUNDS) {
+            setDone(true);
+          } else {
+            setRound(nextRound);
+            runPhase(0, nextRound);
+          }
+        }
+      }
+    }, 1000);
+  }
+
+  const isInhale = phaseIdx === 0;
+  const isExhale = phaseIdx === 2;
+  const scale = started && !done ? (isInhale ? 1.5 : isExhale ? 1 : (phaseIdx === 1 ? 1.5 : 1)) : 1;
+
+  return (
+    <OverlayShell title="Box Breathing" onClose={() => { clearTimer(); onClose(); }}>
+      {!started ? (
+        <div className="flex flex-col items-center gap-8 max-w-sm text-center">
+          <p className="text-lg font-bold uppercase" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+            4 seconds in. 4 hold. 4 out. 4 hold.
+          </p>
+          <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+            {TOTAL_ROUNDS} rounds. Focus on the circle and follow the prompts.
+          </p>
+          <button onClick={begin}
+            className="px-10 py-4 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-95"
+            style={{ backgroundColor: "#C45B28", color: "#0A0A0A", borderRadius: "10px", fontFamily: "var(--font-inter)", fontWeight: 600 }}>
+            Begin
+          </button>
+        </div>
+      ) : done ? (
+        <div className="flex flex-col items-center gap-8 text-center">
+          <div className="w-24 h-24 rounded-full flex items-center justify-center" style={{ backgroundColor: "#1A2A1A", border: "2px solid #2A5A2A" }}>
+            <svg viewBox="0 0 24 24" fill="none" width={36} height={36}>
+              <path d="M5 13l4 4L19 7" stroke="#5A8A5A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <p className="text-2xl font-bold uppercase" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+            Done — You&apos;re Reset
+          </p>
+          <button onClick={onClose}
+            className="px-10 py-4 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-95"
+            style={{ backgroundColor: "#C45B28", color: "#0A0A0A", borderRadius: "10px", fontFamily: "var(--font-inter)", fontWeight: 600 }}>
+            Close
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center gap-10">
+          {/* Round indicator */}
+          <p className="text-xs font-semibold uppercase tracking-[0.25em]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+            Round {round} of {TOTAL_ROUNDS}
+          </p>
+
+          {/* Breathing circle */}
+          <div
+            className="rounded-full flex items-center justify-center"
+            style={{
+              width: 160, height: 160,
+              backgroundColor: "#C45B28",
+              transform: `scale(${scale})`,
+              transition: `transform ${BREATH_PHASES[phaseIdx].duration}s ease-in-out`,
+              opacity: 0.9,
+            }}
+          >
+            <span className="text-4xl font-bold" style={{ color: "#0A0A0A", fontFamily: "var(--font-inter)" }}>
+              {countdown}
+            </span>
+          </div>
+
+          {/* Phase label */}
+          <p className="text-2xl font-bold uppercase" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+            {BREATH_PHASES[phaseIdx].label}
+          </p>
+        </div>
+      )}
+    </OverlayShell>
+  );
+}
+
+// ─── Guided Steps Overlay (shared by Stress Reset + Sleep Protocol) ────────────
+
+function GuidedStepsOverlay({
+  title,
+  steps,
+  doneLabel,
+  onClose,
+  onComplete,
+}: {
+  title: string;
+  steps: { heading: string; body: string }[];
+  doneLabel: string;
+  onClose: () => void;
+  onComplete?: () => Promise<void>;
+}) {
+  const [step, setStep]     = useState(0);
+  const [done, setDone]     = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  async function finish() {
+    setSaving(true);
+    if (onComplete) await onComplete();
+    setSaving(false);
+    setDone(true);
+  }
+
+  const isLast = step === steps.length - 1;
+
+  return (
+    <OverlayShell title={title} onClose={onClose}>
+      {done ? (
+        <div className="flex flex-col items-center gap-8 text-center">
+          <div className="w-24 h-24 rounded-full flex items-center justify-center" style={{ backgroundColor: "#1A2A1A", border: "2px solid #2A5A2A" }}>
+            <svg viewBox="0 0 24 24" fill="none" width={36} height={36}>
+              <path d="M5 13l4 4L19 7" stroke="#5A8A5A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <p className="text-2xl font-bold uppercase" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+            {doneLabel}
+          </p>
+          <button onClick={onClose}
+            className="px-10 py-4 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-95"
+            style={{ backgroundColor: "#C45B28", color: "#0A0A0A", borderRadius: "10px", fontFamily: "var(--font-inter)", fontWeight: 600 }}>
+            Close
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center gap-8 max-w-md text-center w-full">
+          {/* Progress dots */}
+          <div className="flex gap-2">
+            {steps.map((_, i) => (
+              <div key={i} className="w-2.5 h-2.5 rounded-full transition-all duration-300"
+                style={{ backgroundColor: i <= step ? "#C45B28" : "#252525" }} />
+            ))}
+          </div>
+
+          {/* Step number */}
+          <p className="text-xs font-semibold uppercase tracking-[0.25em]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+            Step {step + 1} of {steps.length}
+          </p>
+
+          {/* Step content */}
+          <h3 className="text-2xl font-bold uppercase leading-snug" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+            {steps[step].heading}
+          </h3>
+          <p className="text-base leading-relaxed" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+            {steps[step].body}
+          </p>
+
+          {/* Navigation */}
+          <div className="flex gap-4 w-full max-w-xs">
+            {step > 0 && (
+              <button onClick={() => setStep((s) => s - 1)}
+                className="flex-1 py-4 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-70 active:scale-95"
+                style={{ color: "#9A9A9A", border: "1px solid #252525", borderRadius: "10px", fontFamily: "var(--font-inter)" }}>
+                Back
+              </button>
+            )}
+            <button
+              onClick={isLast ? finish : () => setStep((s) => s + 1)}
+              disabled={saving}
+              className="flex-1 py-4 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-95 disabled:opacity-40"
+              style={{ backgroundColor: "#C45B28", color: "#0A0A0A", borderRadius: "10px", fontFamily: "var(--font-inter)", fontWeight: 600 }}>
+              {saving ? "Saving..." : isLast ? "Done" : "Next"}
+            </button>
+          </div>
+        </div>
+      )}
+    </OverlayShell>
+  );
+}
+
+// ─── Stress Reset Overlay ──────────────────────────────────────────────────────
+
+const STRESS_STEPS = [
+  { heading: "5 Things You Can See", body: "Look around. Name five things you can see right now. The crane. The safety vest. The sky. Say them out loud or in your head." },
+  { heading: "4 Things You Can Touch", body: "Feel four things. The hardhat. The steering wheel. Your jeans. The phone in your hand. Ground yourself in what's real." },
+  { heading: "3 Things You Can Hear", body: "Listen. The engine idling. A radio. Wind. Three sounds that remind you: you're here, right now." },
+  { heading: "2 Things You Can Smell", body: "Diesel. Fresh coffee. Sawdust. Whatever's around you — two things that pull you into the present." },
+  { heading: "1 Thing You Can Taste", body: "Water. Gum. The last thing you ate. One taste to close the loop and bring you all the way back." },
+];
+
+function StressResetOverlay({ onClose }: { onClose: () => void }) {
+  async function saveCompletion() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from("mood_checkins").insert({ user_id: user.id, mood: "reset", source: "Stress Reset" });
+    }
+  }
+
+  return (
+    <GuidedStepsOverlay
+      title="Stress Reset"
+      steps={STRESS_STEPS}
+      doneLabel="Done — I'm Reset"
+      onClose={onClose}
+      onComplete={saveCompletion}
+    />
+  );
+}
+
+// ─── Sleep Protocol Overlay ────────────────────────────────────────────────────
+
+const SLEEP_STEPS = [
+  { heading: "Set Your Alarm — Both Ways", body: "Pick a lights-out time and stick to it. Your body needs a pattern. If you're up at 4:30, you need to be out by 9:00." },
+  { heading: "Blue Light Off", body: "Phone face-down. TV off. 30 minutes before bed, no screens. The light wrecks your melatonin and keeps your brain wired." },
+  { heading: "Cool the Room", body: "65-68°F is the sweet spot. Your body drops its core temp to fall asleep — help it out. Fan, AC, window, whatever works." },
+  { heading: "Brain Dump", body: "Grab your phone or a notepad. Write down tomorrow's top 3 tasks, anything on your mind, worries about the job. Get it out of your head and onto paper." },
+  { heading: "3 Rounds of Box Breathing", body: "Breathe in for 4 counts. Hold for 4. Out for 4. Hold for 4. Three rounds. By the third, your nervous system will start shutting down for the night." },
+];
+
+function SleepProtocolOverlay({ onClose }: { onClose: () => void }) {
+  return (
+    <GuidedStepsOverlay
+      title="Sleep Protocol"
+      steps={SLEEP_STEPS}
+      doneLabel="Protocol Saved — Good Night"
+      onClose={onClose}
+    />
+  );
+}
+
+// ─── Time Blocking Overlay ─────────────────────────────────────────────────────
+
+const TIME_BLOCKS = [
+  { time: "4:30 AM",  label: "Wake Window",         mins: 30 },
+  { time: "5:00 AM",  label: "Morning Routine",     mins: 30 },
+  { time: "5:30 AM",  label: "Pre-Work Planning",   mins: 30 },
+  { time: "6:00 AM",  label: "Site Walk / Safety",   mins: 60 },
+  { time: "7:00 AM",  label: "Crew Coordination",   mins: 60 },
+  { time: "8:00 AM",  label: "Deep Work Block",     mins: 120 },
+  { time: "10:00 AM", label: "Check-ins / Calls",   mins: 60 },
+  { time: "11:00 AM", label: "Lunch",               mins: 60 },
+  { time: "12:00 PM", label: "Afternoon Block",     mins: 120 },
+  { time: "2:00 PM",  label: "Meetings / Admin",    mins: 90 },
+  { time: "3:30 PM",  label: "End of Day Review",   mins: 30 },
+  { time: "4:00 PM",  label: "Family / Recovery",   mins: 240 },
+  { time: "8:00 PM",  label: "Wind Down",           mins: 60 },
+  { time: "9:00 PM",  label: "Lights Out",          mins: 0 },
+];
+
+function TimeBlockingOverlay({ onClose }: { onClose: () => void }) {
+  const [claimed, setClaimed] = useState<Set<number>>(new Set());
+
+  function toggle(idx: number) {
+    setClaimed((prev) => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx); else next.add(idx);
+      return next;
+    });
+  }
+
+  const totalMins = Array.from(claimed).reduce((sum, idx) => sum + TIME_BLOCKS[idx].mins, 0);
+  const hours = Math.floor(totalMins / 60);
+  const mins = totalMins % 60;
+
+  return (
+    <OverlayShell title="Time Blocking" onClose={onClose}>
+      <div className="flex flex-col gap-4 w-full max-w-md">
+        <p className="text-sm text-center mb-2" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+          Tap each block to claim it. Build your day before the day builds itself.
+        </p>
+
+        <div className="flex flex-col gap-1.5">
+          {TIME_BLOCKS.map((block, idx) => {
+            const active = claimed.has(idx);
+            return (
+              <button
+                key={idx}
+                onClick={() => toggle(idx)}
+                className="flex items-center gap-4 px-5 py-3.5 w-full text-left transition-all duration-150 active:scale-[0.98]"
+                style={{
+                  backgroundColor: active ? "#1A0E05" : "#161616",
+                  border: `1px solid ${active ? "#C45B28" : "#252525"}`,
+                  borderRadius: "10px",
+                }}
+              >
+                <span className="text-xs font-bold w-20 shrink-0" style={{ color: active ? "#C45B28" : "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                  {block.time}
+                </span>
+                <span className="text-sm font-semibold flex-1" style={{ color: active ? "#E8E2D8" : "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                  {block.label}
+                </span>
+                {active && (
+                  <svg viewBox="0 0 20 20" fill="none" width={16} height={16}>
+                    <path d="M4 10l4 4 8-8" stroke="#C45B28" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Total claimed */}
+        <div className="flex items-center justify-between px-5 py-4 mt-2"
+          style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "10px" }}>
+          <span className="text-xs font-semibold uppercase tracking-[0.25em]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+            Time Claimed
+          </span>
+          <span className="text-lg font-bold" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>
+            {hours > 0 ? `${hours}h ` : ""}{mins > 0 ? `${mins}m` : hours > 0 ? "" : "0m"}
+          </span>
+        </div>
+
+        <button onClick={onClose}
+          className="py-4 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-95 mt-2"
+          style={{ backgroundColor: "#C45B28", color: "#0A0A0A", borderRadius: "10px", fontFamily: "var(--font-inter)", fontWeight: 600 }}>
+          Done
+        </button>
+      </div>
+    </OverlayShell>
   );
 }

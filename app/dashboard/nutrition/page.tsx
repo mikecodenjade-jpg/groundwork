@@ -49,14 +49,14 @@ const MEALS: { type: MealType; label: string }[] = [
 type FoodEntry = { name: string; cal: number; protein: number; carbs: number; fat: number };
 
 const QUICK_FOODS: FoodEntry[] = [
-  { name: "Eggs (2 large)",          cal: 140, protein: 12, carbs:  0, fat: 10 },
-  { name: "Chicken Breast (6oz)",    cal: 280, protein: 52, carbs:  0, fat:  6 },
-  { name: "Protein Bar",             cal: 200, protein: 20, carbs: 24, fat:  6 },
-  { name: "White Rice (1 cup)",      cal: 206, protein:  4, carbs: 45, fat:  0 },
-  { name: "Oatmeal (1 cup)",         cal: 158, protein:  6, carbs: 27, fat:  3 },
+  { name: "Eggs (2 large)",          cal: 140, protein: 12, carbs:  1, fat: 10 },
+  { name: "Chicken Breast",          cal: 165, protein: 31, carbs:  0, fat:  3.6 },
+  { name: "Protein Shake",           cal: 160, protein: 30, carbs:  5, fat:  2 },
+  { name: "White Rice (1 cup)",      cal: 206, protein:  4, carbs: 45, fat:  0.4 },
   { name: "Banana",                  cal: 105, protein:  1, carbs: 27, fat:  0 },
+  { name: "Oatmeal (1 cup)",         cal: 158, protein:  6, carbs: 27, fat:  3 },
   { name: "Peanut Butter (2 tbsp)", cal: 190, protein:  8, carbs:  6, fat: 16 },
-  { name: "Whey Protein (1 scoop)", cal: 120, protein: 25, carbs:  3, fat:  2 },
+  { name: "Protein Bar",             cal: 200, protein: 20, carbs: 24, fat:  6 },
   { name: "Steak (8oz)",            cal: 540, protein: 56, carbs:  0, fat: 34 },
   { name: "Ground Beef (6oz 80/20)",cal: 430, protein: 38, carbs:  0, fat: 30 },
   { name: "Sweet Potato",           cal: 103, protein:  2, carbs: 24, fat:  0 },
@@ -103,21 +103,21 @@ function offToEntry(p: OFFProduct): FoodEntry | null {
 // ─── DB log type ──────────────────────────────────────────────────────────────
 
 type FoodLog = {
-  id: string; meal_name: string; meal_type: MealType;
-  calories: number; protein_g: number; carbs_g: number; fat_g: number;
-  created_at: string;
+  id: string; name: string; meal_type: MealType;
+  calories: number; protein_g: number; carb_g: number; fat_g: number;
+  logged_at: string;
 };
 
 function coerceLog(d: Record<string, unknown>): FoodLog {
   return {
     id:         d.id as string,
-    meal_name:  d.meal_name as string,
+    name:       (d.name as string) ?? "",
     meal_type:  ((d.meal_type as string) || "snack") as MealType,
     calories:   (d.calories  as number) ?? 0,
     protein_g:  (d.protein_g as number) ?? 0,
-    carbs_g:    (d.carbs_g   as number) ?? 0,
+    carb_g:     (d.carb_g    as number) ?? 0,
     fat_g:      (d.fat_g     as number) ?? 0,
-    created_at: d.created_at as string,
+    logged_at:  (d.logged_at as string) ?? "",
   };
 }
 
@@ -127,6 +127,14 @@ function pct(val: number, target: number) { return Math.min(100, (val / target) 
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+}
+
+/** Auto-detect meal type based on current time of day */
+function detectMealType(): MealType {
+  const hour = new Date().getHours();
+  if (hour < 11) return "breakfast";
+  if (hour < 15) return "lunch";
+  return "dinner";
 }
 
 // ─── Calorie Ring ─────────────────────────────────────────────────────────────
@@ -602,6 +610,14 @@ export default function NutritionPage() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [scannerOpen,    setScannerOpen]    = useState(false);
   const [scannerMeal,    setScannerMeal]    = useState<MealType | null>(null);
+  const [toast,          setToast]          = useState<{ msg: string; type: "ok" | "err" } | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function flash(msg: string, type: "ok" | "err" = "ok") {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast({ msg, type });
+    toastTimer.current = setTimeout(() => setToast(null), 2500);
+  }
 
   // ── Initial load: today's logs + saved goals ──────────────────────────────
 
@@ -609,16 +625,15 @@ export default function NutritionPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const todayStr = new Date().toISOString().split("T")[0];
 
     const [logsRes, profileRes] = await Promise.all([
       supabase
         .from("meal_logs")
-        .select("id, meal_name, meal_type, calories, protein_g, carbs_g, fat_g, created_at")
+        .select("id, name, meal_type, calories, protein_g, carb_g, fat_g, logged_at")
         .eq("user_id", user.id)
-        .gte("created_at", today.toISOString())
-        .order("created_at", { ascending: true }),
+        .eq("date", todayStr)
+        .order("logged_at", { ascending: true }),
       supabase
         .from("user_profiles")
         .select("nutrition_goals")
@@ -659,7 +674,7 @@ export default function NutritionPage() {
     (acc, log) => ({
       calories: acc.calories + (log.calories ?? 0),
       protein:  acc.protein  + (log.protein_g ?? 0),
-      carbs:    acc.carbs    + (log.carbs_g   ?? 0),
+      carbs:    acc.carbs    + (log.carb_g    ?? 0),
       fat:      acc.fat      + (log.fat_g     ?? 0),
     }),
     { calories: 0, protein: 0, carbs: 0, fat: 0 }
@@ -672,26 +687,37 @@ export default function NutritionPage() {
 
   async function addFood(mealType: MealType, food: FoodEntry) {
     setSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setSaving(false); return; }
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { flash("Sign in to track meals", "err"); setSaving(false); return; }
 
-    const { data } = await supabase
-      .from("meal_logs")
-      .insert({
-        user_id:   user.id,
-        meal_name: food.name,
-        meal_type: mealType,
-        calories:  food.cal,
-        protein_g: food.protein,
-        carbs_g:   food.carbs,
-        fat_g:     food.fat,
-      })
-      .select("id, meal_name, meal_type, calories, protein_g, carbs_g, fat_g, created_at")
-      .single();
+      const { data, error } = await supabase
+        .from("meal_logs")
+        .insert({
+          user_id:   user.id,
+          date:      new Date().toISOString().split("T")[0],
+          name:      food.name,
+          meal_type: mealType,
+          calories:  Math.round(food.cal),
+          protein_g: Math.round(food.protein),
+          carb_g:    Math.round(food.carbs),
+          fat_g:     Math.round(food.fat),
+        })
+        .select("id, name, meal_type, calories, protein_g, carb_g, fat_g, logged_at")
+        .single();
 
-    if (data) {
-      // Append immediately — ring, bars, and meal totals update via derived `totals`
-      setTodayLogs((prev) => [...prev, coerceLog(data as Record<string, unknown>)]);
+      if (error) {
+        console.error("meal_logs insert error:", error);
+        flash("Could not save — try again", "err");
+      } else if (data) {
+        setTodayLogs((prev) => [...prev, coerceLog(data as Record<string, unknown>)]);
+        // Auto-expand the meal section so the user sees it
+        setExpandedMeals((prev) => { const n = new Set(prev); n.add(mealType); return n; });
+        flash(`${food.name} added to ${mealType}`);
+      }
+    } catch (err) {
+      console.error("addFood error:", err);
+      flash("Network error — check connection", "err");
     }
     setSaving(false);
   }
@@ -724,17 +750,16 @@ export default function NutritionPage() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setHistoryLoading(false); return; }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const sevenAgo = new Date(today.getTime() - 6 * 86400000);
+    const todayStr = new Date().toISOString().split("T")[0];
+    const sevenAgo = new Date(Date.now() - 6 * 86400000).toISOString().split("T")[0];
 
     const { data } = await supabase
       .from("meal_logs")
-      .select("id, meal_name, meal_type, calories, protein_g, carbs_g, fat_g, created_at")
+      .select("id, name, meal_type, calories, protein_g, carb_g, fat_g, logged_at")
       .eq("user_id", user.id)
-      .gte("created_at", sevenAgo.toISOString())
-      .lt("created_at", today.toISOString())
-      .order("created_at", { ascending: false });
+      .gte("date", sevenAgo)
+      .lt("date", todayStr)
+      .order("logged_at", { ascending: false });
 
     setHistoryLogs((data ?? []).map((d) => coerceLog(d as Record<string, unknown>)));
     setHistoryLoading(false);
@@ -743,7 +768,7 @@ export default function NutritionPage() {
   function toggleHistory() { if (!showHistory && historyLogs.length === 0) loadHistory(); setShowHistory((v) => !v); }
 
   const historyByDate = historyLogs.reduce<Map<string, FoodLog[]>>((map, log) => {
-    const key = new Date(log.created_at).toLocaleDateString("en-CA");
+    const key = new Date(log.logged_at).toLocaleDateString("en-CA");
     if (!map.has(key)) map.set(key, []);
     map.get(key)!.push(log);
     return map;
@@ -843,6 +868,39 @@ export default function NutritionPage() {
             )}
           </section>
 
+          {/* ── Quick Add — always visible ───────────────────────────────── */}
+          <section className="flex flex-col gap-3">
+            <div className="flex items-center justify-between px-1">
+              <p className="text-xs font-semibold tracking-[0.25em] uppercase"
+                style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>
+                Quick Add
+              </p>
+              <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                Adds to {detectMealType()}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {QUICK_FOODS.slice(0, 6).map((food) => (
+                <button
+                  key={food.name}
+                  disabled={saving}
+                  onClick={() => addFood(detectMealType(), food)}
+                  className="flex flex-col gap-1 px-4 py-3 text-left transition-all duration-150 active:scale-[0.97] disabled:opacity-40"
+                  style={{
+                    backgroundColor: "#161616",
+                    border: "1px solid #252525",
+                    borderRadius: "10px",
+                    fontFamily: "var(--font-inter)",
+                  }}
+                >
+                  <span className="text-sm font-semibold truncate w-full" style={{ color: "#E8E2D8" }}>{food.name}</span>
+                  <span className="text-xs" style={{ color: "#C45B28", fontWeight: 600 }}>{food.cal} cal</span>
+                  <span className="text-[11px]" style={{ color: "#9A9A9A" }}>P:{food.protein}g C:{food.carbs}g F:{food.fat}g</span>
+                </button>
+              ))}
+            </div>
+          </section>
+
           {/* ── Meal Sections ────────────────────────────────────────────── */}
           {MEALS.map(({ type, label }) => {
             const logs      = logsForMeal(type);
@@ -902,9 +960,9 @@ export default function NutritionPage() {
                         {logs.map((log) => (
                           <div key={log.id} className="px-5 py-3 flex items-center justify-between gap-4">
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold truncate" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>{log.meal_name}</p>
+                              <p className="text-sm font-semibold truncate" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>{log.name}</p>
                               <p className="text-xs mt-0.5" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-                                P: {log.protein_g}g · C: {log.carbs_g}g · F: {log.fat_g}g
+                                P: {log.protein_g}g · C: {log.carb_g}g · F: {log.fat_g}g
                               </p>
                             </div>
                             <div className="flex items-center gap-3 shrink-0">
@@ -921,13 +979,16 @@ export default function NutritionPage() {
                     )}
 
                     {logs.length === 0 && !isAdding && (
-                      <div className="px-5 py-6 text-center">
+                      <div className="px-5 py-5 text-center">
                         <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-                          No meals tracked today
+                          Nothing logged yet
                         </p>
-                        <p className="text-xs mt-1" style={{ color: "#555", fontFamily: "var(--font-inter)" }}>
-                          Search for a food above to start tracking.
-                        </p>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); openAddFood(type); }}
+                          className="text-xs font-semibold uppercase tracking-widest mt-2 transition-opacity hover:opacity-70"
+                          style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>
+                          + Tap to add food
+                        </button>
                       </div>
                     )}
 
@@ -1111,16 +1172,16 @@ export default function NutritionPage() {
                   Array.from(historyByDate.entries()).map(([, logs]) => {
                     const dayTotal = logs.reduce((acc, l) => acc + (l.calories ?? 0), 0);
                     return (
-                      <div key={logs[0].created_at} style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px", overflow: "hidden" }}>
+                      <div key={logs[0].logged_at} style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px", overflow: "hidden" }}>
                         <div className="px-5 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid #252525" }}>
-                          <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>{formatDate(logs[0].created_at)}</p>
+                          <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>{formatDate(logs[0].logged_at)}</p>
                           <span className="text-sm font-bold" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>{dayTotal} cal</span>
                         </div>
                         <div className="flex flex-col divide-y" style={{ borderColor: "#252525" }}>
                           {logs.map((log) => (
                             <div key={log.id} className="px-5 py-3 flex items-center justify-between gap-4">
                               <div className="min-w-0">
-                                <p className="text-sm font-semibold truncate" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>{log.meal_name}</p>
+                                <p className="text-sm font-semibold truncate" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>{log.name}</p>
                                 <p className="text-xs capitalize" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>{log.meal_type}</p>
                               </div>
                               <span className="text-sm font-bold shrink-0" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>{log.calories} cal</span>
@@ -1154,6 +1215,24 @@ export default function NutritionPage() {
           onDetected={async (food) => { setScannerOpen(false); await addFood(scannerMeal, food); }}
           onClose={() => setScannerOpen(false)}
         />
+      )}
+
+      {/* ── Toast ──────────────────────────────────────────────────────── */}
+      {toast && (
+        <div
+          className="fixed left-1/2 -translate-x-1/2 z-50 px-5 py-3 text-sm font-semibold uppercase tracking-widest transition-all duration-300 animate-[fadeInUp_0.25s_ease]"
+          style={{
+            bottom: 90,
+            backgroundColor: toast.type === "ok" ? "#1A2A1A" : "#2A1A1A",
+            border: `1px solid ${toast.type === "ok" ? "#2A5A2A" : "#5A2A2A"}`,
+            color: toast.type === "ok" ? "#5A8A5A" : "#E87070",
+            borderRadius: "10px",
+            fontFamily: "var(--font-inter)",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {toast.type === "ok" ? "\u2713 " : ""}{toast.msg}
+        </div>
       )}
     </>
   );
