@@ -4,192 +4,192 @@ export interface Quote {
 }
 
 export const QUOTES: Quote[] = [
-  // --- Original Groundwork quotes ---
-  {
-    text: "The foundation doesn't get credit. It just holds everything up. Be the foundation.",
-  },
-  {
-    text: "Every structure ever built started with someone showing up on day one when no one was watching.",
-  },
-  {
-    text: "You don't get to decide how hard the job is. You only get to decide how hard you work.",
-  },
-  {
-    text: "Iron sharpens iron. Surround yourself with people who make you better or get off the site.",
-  },
-  {
-    text: "Nobody ever built anything worth a damn from the couch.",
-  },
-  {
-    text: "Your crew is watching. Lead like it matters, because it does.",
-  },
-  {
-    text: "The guy who shows up early and stays late doesn't need to talk about his work ethic. Everybody already knows.",
-  },
-  {
-    text: "Blueprints don't build buildings. People do. Be the person who gets it done.",
-  },
-  {
-    text: "A wall doesn't go up all at once. It goes up one block at a time. So do you.",
-  },
-  {
-    text: "Tough days on site don't make you weak. Quitting on tough days makes you weak.",
-  },
-  {
-    text: "The trades built the world. Act like you know that.",
-  },
-  {
-    text: "You're not grinding for a pat on the back. You're grinding because that's who you are.",
-  },
-  {
-    text: "If your foundation is off by an inch, your whole building is crooked. Get the basics right first.",
-  },
-  {
-    text: "Asking for help doesn't mean you're soft. It means you're smart enough to know one man can't frame a house alone.",
-  },
-  {
-    text: "Nobody remembers the days you coasted. They remember the days you carried the crew.",
-  },
-  {
-    text: "Mental toughness isn't ignoring the pain. It's showing up anyway.",
-  },
-  {
-    text: "You don't rise to the level of your goals. You fall to the level of your habits.",
-  },
-  {
-    text: "The site doesn't care about your excuses. Neither does the schedule.",
-  },
-  {
-    text: "A foreman who won't pick up a shovel isn't a leader. He's a spectator.",
-  },
-  {
-    text: "Rest when you need to. But don't you dare confuse rest with giving up.",
-  },
-  {
-    text: "The hardest part of any pour is the first truck. After that, you just keep moving.",
-  },
-  {
-    text: "Every callus on your hands is a receipt for work that got done.",
-  },
-  {
-    text: "Complaining about the weather doesn't change the weather. Grab your gear and get after it.",
-  },
-  {
-    text: "The building doesn't know if you felt like showing up. It only knows if you did.",
-  },
-  {
-    text: "Talking about what you're going to build is easy. Pouring the slab is the hard part.",
-  },
-  {
-    text: "If you're the smartest guy on the site, you're on the wrong site.",
-  },
-  {
-    text: "Check on your guys. The toughest dude on your crew might be fighting the hardest battle off the clock.",
-  },
-  {
-    text: "You weren't built for comfort. You were built for work that matters.",
-  },
-  {
-    text: "Discipline on Monday is worth more than motivation on Friday.",
-  },
-  {
-    text: "A level doesn't lie and neither should you. Hold yourself to the standard.",
-  },
-  {
-    text: "When the load gets heavy, you don't drop it. You call for another set of hands. That's not weakness. That's how buildings go up.",
-  },
-  {
-    text: "Your body is a tool. Maintain it like you'd maintain any piece of equipment that keeps the job moving.",
-  },
-  {
-    text: "Punch the clock. Do the work. Go home better than you came in.",
-  },
-  {
-    text: "Nobody handed you these skills. You earned them in the dirt, the cold, and the heat.",
-  },
-  {
-    text: "Build something today that'll still be standing when you're gone. That's legacy.",
-  },
-  // --- Attributed quotes ---
-  {
-    text: "We are what we repeatedly do. Excellence, then, is not an act, but a habit.",
-    author: "Aristotle",
-  },
-  {
-    text: "The more you sweat in training, the less you bleed in combat.",
-    author: "Richard Marcinko",
-  },
-  {
-    text: "Hard work beats talent when talent doesn't work hard.",
-    author: "Tim Notke",
-  },
-  {
-    text: "Suffer the pain of discipline or suffer the pain of regret.",
-    author: "Jim Rohn",
-  },
-  {
-    text: "It's not the size of the dog in the fight. It's the size of the fight in the dog.",
-    author: "Mark Twain",
-  },
-  {
-    text: "Do your job.",
-    author: "Bill Belichick",
-  },
-  {
-    text: "The only easy day was yesterday.",
-    author: "US Navy SEALs",
-  },
-  {
-    text: "You can't build a reputation on what you're going to do.",
-    author: "Henry Ford",
-  },
-  {
-    text: "Strength does not come from winning. Your struggles develop your strengths.",
-    author: "Arnold Schwarzenegger",
-  },
+  // --- Marcus Aurelius ---
   {
     text: "The impediment to action advances action. What stands in the way becomes the way.",
     author: "Marcus Aurelius",
   },
   {
-    text: "I fear not the man who has practiced 10,000 kicks once, but the man who has practiced one kick 10,000 times.",
-    author: "Bruce Lee",
+    text: "You have power over your mind, not outside events. Realize this, and you will find strength.",
+    author: "Marcus Aurelius",
   },
   {
-    text: "Everybody has a plan until they get punched in the mouth.",
-    author: "Mike Tyson",
+    text: "Waste no more time arguing what a good man should be. Be one.",
+    author: "Marcus Aurelius",
   },
   {
-    text: "If it doesn't challenge you, it doesn't change you.",
-    author: "Fred DeVito",
+    text: "Be tolerant with others and strict with yourself.",
+    author: "Marcus Aurelius",
   },
   {
-    text: "The best time to plant a tree was twenty years ago. The second best time is now.",
-    author: "Chinese Proverb",
+    text: "If it is not right, do not do it. If it is not true, do not say it.",
+    author: "Marcus Aurelius",
   },
   {
-    text: "Stay ready so you don't have to get ready.",
-    author: "Will Smith",
+    text: "Confine yourself to the present.",
+    author: "Marcus Aurelius",
   },
   {
-    text: "A man who wants to lead the orchestra must turn his back on the crowd.",
-    author: "Max Lucado",
+    text: "What we do now echoes in eternity.",
+    author: "Marcus Aurelius",
   },
   {
-    text: "Don't count the days. Make the days count.",
-    author: "Muhammad Ali",
+    text: "Never let the future disturb you. You will meet it with the same tools you have now.",
+    author: "Marcus Aurelius",
   },
   {
-    text: "The successful warrior is the average man, with laser-like focus.",
-    author: "Bruce Lee",
+    text: "Receive without pride, relinquish without struggle.",
+    author: "Marcus Aurelius",
   },
   {
-    text: "He who is not courageous enough to take risks will accomplish nothing in life.",
-    author: "Muhammad Ali",
+    text: "Do not indulge in dreams of what you do not have, but count the blessings you actually possess.",
+    author: "Marcus Aurelius",
+  },
+  // --- Seneca ---
+  {
+    text: "We suffer more in imagination than in reality.",
+    author: "Seneca",
   },
   {
-    text: "Sweat more in practice, bleed less in war.",
-    author: "Spartan Warrior Creed",
+    text: "Luck is what happens when preparation meets opportunity.",
+    author: "Seneca",
+  },
+  {
+    text: "Difficulties strengthen the mind, as labor does the body.",
+    author: "Seneca",
+  },
+  {
+    text: "The whole future lies in uncertainty. Live immediately.",
+    author: "Seneca",
+  },
+  {
+    text: "It is not that I am brave. It is just that I am busy.",
+    author: "Seneca",
+  },
+  {
+    text: "A gem cannot be polished without friction, nor a man perfected without trials.",
+    author: "Seneca",
+  },
+  {
+    text: "Associate with people who are likely to improve you.",
+    author: "Seneca",
+  },
+  {
+    text: "If you really want to escape the things that harass you, what you need is not to be in a different place but to be a different person.",
+    author: "Seneca",
+  },
+  {
+    text: "Begin at once to live, and count each separate day as a separate life.",
+    author: "Seneca",
+  },
+  // --- Epictetus ---
+  {
+    text: "No man is free who is not master of himself.",
+    author: "Epictetus",
+  },
+  {
+    text: "Make the best use of what is in your power, and take the rest as it happens.",
+    author: "Epictetus",
+  },
+  {
+    text: "First say to yourself what you would be, and then do what you have to do.",
+    author: "Epictetus",
+  },
+  {
+    text: "How long are you going to wait before you demand the best for yourself?",
+    author: "Epictetus",
+  },
+  {
+    text: "Seek not that the things which happen should happen as you wish; but wish the things which happen to be as they are, and you will have a tranquil flow of life.",
+    author: "Epictetus",
+  },
+  {
+    text: "It's not what happens to you, but how you react to it that matters.",
+    author: "Epictetus",
+  },
+  {
+    text: "Don't explain your philosophy. Embody it.",
+    author: "Epictetus",
+  },
+  {
+    text: "We cannot choose our external circumstances, but we can always choose how we respond to them.",
+    author: "Epictetus",
+  },
+  // --- Modern stoic-inspired, trades-grounded ---
+  {
+    text: "No shortcuts in the foundation. No shortcuts in the work. No shortcuts in the man.",
+  },
+  {
+    text: "Every great structure was once a hole in the ground. Start digging.",
+  },
+  {
+    text: "You don't control the weather, the material costs, or the client. You control your hands and your mind.",
+  },
+  {
+    text: "The level doesn't negotiate. Neither should your standards.",
+  },
+  {
+    text: "A craftsman isn't made in a day. He's made in a thousand days of showing up.",
+  },
+  {
+    text: "What you do when no one is watching is who you actually are.",
+  },
+  {
+    text: "The work doesn't lie. The finished product is your character made visible.",
+  },
+  {
+    text: "You don't need to be the loudest person on site. Let the finished work speak.",
+  },
+  {
+    text: "A man who blames his tools hasn't mastered his craft yet.",
+  },
+  {
+    text: "The obstacle in the trench is not a reason to quit. It's the reason you were hired.",
+  },
+  {
+    text: "Fatigue is an opinion. The job still needs doing.",
+  },
+  {
+    text: "Your reputation is built one pour, one weld, one day at a time.",
+  },
+  {
+    text: "Comfort is the enemy of progress. Lean into the hard days.",
+  },
+  {
+    text: "The man who shows up on the worst days earns the trust that carries him on the good ones.",
+  },
+  {
+    text: "Discipline is not a punishment. It is the price of freedom.",
+  },
+  {
+    text: "You do not rise to the occasion. You fall to the level of your preparation.",
+  },
+  {
+    text: "Every callus is a receipt. Every sore muscle is a proof of work.",
+  },
+  {
+    text: "The job will test your patience before it tests your skill. Hold both.",
+  },
+  {
+    text: "Build the kind of life that doesn't need an escape from.",
+  },
+  {
+    text: "Control what you can. Accept what you cannot. Know the difference.",
+  },
+  {
+    text: "A man at peace with himself is dangerous to no one and useful to everyone.",
+  },
+  {
+    text: "Hard ground is still ground. You can build on it.",
+  },
+  {
+    text: "The load is heavy. That is why they called you.",
+  },
+  {
+    text: "Waste nothing — not time, not material, not effort.",
+  },
+  {
+    text: "Check your work twice. Your name is on it long after the job closes.",
   },
 ];
 
