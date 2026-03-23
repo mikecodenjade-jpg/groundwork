@@ -20,6 +20,16 @@ type DailyScore = {
   meal: boolean;
 };
 
+type WellnessInsight = {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  priority: number;
+  action_label?: string;
+  action_link?: string;
+};
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const INTEREST_TO_SLUG: Record<string, string> = {
@@ -162,6 +172,7 @@ export default function DashboardPage() {
   const [weekly, setWeekly] = useState({ done: 0, total: 7 });
   const [workout, setWorkout] = useState<{ slug: string; name: string } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [insights, setInsights] = useState<WellnessInsight[]>([]);
   const [activeProgram, setActiveProgram] = useState<{
     slug: string;
     name: string;
@@ -240,6 +251,19 @@ export default function DashboardPage() {
           }
         }
       }
+
+      // Load wellness insights (fire-and-forget, non-blocking)
+      supabase.functions
+        .invoke("wellness-insights", { body: { user_id: user.id } })
+        .then(({ data: insightsData }) => {
+          if (insightsData?.insights && Array.isArray(insightsData.insights)) {
+            const sorted = [...insightsData.insights].sort(
+              (a: WellnessInsight, b: WellnessInsight) => a.priority - b.priority
+            );
+            setInsights(sorted.slice(0, 3));
+          }
+        })
+        .catch(() => {});
 
       setLoading(false);
     }
