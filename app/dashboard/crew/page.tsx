@@ -79,11 +79,11 @@ const POST_TYPE_BADGES: Record<string, { label: string; bg: string; color: strin
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
 
-function HeartIcon({ filled }: { filled?: boolean }) {
+function FlameIcon({ filled }: { filled?: boolean }) {
   return (
     <svg viewBox="0 0 20 20" fill={filled ? "currentColor" : "none"} width={16} height={16}>
       <path
-        d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"
+        d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a9.98 9.98 0 00-.236 1.337 9.357 9.357 0 00-1.91-1.485c-.447-.26-.94-.36-1.403-.18-.463.178-.79.61-.87 1.112C4.01 8.77 4 9.383 4 10c0 4.418 3.582 8 8 8s8-3.582 8-8c0-1.768-.578-3.4-1.553-4.715-.243-.33-.563-.647-.927-.81-.37-.167-.784-.162-1.125.067z"
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
@@ -559,16 +559,16 @@ export default function CrewWallPage() {
                     {post.content}
                   </p>
 
-                  {/* Bottom row: like */}
+                  {/* Bottom row: reactions */}
                   <div
-                    className="flex items-center pt-2 mt-1"
+                    className="flex items-center gap-4 pt-2 mt-1"
                     style={{ borderTop: "1px solid #1E1E1E" }}
                   >
                     <button
                       onClick={() => handleLike(post.id)}
-                      className="flex items-center gap-1.5 text-xs transition-colors"
+                      className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest transition-colors"
                       style={{
-                        color: liked ? "#DC2626" : "#9A9A9A",
+                        color: liked ? "#C45B28" : "#9A9A9A",
                         background: "none",
                         border: "none",
                         cursor: liked ? "default" : "pointer",
@@ -576,9 +576,24 @@ export default function CrewWallPage() {
                       }}
                       disabled={liked}
                     >
-                      <HeartIcon filled={liked} />
-                      <span className="font-medium">{post.likes_count}</span>
+                      <FlameIcon filled={liked} />
+                      <span>{post.likes_count} Fired Up</span>
                     </button>
+                    <div
+                      className="flex items-center gap-1.5 text-xs font-medium"
+                      style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                    >
+                      <svg viewBox="0 0 20 20" fill="none" width={14} height={14}>
+                        <path
+                          d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7z"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      <span>Comments</span>
+                    </div>
                   </div>
                 </article>
               );

@@ -544,6 +544,7 @@ export default function CategoryPage({
 
   const [workoutState, setWorkoutState] = useState<WorkoutState>("idle");
   const [elapsed, setElapsed] = useState(0);
+  const [sessionNotes, setSessionNotes] = useState("");
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [injuries, setInjuries] = useState<Injury[]>([]);
   const [equipmentSetting, setEquipmentSetting] = useState<EquipmentSetting>("gym");
@@ -605,6 +606,7 @@ export default function CategoryPage({
         workout_name: workoutName,
         exercises_completed: filteredExercises.length,
         duration_minutes: durationMinutes,
+        notes: sessionNotes.trim() || null,
       });
     }
   }
@@ -767,6 +769,21 @@ export default function CategoryPage({
                       {formatTime(elapsed)}
                     </span>
                   </div>
+                  <textarea
+                    value={sessionNotes}
+                    onChange={(e) => setSessionNotes(e.target.value)}
+                    placeholder="How did it feel? Any PRs? Notes for next time..."
+                    rows={3}
+                    className="w-full resize-none px-4 py-3 text-sm"
+                    style={{
+                      backgroundColor: "#0A0A0A",
+                      border: "1px solid #252525",
+                      borderRadius: "8px",
+                      color: "#E8E2D8",
+                      fontFamily: "var(--font-inter)",
+                      outline: "none",
+                    }}
+                  />
                   <button
                     onClick={handleComplete}
                     className="w-full text-base uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-[0.99]"
@@ -784,17 +801,24 @@ export default function CategoryPage({
                 </>
               )}
               {workoutState === "logged" && (
-                <div className="flex items-center justify-between">
-                  <span
-                    className="text-xs font-semibold uppercase tracking-widest"
-                    style={{ color: "#4CAF50", fontFamily: "var(--font-inter)" }}
-                  >
-                    Workout Logged
-                  </span>
-                  <span className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-                    {formatTime(elapsed)} · {tier.exercises.length} exercises
-                  </span>
-                </div>
+                <>
+                  <div className="flex items-center justify-between">
+                    <span
+                      className="text-xs font-semibold uppercase tracking-widest"
+                      style={{ color: "#4CAF50", fontFamily: "var(--font-inter)" }}
+                    >
+                      Workout Logged
+                    </span>
+                    <span className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                      {formatTime(elapsed)} · {tier.exercises.length} exercises
+                    </span>
+                  </div>
+                  {sessionNotes.trim() && (
+                    <p className="text-xs italic mt-1" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                      &ldquo;{sessionNotes.trim()}&rdquo;
+                    </p>
+                  )}
+                </>
               )}
             </div>
           </div>
