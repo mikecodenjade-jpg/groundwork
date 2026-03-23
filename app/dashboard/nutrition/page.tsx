@@ -426,7 +426,6 @@ function BarcodeScanner({
   const videoRef   = useRef<HTMLVideoElement>(null);
   const streamRef  = useRef<MediaStream | null>(null);
   const frameRef   = useRef<number | null>(null);
-  const zxingControlsRef = useRef<{ stop: () => void } | null>(null);
   const [phase, setPhase]               = useState<ScanPhase>("starting");
   const [product, setProduct]           = useState<FoodEntry | null>(null);
   const [errMsg, setErrMsg]             = useState("");
@@ -437,7 +436,6 @@ function BarcodeScanner({
 
   const stopStream = useCallback(() => {
     if (frameRef.current !== null) { cancelAnimationFrame(frameRef.current); frameRef.current = null; }
-    if (zxingControlsRef.current) { zxingControlsRef.current.stop(); zxingControlsRef.current = null; }
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
   }, []);
@@ -481,24 +479,30 @@ function BarcodeScanner({
     try {
       const { BrowserMultiFormatReader } = await import("@zxing/browser");
       const codeReader = new BrowserMultiFormatReader();
-      const controls = await codeReader.decodeFromVideoElement(videoEl, (result) => {
-        if (result) {
-          controls.stop();
-          zxingControlsRef.current = null;
+      const tick = () => {
+        if (!videoEl || videoEl.readyState < 2 || videoEl.paused) {
+          frameRef.current = requestAnimationFrame(tick);
+          return;
+        }
+        try {
+          const result = codeReader.decode(videoEl);
           stopStream();
           lookupBarcode(result.getText());
+        } catch {
+          // No barcode found in this frame — try next
+          frameRef.current = requestAnimationFrame(tick);
         }
-      });
-      zxingControlsRef.current = controls;
+      };
+      frameRef.current = requestAnimationFrame(tick);
     } catch {
-      // ZXing failed silently — user can still enter manually
+      // ZXing failed to load — user can still enter manually
     }
   }, [lookupBarcode, stopStream]);
 
   const startCamera = useCallback(async () => {
     setPhase("starting");
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } } });
       streamRef.current = stream;
       const video = videoRef.current;
       if (!video) { stopStream(); return; }
@@ -639,11 +643,9 @@ function BarcodeScanner({
               className="py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90 disabled:opacity-40" style={primaryBtn}>
               {barcodeLoading ? "Looking up..." : "Look Up Product"}
             </button>
-            {hasBarcodeDetector && (
-              <button onClick={() => { setManualCode(""); startCamera(); }} className="text-xs font-semibold uppercase tracking-widest text-center transition-opacity hover:opacity-70" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-                ← Back to Camera
-              </button>
-            )}
+            <button onClick={() => { setManualCode(""); startCamera(); }} className="text-xs font-semibold uppercase tracking-widest text-center transition-opacity hover:opacity-70" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+              ← Back to Camera
+            </button>
           </div>
         )}
       </div>

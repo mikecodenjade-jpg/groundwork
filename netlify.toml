@@ -5,5 +5,10 @@
 [build.environment]
   NODE_VERSION = "20"
 
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Permissions-Policy = "camera=*, microphone=()"
+
 [[plugins]]
   package = "@netlify/plugin-nextjs"
