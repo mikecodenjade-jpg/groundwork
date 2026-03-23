@@ -279,6 +279,29 @@ export default function SettingsPage() {
           </Link>
         </section>
 
+        {/* Notifications */}
+        <section className="flex flex-col gap-4">
+          <p
+            className="text-xs font-semibold tracking-[0.25em] uppercase"
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+          >
+            Notifications
+          </p>
+          <Link
+            href="/dashboard/settings/notifications"
+            className="flex items-center justify-between px-6 py-4 transition-opacity hover:opacity-80"
+            style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
+          >
+            <span
+              className="text-sm font-bold uppercase tracking-wide"
+              style={{ fontFamily: "var(--font-inter)", fontWeight: 600, color: "#E8E2D8" }}
+            >
+              Notification Preferences
+            </span>
+            <span style={{ color: "#C45B28" }}>›</span>
+          </Link>
+        </section>
+
         {/* Sign Out */}
         <section>
           <button

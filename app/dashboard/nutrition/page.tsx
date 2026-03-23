@@ -107,59 +107,35 @@ function offToEntry(p: OFFProduct): FoodEntry | null {
 
 // ─── Edamam response mapping ──────────────────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function edamamToEntries(data: any): FoodEntry[] {
-  const results: FoodEntry[] = [];
+type EdamamFood = {
+  label?: string;
+  nutrients?: { ENERC_KCAL?: number; PROCNT?: number; CHOCDF?: number; FAT?: number; };
+  brand?: string;
+};
+type EdamamResponse = {
+  hints?: Array<{ food?: EdamamFood }>;
+  foods?: EdamamFood[];
+};
 
-  // Handle foods array
-  if (Array.isArray(data?.foods)) {
-    for (const f of data.foods) {
-      const label = f?.label?.trim();
-      if (!label) continue;
-      const n = f?.nutrients ?? {};
-      results.push({
-        name: f?.brand ? `${label} (${f.brand})` : label,
-        cal:     Math.round(n?.ENERC_KCAL ?? 0),
-        protein: Math.round(n?.PROCNT ?? 0),
-        carbs:   Math.round(n?.CHOCDF ?? 0),
-        fat:     Math.round(n?.FAT ?? 0),
-      });
-    }
-  }
-
-  // Handle hints array (Edamam format)
-  if (Array.isArray(data?.hints)) {
-    for (const h of data.hints) {
-      const f = h?.food;
-      const label = f?.label?.trim();
-      if (!label) continue;
-      const n = f?.nutrients ?? {};
-      const entry: FoodEntry = {
-        name: f?.brand ? `${label} (${f.brand})` : label,
-        cal:     Math.round(n?.ENERC_KCAL ?? 0),
-        protein: Math.round(n?.PROCNT ?? 0),
-        carbs:   Math.round(n?.CHOCDF ?? 0),
-        fat:     Math.round(n?.FAT ?? 0),
-      };
-      // Avoid duplicates by name
-      if (!results.some((r) => r.name === entry.name)) {
-        results.push(entry);
-      }
-    }
-  }
-
-  return results;
+function edamamToEntries(data: EdamamResponse): FoodEntry[] {
+  const items: EdamamFood[] = [];
+  if (data.hints) data.hints.forEach((h) => { if (h.food) items.push(h.food); });
+  if (data.foods && !data.hints) data.foods.forEach((f) => items.push(f));
+  return items
+    .filter((f) => f.label && (f.nutrients?.ENERC_KCAL ?? 0) > 0)
+    .map((f) => ({
+      name:    f.label!,
+      cal:     Math.round(f.nutrients?.ENERC_KCAL ?? 0),
+      protein: Math.round(f.nutrients?.PROCNT ?? 0),
+      carbs:   Math.round(f.nutrients?.CHOCDF ?? 0),
+      fat:     Math.round(f.nutrients?.FAT ?? 0),
+    }))
+    .slice(0, 10);
 }
 
 // ─── Weekly trends data type ──────────────────────────────────────────────────
 
-type WeeklyDay = {
-  date: string;
-  calories: number;
-  protein_g: number;
-  carbs_g: number;
-  fat_g: number;
-};
+type WeeklyDay = { date: string; calories: number };
 
 // ─── DB log type ──────────────────────────────────────────────────────────────
 
@@ -211,11 +187,6 @@ function detectMealType(): MealType {
   if (hour < 11) return "breakfast";
   if (hour < 15) return "lunch";
   return "dinner";
-}
-
-function shortDayLabel(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00");
-  return d.toLocaleDateString("en-US", { weekday: "short" });
 }
 
 // ─── Calorie Ring ─────────────────────────────────────────────────────────────
@@ -468,30 +439,18 @@ function BarcodeScanner({
     setBarcodeLoading(true);
     setPhase("loading");
     try {
-      // Try nutrition-search edge function first (Edamam barcode lookup)
-      const edamamRes = await fetch(`${SUPABASE_URL}/functions/v1/nutrition-search`, {
+      // Try nutrition-search edge function first
+      const edRes = await fetch(`${SUPABASE_URL}/functions/v1/nutrition-search`, {
         method: "POST",
-        headers: {
-          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-          "Content-Type": "application/json",
-        },
+        headers: { "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({ barcode: code.trim() }),
       });
-
-      if (edamamRes.ok) {
-        const edamamData = await edamamRes.json();
-        const entries = edamamToEntries(edamamData);
-        if (entries.length > 0) {
-          setProduct(entries[0]);
-          setPhase("confirm");
-          setBarcodeLoading(false);
-          return;
-        }
+      if (edRes.ok) {
+        const edData = await edRes.json() as EdamamResponse;
+        const entries = edamamToEntries(edData);
+        if (entries.length > 0) { setProduct(entries[0]); setPhase("confirm"); setBarcodeLoading(false); return; }
       }
-    } catch {
-      // Edge function failed, fall back to OpenFoodFacts
-    }
-
+    } catch { /* fall through */ }
     // Fallback: OpenFoodFacts
     try {
       const res  = await fetch(`https://world.openfoodfacts.org/api/v0/product/${encodeURIComponent(code.trim())}.json`);
@@ -501,7 +460,7 @@ function BarcodeScanner({
         if (entry) { setProduct(entry); setPhase("confirm"); }
         else       { setErrMsg("Product found but missing name or nutrition data."); setPhase("error"); }
       } else {
-        setErrMsg("Product not found in any database.");
+        setErrMsg("Product not found in the database.");
         setPhase("error");
       }
     } catch {
@@ -663,6 +622,94 @@ function BarcodeScanner({
   );
 }
 
+// ─── Weekly Trends Chart ──────────────────────────────────────────────────────
+
+function WeeklyTrendsChart({ data, goalCalories }: { data: WeeklyDay[]; goalCalories: number }) {
+  // SVG bar chart - 7 days
+  // Chart dimensions
+  const W = 320, H = 160, PAD_L = 8, PAD_R = 8, PAD_T = 24, PAD_B = 28;
+  const chartW = W - PAD_L - PAD_R;
+  const chartH = H - PAD_T - PAD_B;
+
+  // Build 7-day array (most recent 7 days, oldest first)
+  const today = new Date();
+  const days: WeeklyDay[] = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() - (6 - i));
+    const key = d.toISOString().split("T")[0];
+    const found = data.find((x) => x.date === key);
+    return { date: key, calories: found?.calories ?? 0 };
+  });
+
+  const maxCal = Math.max(goalCalories * 1.2, ...days.map((d) => d.calories), 100);
+  const barW = (chartW / 7) * 0.6;
+  const barGap = chartW / 7;
+
+  const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  if (days.every((d) => d.calories === 0)) {
+    return (
+      <div className="flex flex-col items-center gap-2 py-8">
+        <svg viewBox="0 0 40 40" width={40} height={40} fill="none">
+          <rect x="4" y="20" width="6" height="16" rx="2" fill="#252525" />
+          <rect x="14" y="12" width="6" height="24" rx="2" fill="#252525" />
+          <rect x="24" y="16" width="6" height="20" rx="2" fill="#252525" />
+          <rect x="34" y="8" width="6" height="28" rx="2" fill="#252525" />
+        </svg>
+        <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>No data yet — log meals to see trends</p>
+      </div>
+    );
+  }
+
+  const goalY = PAD_T + chartH * (1 - Math.min(1, goalCalories / maxCal));
+
+  return (
+    <div className="w-full overflow-x-auto">
+      <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ minWidth: 280 }}>
+        {/* Goal line */}
+        <line x1={PAD_L} y1={goalY} x2={W - PAD_R} y2={goalY}
+          stroke="#252525" strokeWidth="1" strokeDasharray="4 3" />
+        <text x={W - PAD_R - 2} y={goalY - 4} textAnchor="end" fontSize="8" fill="#9A9A9A" fontFamily="var(--font-inter)">
+          goal
+        </text>
+
+        {/* Bars */}
+        {days.map((day, i) => {
+          const cx = PAD_L + i * barGap + barGap / 2;
+          const barH = day.calories > 0 ? chartH * Math.min(1, day.calories / maxCal) : 0;
+          const barX = cx - barW / 2;
+          const barY = PAD_T + chartH - barH;
+          const dayLabel = DAY_LABELS[new Date(day.date + "T12:00:00").getDay()];
+          const isToday = day.date === today.toISOString().split("T")[0];
+
+          return (
+            <g key={day.date}>
+              {barH > 0 && (
+                <rect x={barX} y={barY} width={barW} height={barH} rx="3"
+                  fill={isToday ? "#C45B28" : "#4A3020"} />
+              )}
+              {barH === 0 && (
+                <rect x={barX} y={PAD_T + chartH - 3} width={barW} height={3} rx="1.5"
+                  fill="#252525" />
+              )}
+              {day.calories > 0 && (
+                <text x={cx} y={barY - 4} textAnchor="middle" fontSize="8" fill="#9A9A9A" fontFamily="var(--font-inter)">
+                  {day.calories}
+                </text>
+              )}
+              <text x={cx} y={H - 6} textAnchor="middle" fontSize="9"
+                fill={isToday ? "#C45B28" : "#9A9A9A"} fontFamily="var(--font-inter)"
+                fontWeight={isToday ? "600" : "400"}>
+                {dayLabel}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
 // ─── Food Row ─────────────────────────────────────────────────────────────────
 
 function FoodRow({ food, saving, onAdd, sub }: { food: FoodEntry; saving: boolean; onAdd: () => void; sub?: string }) {
@@ -686,100 +733,6 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
     <p className="px-3 pt-1 pb-0.5 text-xs uppercase tracking-widest font-semibold" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
       {children}
     </p>
-  );
-}
-
-// ─── Weekly Trends Chart ──────────────────────────────────────────────────────
-
-function WeeklyTrendsChart({ data, goalCalories }: { data: WeeklyDay[]; goalCalories: number }) {
-  const CHART_W = 600;
-  const CHART_H = 200;
-  const BAR_GAP = 12;
-  const LABEL_H = 24;
-  const TOP_PAD = 24;
-
-  // Use last 7 days, or fill with zeros
-  const days = data.length > 0 ? data.slice(-7) : [];
-  const barCount = Math.max(days.length, 7);
-  const barWidth = (CHART_W - BAR_GAP * (barCount + 1)) / barCount;
-
-  const maxVal = Math.max(goalCalories, ...days.map((d) => d.calories ?? 0), 1);
-  const chartArea = CHART_H - LABEL_H - TOP_PAD;
-
-  const hasData = days.some((d) => (d.calories ?? 0) > 0);
-
-  if (!hasData && days.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-10 gap-3">
-        <svg width={48} height={48} viewBox="0 0 48 48" fill="none">
-          <rect x="6" y="28" width="8" height="12" rx="2" fill="#252525" />
-          <rect x="20" y="20" width="8" height="20" rx="2" fill="#252525" />
-          <rect x="34" y="12" width="8" height="28" rx="2" fill="#252525" />
-        </svg>
-        <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>No data yet</p>
-        <p className="text-xs" style={{ color: "#5A5A5A", fontFamily: "var(--font-inter)" }}>Log your meals to see weekly trends</p>
-      </div>
-    );
-  }
-
-  const goalY = TOP_PAD + chartArea - (goalCalories / maxVal) * chartArea;
-
-  return (
-    <div className="w-full overflow-x-auto" style={{ scrollbarWidth: "thin", scrollbarColor: "#252525 transparent" }}>
-      <svg
-        viewBox={`0 0 ${CHART_W} ${CHART_H}`}
-        width="100%"
-        preserveAspectRatio="xMidYMid meet"
-        style={{ minWidth: 320, maxWidth: "100%" }}
-      >
-        {/* Goal line */}
-        <line
-          x1={0} y1={goalY} x2={CHART_W} y2={goalY}
-          stroke="#252525" strokeWidth="1.5" strokeDasharray="6 4"
-        />
-        <text x={CHART_W - 4} y={goalY - 6} textAnchor="end"
-          fill="#9A9A9A" fontSize="10" fontFamily="var(--font-inter)">
-          Goal: {goalCalories}
-        </text>
-
-        {/* Bars */}
-        {days.map((day, i) => {
-          const cal = day.calories ?? 0;
-          const barH = cal > 0 ? Math.max(4, (cal / maxVal) * chartArea) : 4;
-          const x = BAR_GAP + i * (barWidth + BAR_GAP);
-          const y = TOP_PAD + chartArea - barH;
-
-          return (
-            <g key={day.date || i}>
-              {/* Bar */}
-              <rect
-                x={x} y={y} width={barWidth} height={barH}
-                rx={4} fill={cal > 0 ? "#C45B28" : "#252525"}
-                opacity={cal > 0 ? 1 : 0.4}
-              />
-              {/* Calorie value above bar */}
-              {cal > 0 && (
-                <text
-                  x={x + barWidth / 2} y={y - 6}
-                  textAnchor="middle" fill="#E8E2D8" fontSize="11"
-                  fontFamily="var(--font-inter)" fontWeight="600"
-                >
-                  {cal}
-                </text>
-              )}
-              {/* Day label below */}
-              <text
-                x={x + barWidth / 2} y={CHART_H - 4}
-                textAnchor="middle" fill="#9A9A9A" fontSize="11"
-                fontFamily="var(--font-inter)"
-              >
-                {day.date ? shortDayLabel(day.date) : ""}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
-    </div>
   );
 }
 
@@ -818,7 +771,6 @@ export default function NutritionPage() {
   const [showWeeklyTrends, setShowWeeklyTrends] = useState(false);
   const [weeklyData,       setWeeklyData]       = useState<WeeklyDay[]>([]);
   const [weeklyLoading,    setWeeklyLoading]    = useState(false);
-  const [weeklyGoal,       setWeeklyGoal]       = useState<number>(DEFAULT_GOALS.calories);
 
   const [hydrationLogs, setHydrationLogs] = useState<HydrationLog[]>([]);
   const [hydrationLoading, setHydrationLoading] = useState(false);
@@ -872,7 +824,7 @@ export default function NutritionPage() {
 
   useEffect(() => { fetchTodayLogs(); }, [fetchTodayLogs]);
 
-  // ── Debounced food search via Edamam edge function ─────────────────────────
+  // ── Debounced food search via edge function ───────────────────────────────
 
   useEffect(() => {
     const q = search.trim();
@@ -880,29 +832,18 @@ export default function NutritionPage() {
     setApiLoading(true);
     const timer = setTimeout(async () => {
       try {
-        // Try nutrition-search edge function (Edamam) first
+        // Try nutrition-search edge function first
         const res = await fetch(`${SUPABASE_URL}/functions/v1/nutrition-search`, {
           method: "POST",
-          headers: {
-            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-            "Content-Type": "application/json",
-          },
+          headers: { "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
           body: JSON.stringify({ query: q }),
         });
-
         if (res.ok) {
-          const data = await res.json();
+          const data = await res.json() as EdamamResponse;
           const entries = edamamToEntries(data);
-          if (entries.length > 0) {
-            setApiResults(entries.slice(0, 10));
-            setApiLoading(false);
-            return;
-          }
+          if (entries.length > 0) { setApiResults(entries); setApiLoading(false); return; }
         }
-      } catch {
-        // Edge function failed, fall back to OpenFoodFacts
-      }
-
+      } catch { /* fall through to OpenFoodFacts */ }
       // Fallback: OpenFoodFacts
       try {
         const res  = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=10`);
@@ -914,38 +855,25 @@ export default function NutritionPage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // ── Fetch weekly trends from edge function ─────────────────────────────────
+  // ── Load weekly trends from edge function ─────────────────────────────────
 
-  const fetchWeeklyTrends = useCallback(async () => {
+  async function loadWeeklyTrends() {
+    if (weeklyLoading) return;
     setWeeklyLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(`${SUPABASE_URL}/functions/v1/nutrition-daily-summary`, {
-        headers: {
-          "Authorization": `Bearer ${session?.access_token ?? SUPABASE_ANON_KEY}`,
-        },
+        headers: { "Authorization": `Bearer ${session?.access_token ?? SUPABASE_ANON_KEY}` },
       });
-
       if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data?.weekly)) {
-          setWeeklyData(data.weekly.map((d: Partial<WeeklyDay>) => ({
-            date: d?.date ?? "",
-            calories: d?.calories ?? 0,
-            protein_g: d?.protein_g ?? 0,
-            carbs_g: d?.carbs_g ?? 0,
-            fat_g: d?.fat_g ?? 0,
-          })));
-        }
-        if (data?.goals?.calories) {
-          setWeeklyGoal(data.goals.calories);
+        const json = await res.json() as { weekly?: Array<{ date: string; calories: number }> };
+        if (json.weekly && Array.isArray(json.weekly)) {
+          setWeeklyData(json.weekly.map((d) => ({ date: d.date, calories: d.calories ?? 0 })));
         }
       }
-    } catch {
-      // Silently fail — chart will show empty state
-    }
+    } catch { /* ignore */ }
     setWeeklyLoading(false);
-  }, []);
+  }
 
   // ── Derived totals (reactive — no refetch needed) ─────────────────────────
 
@@ -1052,15 +980,6 @@ export default function NutritionPage() {
     map.get(key)!.push(log);
     return map;
   }, new Map());
-
-  // ── Weekly trends toggle ────────────────────────────────────────────────
-
-  function toggleWeeklyTrends() {
-    if (!showWeeklyTrends) {
-      fetchWeeklyTrends();
-    }
-    setShowWeeklyTrends((v) => !v);
-  }
 
   // ── Meal section helpers ──────────────────────────────────────────────────
 
@@ -1169,24 +1088,18 @@ export default function NutritionPage() {
             )}
           </section>
 
-          {/* ── Weekly Trends ─────────────────────────────────────────────── */}
-          <section className="flex flex-col gap-0">
+          {/* ── Weekly Trends ────────────────────────────────────────────── */}
+          <section style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px", overflow: "hidden" }}>
             <button
-              onClick={toggleWeeklyTrends}
-              className="flex items-center justify-between px-5 py-4 transition-opacity hover:opacity-80"
-              style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: showWeeklyTrends ? "12px 12px 0 0" : "12px" }}
+              onClick={() => {
+                setShowWeeklyTrends((v) => !v);
+                if (!showWeeklyTrends && weeklyData.length === 0) loadWeeklyTrends();
+              }}
+              className="w-full flex items-center justify-between px-6 py-4"
             >
-              <div className="flex items-center gap-3">
-                <svg viewBox="0 0 20 20" fill="none" width={14} height={14}>
-                  <rect x="2" y="12" width="3" height="6" rx="1" fill="#C45B28" />
-                  <rect x="7" y="8" width="3" height="10" rx="1" fill="#C45B28" />
-                  <rect x="12" y="4" width="3" height="14" rx="1" fill="#C45B28" />
-                  <rect x="17" y="10" width="3" height="8" rx="1" fill="#C45B28" opacity="0.5" />
-                </svg>
-                <span className="text-sm font-bold uppercase tracking-wide" style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}>
-                  Weekly Trends
-                </span>
-              </div>
+              <p className="text-xs font-semibold tracking-[0.25em] uppercase" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>
+                Weekly Trends
+              </p>
               <svg viewBox="0 0 20 20" fill="none" width={16} height={16}
                 style={{ color: "#9A9A9A", transform: showWeeklyTrends ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>
                 <path d="M5 8l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -1194,18 +1107,20 @@ export default function NutritionPage() {
             </button>
 
             {showWeeklyTrends && (
-              <div
-                className="px-5 py-5 flex flex-col gap-4"
-                style={{ backgroundColor: "#161616", border: "1px solid #252525", borderTop: "none", borderRadius: "0 0 12px 12px" }}
-              >
-                <p className="text-xs font-semibold tracking-[0.25em] uppercase" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>
-                  Calorie Intake — Last 7 Days
-                </p>
-
+              <div className="px-4 pb-5 flex flex-col gap-3" style={{ borderTop: "1px solid #252525" }}>
+                <div className="flex items-center justify-between pt-4">
+                  <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Calorie intake — past 7 days</p>
+                  <span className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Goal: {goals.calories} cal</span>
+                </div>
                 {weeklyLoading ? (
-                  <div className="h-48 animate-pulse" style={{ backgroundColor: "#252525", borderRadius: "8px" }} />
+                  <div className="h-40 animate-pulse" style={{ backgroundColor: "#252525", borderRadius: "8px" }} />
                 ) : (
-                  <WeeklyTrendsChart data={weeklyData} goalCalories={weeklyGoal} />
+                  <WeeklyTrendsChart data={weeklyData} goalCalories={goals.calories} />
+                )}
+                {!weeklyLoading && weeklyData.length === 0 && (
+                  <p className="text-xs text-center pb-2" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                    Log meals for a few days to see your trends here.
+                  </p>
                 )}
               </div>
             )}
@@ -1347,7 +1262,7 @@ export default function NutritionPage() {
                           {q !== "" && (
                             <>
                               <SectionLabel>Search Results</SectionLabel>
-                              {apiLoading && <p className="px-3 py-2 text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Searching Edamam...</p>}
+                              {apiLoading && <p className="px-3 py-2 text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Searching...</p>}
                               {!apiLoading && apiResults.map((food) => (
                                 <FoodRow key={food.name} food={food} saving={saving} onAdd={() => addFood(type, food)}
                                   sub={`P: ${food.protein}g · C: ${food.carbs}g · F: ${food.fat}g`} />
@@ -1552,7 +1467,7 @@ export default function NutritionPage() {
                 const totalMl = hydrationLogs.reduce((s, l) => s + l.amount_ml, 0);
                 const totalOz = Math.round(totalMl / 29.574);
                 const goalOz = Math.round(DAILY_GOAL_ML / 29.574);
-                const pct = Math.min(100, Math.round((totalMl / DAILY_GOAL_ML) * 100));
+                const pctVal = Math.min(100, Math.round((totalMl / DAILY_GOAL_ML) * 100));
                 return (
                   <div className="flex flex-col gap-3">
                     <div className="flex items-end justify-between">
@@ -1564,14 +1479,14 @@ export default function NutritionPage() {
                           / {goalOz} oz
                         </span>
                       </div>
-                      <span className="text-sm font-semibold" style={{ color: pct >= 100 ? "#4CAF50" : "#C45B28", fontFamily: "var(--font-inter)" }}>
-                        {pct}%
+                      <span className="text-sm font-semibold" style={{ color: pctVal >= 100 ? "#4CAF50" : "#C45B28", fontFamily: "var(--font-inter)" }}>
+                        {pctVal}%
                       </span>
                     </div>
                     <div style={{ backgroundColor: "#252525", borderRadius: "4px", height: "6px" }}>
                       <div style={{
-                        backgroundColor: pct >= 100 ? "#4CAF50" : "#C45B28",
-                        width: `${pct}%`,
+                        backgroundColor: pctVal >= 100 ? "#4CAF50" : "#C45B28",
+                        width: `${pctVal}%`,
                         height: "100%",
                         borderRadius: "4px",
                         transition: "width 0.3s ease",

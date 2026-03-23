@@ -176,12 +176,25 @@ export default function TodayPage() {
     }
 
     // Save journal entry — use combined entry string for NOT NULL compat
-    await supabase.from("journal_entries").insert({
+    const { data: journalData } = await supabase.from("journal_entries").insert({
       user_id: user.id,
       entry: [heavy.trim(), handled.trim()].filter(Boolean).join(" | ") || "–",
       pissed_off: heavy.trim() || null,
       handled_well: handled.trim() || null,
-    });
+    }).select("id").single();
+
+    // Fire-and-forget sentiment analysis on journal entry
+    if (journalData?.id) {
+      const entryText = [heavy.trim(), handled.trim()].filter(Boolean).join(" ");
+      supabase.functions.invoke("analyze-sentiment", {
+        body: {
+          text: entryText,
+          user_id: user.id,
+          entry_type: "journal_entry",
+          entry_id: journalData.id,
+        },
+      }).catch(() => {});
+    }
 
     // Calculate final score and streak
     const todayStart = new Date();

@@ -469,6 +469,53 @@ export default function DashboardPage() {
           Start Your Day →
         </Link>
 
+        {/* Wellness Insights */}
+        {insights.length > 0 && (
+          <section className="flex flex-col gap-4">
+            <p
+              className="text-xs font-semibold tracking-[0.25em] uppercase"
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+            >
+              Wellness Insights
+            </p>
+            <div className="flex flex-col gap-3">
+              {insights.map((insight) => (
+                <div
+                  key={insight.id}
+                  className="px-6 py-5 flex flex-col gap-2"
+                  style={{
+                    backgroundColor: "#161616",
+                    border: "1px solid #252525",
+                    borderRadius: "12px",
+                  }}
+                >
+                  <p
+                    className="text-sm font-bold leading-snug"
+                    style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
+                  >
+                    {insight.title}
+                  </p>
+                  <p
+                    className="text-xs leading-relaxed"
+                    style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                  >
+                    {insight.body}
+                  </p>
+                  {insight.action_label && insight.action_link && (
+                    <Link
+                      href={insight.action_link}
+                      className="text-xs font-bold uppercase tracking-widest transition-opacity hover:opacity-70 mt-1"
+                      style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+                    >
+                      {insight.action_label} →
+                    </Link>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Your Progress */}
         <section className="flex flex-col gap-4">
           <p
