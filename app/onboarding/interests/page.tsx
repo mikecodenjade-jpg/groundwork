@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
@@ -23,7 +23,25 @@ export default function InterestsPage() {
   const router = useRouter();
   const [selected, setSelected] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadExisting() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
+      const { data } = await supabase
+        .from("user_profiles")
+        .select("interests")
+        .eq("id", user.id)
+        .single();
+      if (data?.interests && Array.isArray(data.interests)) {
+        setSelected(data.interests);
+      }
+      setLoading(false);
+    }
+    loadExisting();
+  }, []);
 
   function toggleInterest(interest: string) {
     setSelected((prev) =>
@@ -88,26 +106,34 @@ export default function InterestsPage() {
 
         {/* Interest grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {INTERESTS.map((interest) => {
-            const active = selected.includes(interest);
-            return (
-              <button
-                key={interest}
-                onClick={() => toggleInterest(interest)}
-                className="px-4 py-4 text-sm font-bold uppercase tracking-wide text-left transition-all duration-150 active:scale-[0.97]"
-                style={{
-                  fontFamily: "var(--font-inter)",
-                  fontWeight: 600,
-                  backgroundColor: active ? "#1A0E09" : "#161616",
-                  color: active ? "#E8E2D8" : "#9A9A9A",
-                  border: `1px solid ${active ? "#C45B28" : "#252525"}`,
-                  borderRadius: "8px",
-                }}
-              >
-                {interest}
-              </button>
-            );
-          })}
+          {loading
+            ? INTERESTS.map((interest) => (
+                <div
+                  key={interest}
+                  className="px-4 py-4 h-14 animate-pulse"
+                  style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "8px" }}
+                />
+              ))
+            : INTERESTS.map((interest) => {
+                const active = selected.includes(interest);
+                return (
+                  <button
+                    key={interest}
+                    onClick={() => toggleInterest(interest)}
+                    className="px-4 py-4 text-sm font-bold uppercase tracking-wide text-left transition-all duration-150 active:scale-[0.97]"
+                    style={{
+                      fontFamily: "var(--font-inter)",
+                      fontWeight: 600,
+                      backgroundColor: active ? "#1A0E09" : "#161616",
+                      color: active ? "#E8E2D8" : "#9A9A9A",
+                      border: `1px solid ${active ? "#C45B28" : "#252525"}`,
+                      borderRadius: "8px",
+                    }}
+                  >
+                    {interest}
+                  </button>
+                );
+              })}
         </div>
 
         {/* Selection count */}
