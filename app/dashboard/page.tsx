@@ -366,6 +366,12 @@ export default function DashboardPage() {
   >([]);
   const [activityFeed, setActivityFeed] = useState<ActivityItem[]>([]);
   const [weeklyTrends, setWeeklyTrends] = useState<WeeklyTrends | null>(null);
+  const [measurementSummary, setMeasurementSummary] = useState<{
+    totalInchLoss: number | null;
+    latestTotalInches: number | null;
+    latestWeight: number | null;
+    firstDate: string | null;
+  } | null>(null);
 
   const reset = todayReset();
   const leadAction = todayLeadershipAction();
@@ -569,6 +575,36 @@ export default function DashboardPage() {
           (mealsRes.data ?? []).map((m) => ({ calories: m.calories, date: m.date }))
         )
       );
+
+      // ── Body measurements summary ──
+      const [latestMeasRes, firstMeasRes] = await Promise.all([
+        supabase
+          .from("body_measurements")
+          .select("total_inches, weight_lbs, measured_at")
+          .eq("user_id", user.id)
+          .order("measured_at", { ascending: false })
+          .limit(1),
+        supabase
+          .from("body_measurements")
+          .select("total_inches, measured_at")
+          .eq("user_id", user.id)
+          .order("measured_at", { ascending: true })
+          .limit(1),
+      ]);
+      const latestM = latestMeasRes.data?.[0] ?? null;
+      const firstM = firstMeasRes.data?.[0] ?? null;
+      if (latestM || firstM) {
+        const totalInchLoss =
+          firstM?.total_inches != null && latestM?.total_inches != null
+            ? firstM.total_inches - latestM.total_inches
+            : null;
+        setMeasurementSummary({
+          totalInchLoss,
+          latestTotalInches: latestM?.total_inches ?? null,
+          latestWeight: latestM?.weight_lbs ?? null,
+          firstDate: firstM?.measured_at ?? null,
+        });
+      }
 
       // ── Wellness insights (fire-and-forget) ──
       supabase.functions
@@ -817,6 +853,98 @@ export default function DashboardPage() {
           </div>
         </section>
 
+        {/* ─── 2b. Body Measurements Summary ──────────────────────────────────── */}
+        {(measurementSummary || loading) && (
+          <section>
+            <div className="flex items-center justify-between mb-4">
+              <p
+                className="text-xs font-semibold tracking-[0.25em] uppercase"
+                style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+              >
+                Body Measurements
+              </p>
+              <Link
+                href="/dashboard/body/measurements"
+                className="text-xs"
+                style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+              >
+                View all →
+              </Link>
+            </div>
+            <Link
+              href="/dashboard/body/measurements"
+              className="flex items-center justify-between px-5 py-4 transition-opacity hover:opacity-80 active:scale-[0.99]"
+              style={{
+                backgroundColor: "#161616",
+                border: "1px solid #252525",
+                borderRadius: "12px",
+              }}
+            >
+              {loading ? (
+                <div className="flex gap-4 w-full">
+                  <div className="rounded animate-pulse" style={{ width: 60, height: 40, backgroundColor: "#252525" }} />
+                  <div className="flex flex-col gap-2 flex-1">
+                    <div className="rounded animate-pulse" style={{ width: "60%", height: 14, backgroundColor: "#252525" }} />
+                    <div className="rounded animate-pulse" style={{ width: "40%", height: 10, backgroundColor: "#252525" }} />
+                  </div>
+                </div>
+              ) : measurementSummary ? (
+                <>
+                  <div className="flex flex-col gap-0.5">
+                    <span
+                      className="text-3xl font-black leading-none"
+                      style={{
+                        fontFamily: "var(--font-oswald)",
+                        color: (measurementSummary.totalInchLoss ?? 0) >= 0 ? "#C45B28" : "#E87070",
+                      }}
+                    >
+                      {measurementSummary.totalInchLoss != null
+                        ? `${(measurementSummary.totalInchLoss ?? 0) >= 0 ? "" : "+"}${Math.abs(measurementSummary.totalInchLoss).toFixed(1)}"`
+                        : measurementSummary.latestTotalInches != null
+                        ? `${measurementSummary.latestTotalInches.toFixed(1)}"`
+                        : "—"}
+                    </span>
+                    <span
+                      className="text-xs uppercase tracking-widest"
+                      style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                    >
+                      {measurementSummary.totalInchLoss != null
+                        ? (measurementSummary.totalInchLoss ?? 0) >= 0
+                          ? "total inches lost"
+                          : "total inches gained"
+                        : "total circumference"}
+                    </span>
+                    {measurementSummary.firstDate && (
+                      <span
+                        className="text-xs"
+                        style={{ color: "#555555", fontFamily: "var(--font-inter)" }}
+                      >
+                        since {new Date(measurementSummary.firstDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    {measurementSummary.latestWeight != null && (
+                      <>
+                        <span
+                          className="text-xl font-bold leading-none"
+                          style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+                        >
+                          {measurementSummary.latestWeight.toFixed(1)}
+                        </span>
+                        <span className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>lbs</span>
+                      </>
+                    )}
+                    <span className="text-xs mt-1" style={{ color: "#555555", fontFamily: "var(--font-inter)" }}>
+                      tap to track →
+                    </span>
+                  </div>
+                </>
+              ) : null}
+            </Link>
+          </section>
+        )}
+
         {/* ─── 3. Quick Actions ─────────────────────────────────────────────────── */}
         <section>
           <p
@@ -912,6 +1040,18 @@ export default function DashboardPage() {
                     d="M12 3C7.03 3 3 7.03 3 12C3 16.97 7.03 21 12 21C16.97 21 21 16.97 21 12C21 11.54 20.96 11.08 20.9 10.64C19.92 12.01 18.32 12.9 16.5 12.9C13.46 12.9 11 10.44 11 7.4C11 5.58 11.9 3.98 13.26 3C12.86 3.03 12.43 3 12 3Z"
                     fill="currentColor"
                   />
+                </svg>
+              }
+            />
+            <QuickActionBtn
+              label="Log Measurements"
+              href="/dashboard/body/measurements"
+              color="#2A6A4A"
+              bg="#001A0A"
+              icon={
+                <svg viewBox="0 0 24 24" fill="none" width={22} height={22}>
+                  <path d="M3 3h18v2H3zM3 8h12v2H3zM3 13h15v2H3zM3 18h9v2H3z" fill="currentColor" />
+                  <path d="M19 14v6M16 17h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                 </svg>
               }
             />

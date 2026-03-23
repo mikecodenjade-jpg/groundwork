@@ -351,6 +351,28 @@ export default function BodyPage() {
           </Link>
 
           <Link
+            href="/dashboard/body/measurements"
+            className="flex items-center justify-between px-6 py-4 transition-opacity hover:opacity-80"
+            style={{ backgroundColor: "#161616", border: "1px solid #2A6A4A44", borderRadius: "12px" }}
+          >
+            <div className="flex flex-col gap-0.5">
+              <span
+                className="text-sm font-bold uppercase tracking-wide"
+                style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
+              >
+                Body Measurements
+              </span>
+              <span
+                className="text-xs"
+                style={{ fontFamily: "var(--font-inter)", color: "#9A9A9A" }}
+              >
+                Track inches lost · Waist, chest, arms &amp; more
+              </span>
+            </div>
+            <span style={{ color: "#C45B28" }}>&rsaquo;</span>
+          </Link>
+
+          <Link
             href="/dashboard/body/devices"
             className="flex items-center justify-between px-6 py-4 transition-opacity hover:opacity-80"
             style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
