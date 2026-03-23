@@ -3,6 +3,13 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type ParsedSet = {
@@ -206,7 +213,7 @@ export default function VoiceTracker() {
   const [transcript, setTranscript] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [showTooltip, setShowTooltip] = useState(false);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<any>(null);
 
   // Check tooltip on mount
   useEffect(() => {
