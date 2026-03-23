@@ -775,6 +775,81 @@ export default function DashboardPage() {
           </div>
         </section>
 
+        {/* ─── Your Progress ───────────────────────────────────────────────────── */}
+        <section>
+          <p
+            className="text-xs font-semibold tracking-[0.25em] uppercase mb-4"
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+          >
+            Your Progress
+          </p>
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              {
+                label: "Day Streak",
+                value: loading ? "–" : String(streak),
+                sub: "days",
+                color: "#C45B28",
+              },
+              {
+                label: "Workouts",
+                value: loading ? "–" : String(totalWorkouts),
+                sub: "logged",
+                color: "#4CAF50",
+              },
+              {
+                label: "lbs Lost",
+                value: loading
+                  ? "–"
+                  : measurementSummary?.latestWeight != null
+                  ? `${measurementSummary.latestWeight.toFixed(0)}`
+                  : "–",
+                sub: measurementSummary?.latestWeight != null ? "current" : "track it",
+                color: "#3b82f6",
+              },
+              {
+                label: "Energy",
+                value: loading
+                  ? "–"
+                  : snapshot?.mood
+                  ? `${Math.round(((MOOD_MAP[snapshot.mood]?.score ?? 3) / 5) * 100)}%`
+                  : "–",
+                sub: "today",
+                color: snapshot?.mood ? (MOOD_MAP[snapshot.mood]?.color ?? "#9A9A9A") : "#9A9A9A",
+              },
+            ].map(({ label, value, sub, color }) => (
+              <div
+                key={label}
+                className="flex flex-col items-center justify-center gap-1 py-4 px-2"
+                style={{
+                  backgroundColor: "#111111",
+                  border: "1px solid #252525",
+                  borderRadius: "10px",
+                }}
+              >
+                <span
+                  className="text-xl font-black leading-none"
+                  style={{ fontFamily: "var(--font-oswald)", color }}
+                >
+                  {value}
+                </span>
+                <span
+                  className="text-[9px] font-semibold uppercase tracking-widest text-center leading-tight"
+                  style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                >
+                  {sub}
+                </span>
+                <span
+                  className="text-[8px] uppercase tracking-widest text-center opacity-60"
+                  style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                >
+                  {label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* ─── 2. Daily Snapshot Cards ─────────────────────────────────────────── */}
         <section>
           <p
@@ -1243,9 +1318,9 @@ export default function DashboardPage() {
         </section>
 
         {/* ─── 4. Continue Program ─────────────────────────────────────────────── */}
-        {activeProgram && (
+        {activeProgram ? (
           <Link
-            href={`/dashboard/body/programs/${activeProgram.slug}/week/${activeProgram.currentWeek}`}
+            href={`/dashboard/body/programs/${activeProgram.slug}`}
             className="flex flex-col gap-3 px-6 py-5 transition-opacity hover:opacity-90 active:scale-[0.99]"
             style={{
               backgroundColor: "#161616",
@@ -1273,6 +1348,7 @@ export default function DashboardPage() {
                     style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
                   >
                     Week {activeProgram.currentWeek}
+                    {activeProgram.totalWeeks ? ` of ${activeProgram.totalWeeks}` : ""}
                   </span>
                   {activeProgram.phaseName && (
                     <>
@@ -1287,18 +1363,28 @@ export default function DashboardPage() {
                   )}
                 </div>
               </div>
-              <span
-                className="text-sm font-semibold uppercase tracking-widest shrink-0"
-                style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
-              >
-                Go &rsaquo;
-              </span>
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                {activeProgram.totalWeeks != null && (
+                  <span
+                    className="text-xs font-bold"
+                    style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+                  >
+                    {Math.round((activeProgram.currentWeek / activeProgram.totalWeeks) * 100)}% complete
+                  </span>
+                )}
+                <span
+                  className="text-sm font-semibold uppercase tracking-widest"
+                  style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+                >
+                  Go &rsaquo;
+                </span>
+              </div>
             </div>
             {activeProgram.totalWeeks != null && (
               <div className="flex flex-col gap-1.5">
                 <div
                   className="w-full rounded-full overflow-hidden"
-                  style={{ height: "4px", backgroundColor: "#252525" }}
+                  style={{ height: "5px", backgroundColor: "#252525" }}
                 >
                   <div
                     className="h-full rounded-full transition-all duration-700"
@@ -1308,14 +1394,37 @@ export default function DashboardPage() {
                     }}
                   />
                 </div>
-                <span
-                  className="text-[10px] uppercase tracking-widest"
-                  style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
-                >
-                  Week {activeProgram.currentWeek} of {activeProgram.totalWeeks}
-                </span>
               </div>
             )}
+          </Link>
+        ) : (
+          <Link
+            href="/dashboard/body/programs/power-block"
+            className="flex flex-col gap-3 px-6 py-5 transition-opacity hover:opacity-90 active:scale-[0.99]"
+            style={{
+              backgroundColor: "#111111",
+              border: "1px solid #252525",
+              borderRadius: "12px",
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs font-semibold uppercase tracking-widest"
+                  style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                  Start a Program
+                </span>
+                <p className="text-base font-bold mt-0.5"
+                  style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                  Power Block Pro →
+                </p>
+                <p className="text-xs mt-0.5" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                  16-week strength periodization
+                </p>
+              </div>
+              <svg viewBox="0 0 24 24" fill="none" width={20} height={20} style={{ color: "#C45B28", flexShrink: 0 }}>
+                <path d="M6 4v16M18 4v16M8 12h8M3 8h3M18 8h3M3 16h3M18 16h3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+            </div>
           </Link>
         )}
 

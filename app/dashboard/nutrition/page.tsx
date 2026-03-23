@@ -1538,6 +1538,97 @@ export default function NutritionPage() {
           </div>
         </section>
 
+        {/* ── Supplements ──────────────────────────────────────────────────── */}
+        <section>
+          <p className="text-xs font-semibold tracking-[0.25em] uppercase mb-4"
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>
+            Supplements
+          </p>
+          <div
+            style={{
+              backgroundColor: "#111111",
+              border: "1px solid #252525",
+              borderRadius: "12px",
+              overflow: "hidden",
+            }}
+          >
+            {/* Partner header */}
+            <div className="flex items-center justify-between px-5 py-3"
+              style={{ borderBottom: "1px solid #1c1c1c", backgroundColor: "#0d0d0d" }}>
+              <div className="flex items-center gap-3">
+                <div
+                  className="flex items-center justify-center w-8 h-8 rounded"
+                  style={{ backgroundColor: "#C45B2822", border: "1px solid #C45B2844" }}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" width={16} height={16} style={{ color: "#C45B28" }}>
+                    <path d="M12 2L9 9H2L7.5 13.5L5.5 20.5L12 16L18.5 20.5L16.5 13.5L22 9H15L12 2Z"
+                      stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest"
+                    style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                    5 Star Nutrition
+                  </p>
+                  <p className="text-[10px]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                    Partner
+                  </p>
+                </div>
+              </div>
+              <span
+                className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded"
+                style={{ backgroundColor: "#1a4a20", color: "#4CAF50", border: "1px solid #2a6a30", fontFamily: "var(--font-inter)" }}
+              >
+                Member Deal
+              </span>
+            </div>
+
+            {/* Deal body */}
+            <div className="px-5 py-5 flex flex-col gap-4">
+              <div>
+                <p className="text-2xl font-black uppercase leading-tight"
+                  style={{ fontFamily: "var(--font-oswald)", color: "#C45B28" }}>
+                  20% Off
+                </p>
+                <p className="text-sm font-semibold"
+                  style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                  For Groundwork Members
+                </p>
+                <p className="text-xs mt-1 leading-relaxed"
+                  style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                  Everything from protein to pre-workout, creatine, vitamins, and more.
+                  Use your member discount at checkout.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {["Protein", "Pre-Workout", "Creatine", "Vitamins", "BCAAs"].map((item) => (
+                  <span
+                    key={item}
+                    className="text-[10px] font-semibold uppercase tracking-widest px-2 py-1 rounded"
+                    style={{ backgroundColor: "#1a1a1a", color: "#9A9A9A", border: "1px solid #252525", fontFamily: "var(--font-inter)" }}
+                  >
+                    {item}
+                  </span>
+                ))}
+              </div>
+              <a
+                href="https://www.5starnutrition.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 py-3 text-sm font-bold uppercase tracking-widest transition-all hover:opacity-90 active:scale-[0.98]"
+                style={{
+                  backgroundColor: "#C45B28",
+                  color: "#0A0A0A",
+                  borderRadius: "8px",
+                  fontFamily: "var(--font-inter)",
+                }}
+              >
+                Shop Now →
+              </a>
+            </div>
+          </div>
+        </section>
+
         </div>
         <BottomNav />
       </main>

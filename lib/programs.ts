@@ -161,6 +161,25 @@ const MF_WEEK_META: { title: string; description: string }[] = [
 
 export const PROGRAMS: Program[] = [
   {
+    slug: "power-block",
+    name: "Power Block Pro",
+    tagline: "16-Week Strength Periodization",
+    description: "5 progressive loading blocks. 4 days a week. Built around the squat, bench, deadlift, and overhead press. The most battle-tested strength program for guys who want to move serious weight.",
+    totalWeeks: 16,
+    workouts: "4x/week",
+    timePerDay: "60–75 min",
+    difficulty: "Advanced",
+    workoutCategory: "weightlifting",
+    ongoing: false,
+    phases: [
+      { name: "Volume",   num: 1, weekStart: 1,  weekEnd: 4  },
+      { name: "Strength", num: 2, weekStart: 5,  weekEnd: 8  },
+      { name: "Intensity",num: 3, weekStart: 9,  weekEnd: 12 },
+      { name: "Peak",     num: 4, weekStart: 13, weekEnd: 14 },
+      { name: "Maxout",   num: 5, weekStart: 15, weekEnd: 16 },
+    ],
+  },
+  {
     slug: "16-week-foundation",
     name: "16-Week Foundation",
     tagline: "The full transformation.",
