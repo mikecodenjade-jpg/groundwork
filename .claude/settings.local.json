@@ -78,7 +78,18 @@
       "Bash(echo EXIT:$?)",
       "Bash(npm list:*)",
       "Bash(dir C:Usersmjonegroundworknode_modules)",
-      "Bash(printf '%s\\\\n' \"hello world\")"
+      "Bash(printf '%s\\\\n' \"hello world\")",
+      "Bash(echo \"DONE exit=$?\")",
+      "Bash(New-Item -ItemType Directory -Path \"C:\\\\Users\\\\mjone\\\\groundwork\\\\app\\\\dashboard\\\\body\\\\programs\\\\power-block\\\\overview\" -Force)",
+      "Bash(Out-String)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(dir \"C:\\\\Users\\\\mjone\\\\groundwork\\\\app\\\\dashboard\\\\body\\\\programs\\\\power-block\" /b)",
+      "Bash(git.exe -C \"C:/Users/mjone/groundwork\" status --short)",
+      "Bash(powershell -NoProfile -Command \"Set-Location ''C:\\\\Users\\\\mjone\\\\groundwork''; git status --short 2>&1 | Out-String\")",
+      "Bash(powershell.exe -NoProfile -Command \"Set-Location ''C:\\\\Users\\\\mjone\\\\groundwork''; git status\")",
+      "Bash(export GIT_DIR=\"C:/Users/mjone/groundwork/.git\")",
+      "Bash(export GIT_WORK_TREE=\"C:/Users/mjone/groundwork\")",
+      "Bash(echo \"exit $?\")"
     ]
   }
 }
