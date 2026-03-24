@@ -191,6 +191,15 @@ function calcWeeklyDays(allDates: string[]): { done: number; total: number } {
   return { done: activeDays.size, total: 7 };
 }
 
+function calcWeeklyDaysDone(allDates: string[]): boolean[] {
+  const dateSet = new Set(allDates.map((d) => new Date(d).toLocaleDateString("en-CA")));
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    return dateSet.has(d.toLocaleDateString("en-CA"));
+  });
+}
+
 function suggestWorkout(interests: string[] | null): { slug: string; name: string } {
   const slugs =
     interests && interests.length > 0
@@ -354,6 +363,7 @@ export default function DashboardPage() {
     meal: false,
   });
   const [weekly, setWeekly] = useState({ done: 0, total: 7 });
+  const [weeklyDaysDone, setWeeklyDaysDone] = useState<boolean[]>(Array(7).fill(false));
   const [workout, setWorkout] = useState<{ slug: string; name: string } | null>(null);
   const [selectedTime, setSelectedTime] = useState<15 | 30 | 45 | 60 | null>(null);
   const [totalWorkouts, setTotalWorkouts] = useState(0);
@@ -471,9 +481,11 @@ export default function DashboardPage() {
       // ── Streak & weekly ──
       const workoutDates = (workoutsRes.data ?? []).map((r) => r.created_at);
       const moodDates = (moodsRes.data ?? []).map((r) => r.created_at);
-      setStreak(calcStreak([...workoutDates, ...moodDates]));
+      const allActivityDates = [...workoutDates, ...moodDates];
+      setStreak(calcStreak(allActivityDates));
       setTotalWorkouts((workoutsRes.data ?? []).length);
-      setWeekly(calcWeeklyDays([...workoutDates, ...moodDates]));
+      setWeekly(calcWeeklyDays(allActivityDates));
+      setWeeklyDaysDone(calcWeeklyDaysDone(allActivityDates));
 
       // ── Daily score ──
       setScore({
@@ -706,39 +718,54 @@ export default function DashboardPage() {
 
           {/* Streak badge */}
           <div className="mt-4 flex items-center gap-3">
-            <div
-              className="flex items-center gap-2 px-4 py-2"
-              style={{
-                backgroundColor: "#0D1B2A",
-                border: "1px solid #1E3A5F",
-                borderRadius: "8px",
-              }}
-            >
-              <span
-                className="text-2xl font-bold leading-none"
-                style={{ fontFamily: "var(--font-oswald)", color: "#C45B28" }}
+            {!loading && streak === 0 ? (
+              <div
+                className="flex items-center gap-2 px-4 py-2"
+                style={{
+                  backgroundColor: "#1A0C00",
+                  border: "1px solid #3A1800",
+                  borderRadius: "8px",
+                }}
               >
-                {loading ? "\u2013" : streak}
-              </span>
-              <span
-                className="text-xs font-semibold uppercase tracking-widest"
-                style={{ fontFamily: "var(--font-inter)", color: "#9A9A9A" }}
+                <span className="text-xl leading-none" role="img" aria-label="fire">🔥</span>
+                <span
+                  className="text-xs font-semibold uppercase tracking-widest"
+                  style={{ fontFamily: "var(--font-inter)", color: "#C45B28" }}
+                >
+                  Day 1 starts now.
+                </span>
+              </div>
+            ) : (
+              <div
+                className="flex items-center gap-2 px-4 py-2"
+                style={{
+                  backgroundColor: "#0D1B2A",
+                  border: "1px solid #1E3A5F",
+                  borderRadius: "8px",
+                }}
               >
-                Day Streak
-              </span>
-            </div>
-            <p
-              className="text-xs"
-              style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
-            >
-              {loading
-                ? ""
-                : streak === 0
-                ? "Start something today."
-                : streak === 1
-                ? "Day one. Keep going."
-                : `${streak} days straight.`}
-            </p>
+                <span
+                  className="text-2xl font-bold leading-none"
+                  style={{ fontFamily: "var(--font-oswald)", color: "#C45B28" }}
+                >
+                  {loading ? "\u2013" : streak}
+                </span>
+                <span
+                  className="text-xs font-semibold uppercase tracking-widest"
+                  style={{ fontFamily: "var(--font-inter)", color: "#9A9A9A" }}
+                >
+                  Day Streak
+                </span>
+              </div>
+            )}
+            {!loading && streak > 0 && (
+              <p
+                className="text-xs"
+                style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+              >
+                {streak === 1 ? "Day one. Keep going." : `${streak} days straight.`}
+              </p>
+            )}
           </div>
         </section>
 
@@ -869,9 +896,9 @@ export default function DashboardPage() {
                   ? "\u2013"
                   : snapshot && snapshot.steps > 0
                   ? `~${snapshot.steps.toLocaleString()}`
-                  : "\u2014"
+                  : "Start tracking"
               }
-              sub="(est.)"
+              sub={snapshot && snapshot.steps > 0 ? "(est.)" : ""}
               icon={
                 <svg viewBox="0 0 24 24" fill="none" width={20} height={20}>
                   <path
@@ -887,9 +914,11 @@ export default function DashboardPage() {
               value={
                 loading
                   ? "\u2013"
-                  : `${snapshot?.calories ?? 0} / ${snapshot?.caloriesGoal ?? 2400}`
+                  : snapshot && snapshot.calories > 0
+                  ? `${snapshot.calories} / ${snapshot.caloriesGoal}`
+                  : "Start tracking"
               }
-              sub="cal"
+              sub={snapshot && snapshot.calories > 0 ? "cal" : ""}
               icon={
                 <svg viewBox="0 0 24 24" fill="none" width={20} height={20}>
                   <path
@@ -905,9 +934,11 @@ export default function DashboardPage() {
               value={
                 loading
                   ? "\u2013"
-                  : `${snapshot?.waterGlasses ?? 0} / 96`
+                  : snapshot && snapshot.waterGlasses > 0
+                  ? `${snapshot.waterGlasses} / 96`
+                  : "Start tracking"
               }
-              sub="oz today"
+              sub={snapshot && snapshot.waterGlasses > 0 ? "oz today" : ""}
               icon={
                 <svg viewBox="0 0 24 24" fill="none" width={20} height={20}>
                   <path
@@ -927,7 +958,7 @@ export default function DashboardPage() {
                   ? "\u2013"
                   : snapshot && (snapshot.sleepHours > 0 || snapshot.sleepMinutes > 0)
                   ? `${snapshot.sleepHours}h ${snapshot.sleepMinutes}m`
-                  : "\u2014"
+                  : "Start tracking"
               }
               sub={
                 snapshot?.sleepQuality != null
@@ -951,7 +982,7 @@ export default function DashboardPage() {
                   ? "\u2013"
                   : snapshot?.mood
                   ? `${MOOD_MAP[snapshot.mood]?.emoji ?? ""} ${snapshot.mood.replace(/_/g, " ")}`
-                  : "\u2014"
+                  : "Start tracking"
               }
               sub=""
               icon={
@@ -1645,11 +1676,19 @@ export default function DashboardPage() {
         {/* ─── 9. Today's Plan ─────────────────────────────────────────────────── */}
         <section>
           <p
-            className="text-xs font-semibold tracking-[0.25em] uppercase mb-4"
+            className="text-xs font-semibold tracking-[0.25em] uppercase mb-2"
             style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
           >
             Today&apos;s Plan
           </p>
+          {!loading && streak === 0 && dailyScore === 0 && (
+            <p
+              className="text-xs mb-4"
+              style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+            >
+              Your first day is mapped out. Tap any task to begin.
+            </p>
+          )}
           <div
             style={{
               backgroundColor: "#161616",
@@ -1761,52 +1800,91 @@ export default function DashboardPage() {
                 borderRadius: "12px",
               }}
             >
-              <span
-                className="text-4xl font-bold leading-none"
-                style={{
-                  fontFamily: "var(--font-oswald)",
-                  color: loading ? "#252525" : dailyScore === 100 ? "#4CAF50" : "#C45B28",
-                }}
-              >
-                {loading ? "\u2013" : dailyScore}
-              </span>
-              <span
-                className="text-[10px] font-semibold uppercase tracking-widest"
-                style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
-              >
-                Daily Score / 100
-              </span>
-              {!loading && (
-                <div className="flex gap-2 flex-wrap justify-center mt-1">
-                  <ScorePip label="Train" done={score.workout} points={40} />
-                  <ScorePip label="Check-in" done={score.checkin} points={20} />
-                  <ScorePip label="Journal" done={score.journal} points={20} />
-                  <ScorePip label="Meal" done={score.meal} points={20} />
-                </div>
+              {!loading && dailyScore === 0 ? (
+                <>
+                  <span
+                    className="text-xs font-semibold text-center px-4 leading-snug"
+                    style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                  >
+                    Complete your first task to start scoring.
+                  </span>
+                  <div className="flex gap-2 flex-wrap justify-center mt-1">
+                    <ScorePip label="Train" done={false} points={40} />
+                    <ScorePip label="Check-in" done={false} points={20} />
+                    <ScorePip label="Journal" done={false} points={20} />
+                    <ScorePip label="Meal" done={false} points={20} />
+                  </div>
+                  <span
+                    className="text-[10px] font-semibold uppercase tracking-widest mt-1"
+                    style={{ color: "#3A3A3A", fontFamily: "var(--font-inter)" }}
+                  >
+                    Daily Score / 100
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span
+                    className="text-4xl font-bold leading-none"
+                    style={{
+                      fontFamily: "var(--font-oswald)",
+                      color: loading ? "#252525" : dailyScore === 100 ? "#4CAF50" : "#C45B28",
+                    }}
+                  >
+                    {loading ? "\u2013" : dailyScore}
+                  </span>
+                  <span
+                    className="text-[10px] font-semibold uppercase tracking-widest"
+                    style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                  >
+                    Daily Score / 100
+                  </span>
+                  {!loading && (
+                    <div className="flex gap-2 flex-wrap justify-center mt-1">
+                      <ScorePip label="Train" done={score.workout} points={40} />
+                      <ScorePip label="Check-in" done={score.checkin} points={20} />
+                      <ScorePip label="Journal" done={score.journal} points={20} />
+                      <ScorePip label="Meal" done={score.meal} points={20} />
+                    </div>
+                  )}
+                </>
               )}
             </Link>
 
             <Link
               href="/dashboard/badges"
-              className="flex flex-col items-center justify-center py-6 gap-1 transition-opacity hover:opacity-90"
+              className="flex flex-col items-center justify-center py-6 gap-2 transition-opacity hover:opacity-90"
               style={{
                 backgroundColor: "#0D1B2A",
                 border: "1px solid #1E3A5F",
                 borderRadius: "12px",
               }}
             >
-              <span
-                className="text-4xl font-bold leading-none"
-                style={{ fontFamily: "var(--font-oswald)", color: "#C45B28" }}
-              >
-                {loading ? "\u2013" : streak}
-              </span>
-              <span
-                className="text-[10px] font-semibold uppercase tracking-widest"
-                style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
-              >
-                Day Streak
-              </span>
+              {!loading && streak === 0 ? (
+                <>
+                  <span className="text-3xl leading-none" role="img" aria-label="fire">🔥</span>
+                  <span
+                    className="text-[10px] font-semibold uppercase tracking-widest text-center px-2"
+                    style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+                  >
+                    Day 1 starts now.
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span
+                    className="text-4xl font-bold leading-none"
+                    style={{ fontFamily: "var(--font-oswald)", color: "#C45B28" }}
+                  >
+                    {loading ? "\u2013" : streak}
+                  </span>
+                  <span
+                    className="text-[10px] font-semibold uppercase tracking-widest"
+                    style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                  >
+                    Day Streak
+                  </span>
+                </>
+              )}
             </Link>
           </div>
 
@@ -1818,9 +1896,9 @@ export default function DashboardPage() {
             View All Badges &rsaquo;
           </Link>
 
-          {/* Weekly bar */}
+          {/* Weekly day circles */}
           <div
-            className="px-6 py-5 flex flex-col gap-3"
+            className="px-6 py-5 flex flex-col gap-4"
             style={{
               backgroundColor: "#161616",
               border: "1px solid #252525",
@@ -1838,33 +1916,61 @@ export default function DashboardPage() {
                 className="text-sm font-bold"
                 style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
               >
-                {loading ? "\u2013/7" : `${weekly.done}/7 days`}
+                {loading
+                  ? ""
+                  : weekly.done === 0
+                  ? "7 days. Start with this one."
+                  : `${weekly.done}/7 days`}
               </span>
             </div>
-            <div
-              className="w-full rounded-full overflow-hidden"
-              style={{ height: "6px", backgroundColor: "#252525" }}
-            >
-              <div
-                className="h-full rounded-full transition-all duration-700"
-                style={{
-                  backgroundColor: "#C45B28",
-                  width: loading ? "0%" : `${(weekly.done / weekly.total) * 100}%`,
-                }}
-              />
-            </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               {Array.from({ length: 7 }, (_, i) => {
                 const d = new Date();
                 d.setDate(d.getDate() - (6 - i));
+                const isToday = i === 6;
+                const isDone = !loading && weeklyDaysDone[i];
                 return (
-                  <span
-                    key={i}
-                    className="text-[9px] uppercase"
-                    style={{ color: "#3A3A3A", fontFamily: "var(--font-inter)" }}
-                  >
-                    {d.toLocaleDateString("en-US", { weekday: "narrow" })}
-                  </span>
+                  <div key={i} className="flex flex-col items-center gap-1.5">
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: "50%",
+                        backgroundColor: isDone ? "#C45B28" : "transparent",
+                        border: isDone
+                          ? "2px solid #C45B28"
+                          : isToday
+                          ? "2px solid #C45B28"
+                          : "2px solid #252525",
+                        transition: "all 0.3s ease",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      {isDone && (
+                        <svg viewBox="0 0 24 24" fill="none" width={12} height={12}>
+                          <path
+                            d="M5 12l5 5L20 7"
+                            stroke="#0A0A0A"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      )}
+                    </div>
+                    <span
+                      className="text-[9px] uppercase"
+                      style={{
+                        color: isToday ? "#C45B28" : "#3A3A3A",
+                        fontFamily: "var(--font-inter)",
+                        fontWeight: isToday ? 700 : 400,
+                      }}
+                    >
+                      {d.toLocaleDateString("en-US", { weekday: "narrow" })}
+                    </span>
+                  </div>
                 );
               })}
             </div>

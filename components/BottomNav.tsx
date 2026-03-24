@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 const TABS = [
   {
     label: "Home",
-    subtitle: "BM",
     href: "/dashboard",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" width={24} height={24}>
@@ -21,7 +20,6 @@ const TABS = [
   },
   {
     label: "Train",
-    subtitle: "PB",
     href: "/dashboard/body",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" width={24} height={24}>
@@ -36,7 +34,6 @@ const TABS = [
   },
   {
     label: "Fuel",
-    subtitle: "FL",
     href: "/dashboard/nutrition",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" width={24} height={24}>
@@ -52,7 +49,6 @@ const TABS = [
   },
   {
     label: "Mind",
-    subtitle: "MN",
     href: "/dashboard/mind",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" width={24} height={24}>
@@ -68,39 +64,41 @@ const TABS = [
     ),
   },
   {
-    label: "Crew",
-    subtitle: "CR",
-    href: "/dashboard/crew",
+    label: "More",
+    href: "/dashboard/more",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" width={24} height={24}>
-        <circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.8" />
-        <circle cx="16" cy="9" r="2.5" stroke="currentColor" strokeWidth="1.5" />
-        <path
-          d="M3 20C3 16.5 5.5 14 9 14C10.8 14 12.4 14.7 13.5 15.8"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-        />
-        <path
-          d="M14 19C14 16.5 15.2 15 16 15C18.5 15 20 16.5 20 19"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
+        <circle cx="5" cy="12" r="1.5" fill="currentColor" />
+        <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+        <circle cx="19" cy="12" r="1.5" fill="currentColor" />
       </svg>
     ),
   },
 ];
 
+const MORE_ROUTES = [
+  "/dashboard/more",
+  "/dashboard/heart",
+  "/dashboard/lead",
+  "/dashboard/coach",
+  "/dashboard/library",
+  "/dashboard/settings",
+  "/dashboard/crew",
+  "/dashboard/challenges",
+  "/dashboard/body/measurements",
+  "/dashboard/body/devices",
+  "/dashboard/badges",
+];
+
 function isActive(href: string, pathname: string): boolean {
   if (href === "/dashboard") return pathname === "/dashboard";
 
-  // Train covers: /dashboard/body, /dashboard/library, /dashboard/programs
+  // Train covers: /dashboard/body, /dashboard/library (now in More), /dashboard/programs
   if (href === "/dashboard/body") {
     return (
-      pathname.startsWith("/dashboard/body") ||
-      pathname.startsWith("/dashboard/library") ||
-      pathname.startsWith("/dashboard/programs")
+      pathname.startsWith("/dashboard/body") &&
+      !pathname.startsWith("/dashboard/body/measurements") &&
+      !pathname.startsWith("/dashboard/body/devices")
     );
   }
 
@@ -118,13 +116,9 @@ function isActive(href: string, pathname: string): boolean {
     );
   }
 
-  // Crew covers: /dashboard/heart, /dashboard/challenges, /dashboard/crew
-  if (href === "/dashboard/crew") {
-    return (
-      pathname.startsWith("/dashboard/heart") ||
-      pathname.startsWith("/dashboard/crew") ||
-      pathname.startsWith("/dashboard/challenges")
-    );
+  // More covers all the overflow routes
+  if (href === "/dashboard/more") {
+    return MORE_ROUTES.some((r) => pathname.startsWith(r));
   }
 
   return pathname.startsWith(href);
@@ -157,7 +151,7 @@ export default function BottomNav() {
               position: "relative",
             }}
           >
-            {/* Active indicator dot/line above icon */}
+            {/* Active indicator line above icon */}
             <div
               style={{
                 position: "absolute",
