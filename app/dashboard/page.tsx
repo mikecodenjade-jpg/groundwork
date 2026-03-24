@@ -814,14 +814,14 @@ export default function DashboardPage() {
             {[
               {
                 label: "Day Streak",
-                value: loading ? "–" : String(streak),
-                sub: "days",
+                value: loading ? "–" : streak === 0 ? "Day 1" : String(streak),
+                sub: !loading && streak === 0 ? "starts now" : "days",
                 color: "#C45B28",
               },
               {
                 label: "Workouts",
-                value: loading ? "–" : String(totalWorkouts),
-                sub: "logged",
+                value: loading ? "–" : totalWorkouts === 0 ? "None" : String(totalWorkouts),
+                sub: !loading && totalWorkouts === 0 ? "log your first" : "logged",
                 color: "#4CAF50",
               },
               {
@@ -830,7 +830,7 @@ export default function DashboardPage() {
                   ? "–"
                   : measurementSummary?.latestWeight != null
                   ? `${measurementSummary.latestWeight.toFixed(0)}`
-                  : "–",
+                  : "—",
                 sub: measurementSummary?.latestWeight != null ? "current" : "track it",
                 color: "#3b82f6",
               },
@@ -840,8 +840,8 @@ export default function DashboardPage() {
                   ? "–"
                   : snapshot?.mood
                   ? `${Math.round(((MOOD_MAP[snapshot.mood]?.score ?? 3) / 5) * 100)}%`
-                  : "–",
-                sub: "today",
+                  : "—",
+                sub: !loading && !snapshot?.mood ? "check in" : "today",
                 color: snapshot?.mood ? (MOOD_MAP[snapshot.mood]?.color ?? "#9A9A9A") : "#9A9A9A",
               },
             ].map(({ label, value, sub, color }) => (
@@ -1754,10 +1754,10 @@ export default function DashboardPage() {
           {/* 4-stat row */}
           <div className="grid grid-cols-4 gap-2">
             {[
-              { label: "Day Streak", value: loading ? "\u2013" : String(streak), unit: "days", color: "#C45B28" },
-              { label: "Workouts", value: loading ? "\u2013" : String(totalWorkouts), unit: "logged", color: "#22c55e" },
+              { label: "Day Streak", value: loading ? "\u2013" : streak === 0 ? "Day 1" : String(streak), unit: !loading && streak === 0 ? "starts now" : "days", color: "#C45B28" },
+              { label: "Workouts", value: loading ? "\u2013" : totalWorkouts === 0 ? "None" : String(totalWorkouts), unit: !loading && totalWorkouts === 0 ? "log your first" : "logged", color: "#22c55e" },
               { label: "Weight", value: loading ? "\u2013" : (measurementSummary?.latestWeight != null ? `${measurementSummary.latestWeight.toFixed(0)}` : "\u2014"), unit: "lbs", color: "#E8E2D8" },
-              { label: "Energy", value: loading ? "\u2013" : String(dailyScore), unit: "%", color: "#f97316" },
+              { label: "Energy", value: loading ? "\u2013" : dailyScore === 0 ? "\u2014" : String(dailyScore), unit: !loading && dailyScore === 0 ? "complete a task" : "%", color: "#f97316" },
             ].map(({ label, value, unit, color }) => (
               <div
                 key={label}

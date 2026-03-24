@@ -262,7 +262,7 @@ export const PROGRAMS: Program[] = [
   {
     slug: "military-functional",
     name: "Operator Conditioning",
-    tagline: "Bodyweight, rucks, and grit.",
+    tagline: "12 weeks of no-nonsense functional training. Bodyweight, rucks, and grit.",
     description: "12 weeks of no-nonsense functional training. Bodyweight, rucks, and grit. For guys who want to be hard to kill.",
     totalWeeks: 12,
     workouts: "60",
