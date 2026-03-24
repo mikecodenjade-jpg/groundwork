@@ -261,9 +261,9 @@ export const PROGRAMS: Program[] = [
   },
   {
     slug: "military-functional",
-    name: "Military Functional",
-    tagline: "TACP-inspired. Operate at a different level.",
-    description: "For guys who want to operate at a different level.",
+    name: "Operator Conditioning",
+    tagline: "Bodyweight, rucks, and grit.",
+    description: "12 weeks of no-nonsense functional training. Bodyweight, rucks, and grit. For guys who want to be hard to kill.",
     totalWeeks: 12,
     workouts: "60",
     timePerDay: "45–60 min",

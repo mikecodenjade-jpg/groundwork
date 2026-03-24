@@ -274,7 +274,7 @@ export default function BodyPage() {
                 className="text-xs"
                 style={{ fontFamily: "var(--font-inter)", color: "#9A9A9A" }}
               >
-                16-Week Foundation · 8-Week Kickstart · Military Functional
+                16-Week Foundation · 8-Week Kickstart · Operator Conditioning
               </span>
             </div>
             <span style={{ color: "#C45B28" }}>›</span>

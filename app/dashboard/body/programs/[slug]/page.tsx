@@ -98,6 +98,15 @@ export default function ProgramDetailPage({
   }));
 
   const isEnrolled = !!enrollment;
+  const isCompleted = enrollment?.status === "completed";
+
+  // "Level up" progression: Kickstart → Foundation → Power Block → Operator Conditioning
+  const NEXT_PROGRAM: Record<string, { slug: string; name: string }> = {
+    "8-week-kickstart":     { slug: "16-week-foundation",  name: "16-Week Foundation" },
+    "16-week-foundation":   { slug: "power-block",         name: "Power Block Training" },
+    "power-block":          { slug: "military-functional", name: "Operator Conditioning" },
+    "back-in-the-groove":   { slug: "8-week-kickstart",    name: "8-Week Kickstart" },
+  };
 
   return (
     <main
@@ -165,9 +174,16 @@ export default function ProgramDetailPage({
             ))}
           </div>
 
-          {/* Start / enrolled state */}
+          {/* Start / enrolled / completed state */}
           {loading ? (
             <div className="h-12 w-40 animate-pulse rounded-lg" style={{ backgroundColor: "#252525" }} />
+          ) : isCompleted ? (
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-semibold uppercase tracking-widest px-3 py-1.5"
+                style={{ backgroundColor: "#0A2010", color: "#4CAF50", border: "1px solid #1A4A20", borderRadius: "6px", fontFamily: "var(--font-inter)" }}>
+                Completed
+              </span>
+            </div>
           ) : isEnrolled ? (
             <div className="flex items-center gap-4">
               <Link
@@ -204,6 +220,86 @@ export default function ProgramDetailPage({
             </button>
           )}
         </div>
+
+        {/* Program Complete — What's Next */}
+        {isCompleted && (
+          <div
+            className="px-7 py-8 flex flex-col gap-6"
+            style={{ backgroundColor: "#0A1A0A", border: "1px solid #1A4A20", borderRadius: "12px" }}
+          >
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.25em] mb-2"
+                style={{ color: "#4CAF50", fontFamily: "var(--font-inter)" }}>
+                Program Complete
+              </p>
+              <h2 className="text-3xl font-black uppercase leading-none"
+                style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}>
+                You Finished It.
+              </h2>
+            </div>
+
+            <div className="flex flex-wrap gap-6">
+              {[
+                { label: String(program.totalWeeks ?? "—"), sub: "Weeks Completed" },
+                { label: program.workouts, sub: "Total Workouts" },
+              ].map(({ label, sub }) => (
+                <div key={sub} className="flex flex-col gap-0.5">
+                  <span className="text-2xl font-bold" style={{ color: "#4CAF50", fontFamily: "var(--font-inter)" }}>{label}</span>
+                  <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>{sub}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em]"
+                style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                What&apos;s Next?
+              </p>
+
+              {/* Run it again */}
+              <button
+                onClick={startProgram}
+                disabled={enrolling}
+                className="flex items-center justify-between px-5 py-4 transition-opacity hover:opacity-80 disabled:opacity-50"
+                style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "10px", textAlign: "left" }}
+              >
+                <div>
+                  <p className="text-sm font-bold uppercase" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>Run It Again</p>
+                  <p className="text-xs mt-0.5" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Restart {program.name} from Week 1</p>
+                </div>
+                <span style={{ color: "#C45B28" }}>›</span>
+              </button>
+
+              {/* Level up */}
+              {NEXT_PROGRAM[slug] && (
+                <Link
+                  href={`/dashboard/body/programs/${NEXT_PROGRAM[slug].slug}`}
+                  className="flex items-center justify-between px-5 py-4 transition-opacity hover:opacity-80"
+                  style={{ backgroundColor: "#161616", border: "1px solid #C45B28", borderRadius: "10px" }}
+                >
+                  <div>
+                    <p className="text-sm font-bold uppercase" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>Level Up</p>
+                    <p className="text-xs mt-0.5" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Start {NEXT_PROGRAM[slug].name}</p>
+                  </div>
+                  <span style={{ color: "#C45B28" }}>›</span>
+                </Link>
+              )}
+
+              {/* Switch it up */}
+              <Link
+                href="/dashboard/body/programs"
+                className="flex items-center justify-between px-5 py-4 transition-opacity hover:opacity-80"
+                style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "10px" }}
+              >
+                <div>
+                  <p className="text-sm font-bold uppercase" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>Switch It Up</p>
+                  <p className="text-xs mt-0.5" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Browse all programs</p>
+                </div>
+                <span style={{ color: "#C45B28" }}>›</span>
+              </Link>
+            </div>
+          </div>
+        )}
 
         {/* Daily Blueprint — special case */}
         {program.ongoing && (

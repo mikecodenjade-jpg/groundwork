@@ -26,6 +26,17 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [jobsiteMode, setJobsiteMode] = useState(false);
+
+  useEffect(() => {
+    setJobsiteMode(localStorage.getItem("jobsite_mode") === "true");
+  }, []);
+
+  function toggleJobsiteMode() {
+    const next = !jobsiteMode;
+    setJobsiteMode(next);
+    localStorage.setItem("jobsite_mode", String(next));
+  }
 
   useEffect(() => {
     async function load() {
@@ -300,6 +311,60 @@ export default function SettingsPage() {
             </span>
             <span style={{ color: "#C45B28" }}>›</span>
           </Link>
+        </section>
+
+        {/* Jobsite Mode */}
+        <section className="flex flex-col gap-4">
+          <p
+            className="text-xs font-semibold tracking-[0.25em] uppercase"
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+          >
+            Display
+          </p>
+          <div
+            className="flex items-center justify-between px-6 py-5"
+            style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
+          >
+            <div className="flex flex-col gap-1">
+              <span
+                className="text-sm font-bold uppercase tracking-wide"
+                style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
+              >
+                Jobsite Mode
+              </span>
+              <span className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                Larger text, minimal UI, big buttons. Built for sunlight.
+              </span>
+            </div>
+            <button
+              onClick={toggleJobsiteMode}
+              className="relative shrink-0 transition-all duration-200"
+              style={{
+                width: 48,
+                height: 28,
+                borderRadius: 14,
+                backgroundColor: jobsiteMode ? "#C45B28" : "#252525",
+                border: `1px solid ${jobsiteMode ? "#C45B28" : "#333"}`,
+              }}
+              aria-label="Toggle Jobsite Mode"
+            >
+              <span
+                className="absolute top-0.5 transition-all duration-200"
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: "50%",
+                  backgroundColor: "#E8E2D8",
+                  left: jobsiteMode ? 23 : 3,
+                }}
+              />
+            </button>
+          </div>
+          {jobsiteMode && (
+            <p className="text-xs px-1" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+              Active — workout pages will show larger text and a simplified layout.
+            </p>
+          )}
         </section>
 
         {/* Sign Out */}

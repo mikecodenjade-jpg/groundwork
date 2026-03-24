@@ -85,6 +85,79 @@ const FAST_FOOD = [
   { place: "Popeyes",        item: "Blackened Chicken Tenders (3-piece)", name: "Popeyes Blackened Chicken Tenders",    cal: 170, protein: 28, carbs:  4, fat:  5 },
 ];
 
+type JobsiteFood = { category: string; name: string; desc: string; cal: number; protein: number; carbs: number; fat: number };
+
+const JOBSITE_FOODS: JobsiteFood[] = [
+  // Gas Station / Convenience Store
+  { category: "Gas Station / Convenience Store", name: "Beef Jerky (1 bag)",          desc: "High-protein grab-and-go staple",                    cal: 100, protein: 14, carbs:  6, fat:  3 },
+  { category: "Gas Station / Convenience Store", name: "String Cheese (2 sticks)",    desc: "Easy protein, no prep needed",                       cal: 160, protein: 14, carbs:  2, fat: 10 },
+  { category: "Gas Station / Convenience Store", name: "Hard-Boiled Eggs (2-pack)",   desc: "Real food in a cooler or on the go",                 cal: 140, protein: 12, carbs:  1, fat: 10 },
+  { category: "Gas Station / Convenience Store", name: "Mixed Nuts (small bag)",      desc: "Healthy fats and protein, shelf stable",             cal: 170, protein:  6, carbs:  8, fat: 14 },
+  { category: "Gas Station / Convenience Store", name: "Protein Bar (average)",       desc: "Not ideal but beats skipping a meal",                cal: 230, protein: 20, carbs: 25, fat:  8 },
+  { category: "Gas Station / Convenience Store", name: "Banana + Peanut Butter Cup",  desc: "Fast carbs and fat for long days",                   cal: 250, protein:  7, carbs: 34, fat:  9 },
+  { category: "Gas Station / Convenience Store", name: "Greek Yogurt Cup",            desc: "Protein and probiotics, grab from the cooler",       cal: 130, protein: 15, carbs: 12, fat:  2 },
+  // Taco Trucks / Mexican
+  { category: "Taco Trucks / Mexican",           name: "Chicken Street Tacos (3)",    desc: "Street tacos — better macros than fast food",        cal: 420, protein: 30, carbs: 36, fat: 15 },
+  { category: "Taco Trucks / Mexican",           name: "Burrito Bowl (no tortilla)",  desc: "High protein, skip the wrap",                        cal: 460, protein: 40, carbs: 35, fat: 16 },
+  { category: "Taco Trucks / Mexican",           name: "Grilled Chicken Quesadilla",  desc: "Solid protein, easy to eat in the truck",            cal: 410, protein: 28, carbs: 30, fat: 18 },
+  // Regional / Other
+  { category: "Regional / Other",                name: "Wawa Turkey Hoagie",          desc: "Mid-Atlantic staple — solid macros",                 cal: 380, protein: 28, carbs: 48, fat:  8 },
+  { category: "Regional / Other",                name: "Buc-ee's Brisket Sandwich",   desc: "Texas legend — high protein, watch the fat",         cal: 520, protein: 35, carbs: 40, fat: 22 },
+  { category: "Regional / Other",                name: "QuikTrip Roller Grill Chicken", desc: "Surprisingly clean — protein without the carbs",   cal: 180, protein: 22, carbs:  4, fat:  8 },
+  { category: "Regional / Other",                name: "Casey's Breakfast Pizza (2 slices)", desc: "Midwest staple when nothing else is open",     cal: 340, protein: 16, carbs: 36, fat: 14 },
+  { category: "Regional / Other",                name: "Jack in the Box Grilled Chicken Strips", desc: "Low carb, high protein — solid option",    cal: 180, protein: 30, carbs:  2, fat:  6 },
+];
+
+type MealPrepRecipe = { name: string; tagline: string; prepTime: string; totalMeals: number; cal: number; protein: number; carbs: number; fat: number; coolerRating: number; instructions: string };
+
+const MEAL_PREP_RECIPES: MealPrepRecipe[] = [
+  {
+    name: "Grilled Chicken + Rice",
+    tagline: "The classic. Never fails.",
+    prepTime: "45 min",
+    totalMeals: 5,
+    cal: 420, protein: 48, carbs: 38, fat: 7,
+    coolerRating: 5,
+    instructions: "Cook 5 lbs chicken breast, 4 cups rice. Season however you want. Divide into 5 containers. Done.",
+  },
+  {
+    name: "Slow Cooker Pulled Pork",
+    tagline: "Set it before your shift. Done when you're back.",
+    prepTime: "20 min active / 8 hr cook",
+    totalMeals: 6,
+    cal: 490, protein: 44, carbs: 32, fat: 18,
+    coolerRating: 4,
+    instructions: "Pork shoulder, BBQ sauce, 8 hours on low. Portion into containers with sweet potatoes.",
+  },
+  {
+    name: "Egg Muffins",
+    tagline: "Grab 3, eat on the way to the site.",
+    prepTime: "30 min",
+    totalMeals: 4,
+    cal: 220, protein: 18, carbs: 4, fat: 14,
+    coolerRating: 3,
+    instructions: "12 eggs, whatever vegetables and cheese you have. Pour into muffin tin, bake 20 min at 375°. Grab 3 each morning.",
+  },
+  {
+    name: "Turkey Taco Bowls",
+    tagline: "Flavor without the work.",
+    prepTime: "30 min",
+    totalMeals: 5,
+    cal: 450, protein: 42, carbs: 40, fat: 12,
+    coolerRating: 5,
+    instructions: "Brown 3 lbs ground turkey with taco seasoning. Add to containers with rice, black beans, salsa.",
+  },
+  {
+    name: "Overnight Oats",
+    tagline: "Zero morning effort. Eat cold.",
+    prepTime: "10 min",
+    totalMeals: 5,
+    cal: 380, protein: 28, carbs: 50, fat: 8,
+    coolerRating: 4,
+    instructions: "Oats + protein powder + milk in mason jars. Make 5. Grab one each morning. Eat cold.",
+  },
+];
+
 // ─── OpenFoodFacts types ──────────────────────────────────────────────────────
 
 type OFFProduct = {
@@ -754,7 +827,7 @@ export default function NutritionPage() {
   const [customCarbs,    setCustomCarbs]    = useState("");
   const [customFat,      setCustomFat]      = useState("");
   const [saving,         setSaving]         = useState(false);
-  const [fastFoodPicker, setFastFoodPicker] = useState<number | null>(null);
+  const [fastFoodPicker, setFastFoodPicker] = useState<number | string | null>(null);
   const [showHistory,    setShowHistory]    = useState(false);
   const [historyLogs,    setHistoryLogs]    = useState<FoodLog[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -1360,8 +1433,11 @@ export default function NutritionPage() {
           <section className="flex flex-col gap-4">
             <div>
               <p className="text-xs font-semibold tracking-[0.25em] uppercase mb-1" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>JOBSITE-APPROVED OPTIONS</p>
-              <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>High-protein drive-through picks for when you&apos;re stuck near the jobsite. Tap Add to log it.</p>
+              <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>High-protein picks for when you&apos;re stuck near the jobsite. Tap Add to log it.</p>
             </div>
+
+            {/* Drive-through chains */}
+            <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Drive-Through Chains</p>
             <div className="flex flex-col gap-3">
               {FAST_FOOD.map((ff, idx) => {
                 const isPicking = fastFoodPicker === idx;
@@ -1400,6 +1476,101 @@ export default function NutritionPage() {
                   </div>
                 );
               })}
+            </div>
+
+            {/* Gas Station, Taco Trucks, Regional */}
+            {(["Gas Station / Convenience Store", "Taco Trucks / Mexican", "Regional / Other"] as const).map((cat) => {
+              const items = JOBSITE_FOODS.filter((f) => f.category === cat);
+              return (
+                <div key={cat} className="flex flex-col gap-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>{cat}</p>
+                  {items.map((jf, idx) => {
+                    const key = `jf-${cat}-${idx}`;
+                    const isPicking = fastFoodPicker === key;
+                    return (
+                      <div key={key} className="px-5 py-5 flex flex-col gap-3" style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}>
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0">
+                            <h3 className="text-sm font-bold" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>{jf.name}</h3>
+                            <p className="text-xs mt-0.5" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>{jf.desc}</p>
+                            <p className="text-xs mt-1" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>P: {jf.protein}g · C: {jf.carbs}g · F: {jf.fat}g</p>
+                          </div>
+                          <div className="flex flex-col items-end gap-2 shrink-0">
+                            <span className="text-sm font-bold" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>{jf.cal} cal</span>
+                            <button onClick={() => setFastFoodPicker(isPicking ? null : key)}
+                              className="text-xs font-semibold uppercase tracking-widest px-3 py-1.5 transition-opacity hover:opacity-80"
+                              style={{ backgroundColor: isPicking ? "#252525" : "#161616", color: isPicking ? "#9A9A9A" : "#C45B28", border: `1px solid ${isPicking ? "#252525" : "#C45B28"}`, borderRadius: "6px", fontFamily: "var(--font-inter)" }}>
+                              {isPicking ? "Cancel" : "Add"}
+                            </button>
+                          </div>
+                        </div>
+                        {isPicking && (
+                          <div className="flex flex-col gap-2 pt-2" style={{ borderTop: "1px solid #252525" }}>
+                            <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Add to:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {MEALS.map(({ type, label }) => (
+                                <button key={type} disabled={saving}
+                                  onClick={async () => { setFastFoodPicker(null); await addFood(type, { name: jf.name, cal: jf.cal, protein: jf.protein, carbs: jf.carbs, fat: jf.fat }); }}
+                                  className="px-4 py-2 text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-80 disabled:opacity-40"
+                                  style={{ backgroundColor: "#252525", color: "#E8E2D8", borderRadius: "6px", fontFamily: "var(--font-inter)" }}>
+                                  {label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </section>
+
+          {/* ── Meal Prep Sunday ─────────────────────────────────────────── */}
+          <section className="flex flex-col gap-5">
+            <div>
+              <p className="text-xs font-semibold tracking-[0.25em] uppercase mb-1" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>MEAL PREP SUNDAY</p>
+              <h2 className="text-xl font-bold uppercase mb-1" style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}>Cook once. Eat all week.</h2>
+              <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Survives a cooler on a 100° jobsite.</p>
+            </div>
+            <div className="flex flex-col gap-4">
+              {MEAL_PREP_RECIPES.map((recipe) => (
+                <div key={recipe.name} className="px-5 py-5 flex flex-col gap-4" style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <h3 className="text-base font-bold uppercase" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>{recipe.name}</h3>
+                      <p className="text-xs mt-0.5 italic" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>{recipe.tagline}</p>
+                    </div>
+                    {/* Cooler rating */}
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <div className="flex gap-0.5">
+                        {[1,2,3,4,5].map((n) => (
+                          <svg key={n} viewBox="0 0 12 12" width={10} height={10}>
+                            <rect x="1" y="4" width="10" height="7" rx="1" fill={n <= recipe.coolerRating ? "#C45B28" : "#252525"} />
+                            <rect x="3" y="2" width="6" height="3" rx="1" fill={n <= recipe.coolerRating ? "#C45B28" : "#252525"} />
+                          </svg>
+                        ))}
+                      </div>
+                      <span className="text-[10px] uppercase tracking-widest" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Cooler: {recipe.coolerRating}/5</span>
+                    </div>
+                  </div>
+                  <p className="text-sm leading-relaxed" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>{recipe.instructions}</p>
+                  <div className="flex flex-wrap gap-4 pt-1" style={{ borderTop: "1px solid #1a1a1a" }}>
+                    {[
+                      { label: recipe.prepTime, sub: "Prep Time" },
+                      { label: `${recipe.totalMeals} meals`, sub: "Total" },
+                      { label: `${recipe.cal} cal`, sub: "Per Serving" },
+                      { label: `P${recipe.protein} · C${recipe.carbs} · F${recipe.fat}`, sub: "Macros" },
+                    ].map(({ label, sub }) => (
+                      <div key={sub} className="flex flex-col gap-0.5">
+                        <span className="text-sm font-bold" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>{label}</span>
+                        <span className="text-[10px] uppercase tracking-widest" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>{sub}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           </section>
 

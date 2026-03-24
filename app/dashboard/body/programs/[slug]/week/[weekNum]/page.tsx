@@ -30,6 +30,11 @@ export default function WeekPage({
   const [marking, setMarking] = useState<number | null>(null);
   const [weekAdvanced, setWeekAdvanced] = useState(false);
   const [injuries, setInjuries] = useState<Injury[]>([]);
+  const [jobsiteMode, setJobsiteMode] = useState(false);
+
+  useEffect(() => {
+    setJobsiteMode(localStorage.getItem("jobsite_mode") === "true");
+  }, []);
 
   // Fetch active injuries
   useEffect(() => {
@@ -191,6 +196,30 @@ export default function WeekPage({
           </div>
         )}
 
+        {/* Jobsite Mode toggle */}
+        <button
+          onClick={() => {
+            const next = !jobsiteMode;
+            setJobsiteMode(next);
+            localStorage.setItem("jobsite_mode", String(next));
+          }}
+          className="self-start flex items-center gap-2 px-4 py-2 transition-opacity hover:opacity-80"
+          style={{
+            backgroundColor: jobsiteMode ? "#C45B2822" : "#161616",
+            border: `1px solid ${jobsiteMode ? "#C45B28" : "#252525"}`,
+            borderRadius: "8px",
+          }}
+        >
+          <svg viewBox="0 0 24 24" fill="none" width={14} height={14}>
+            <rect x="2" y="6" width="20" height="14" rx="2" stroke={jobsiteMode ? "#C45B28" : "#9A9A9A"} strokeWidth="1.8" />
+            <rect x="6" y="3" width="12" height="4" rx="1" stroke={jobsiteMode ? "#C45B28" : "#9A9A9A"} strokeWidth="1.5" />
+          </svg>
+          <span className="text-xs font-semibold uppercase tracking-widest"
+            style={{ color: jobsiteMode ? "#C45B28" : "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+            Jobsite Mode {jobsiteMode ? "On" : "Off"}
+          </span>
+        </button>
+
         {/* Week description */}
         <div
           className="px-6 py-4 flex items-start gap-3"
@@ -280,6 +309,7 @@ export default function WeekPage({
                 marking={marking === i + 1}
                 workoutHref={`/dashboard/body/${program.workoutCategory}?time=${day.duration}`}
                 onMarkComplete={() => markDayComplete(i + 1)}
+                jobsiteMode={jobsiteMode}
               />
             ))}
           </div>
@@ -301,6 +331,7 @@ function DayCard({
   marking,
   workoutHref,
   onMarkComplete,
+  jobsiteMode,
 }: {
   dayNum: number;
   dayLabel: string;
@@ -309,7 +340,58 @@ function DayCard({
   marking: boolean;
   workoutHref: string;
   onMarkComplete: () => void;
+  jobsiteMode: boolean;
 }) {
+  if (jobsiteMode) {
+    // Jobsite Mode: minimal, large-text layout optimized for bright sunlight
+    return (
+      <div
+        style={{
+          backgroundColor: completed ? "#0A1A0A" : "#161616",
+          border: `2px solid ${completed ? "#1A4A20" : "#252525"}`,
+          borderRadius: "14px",
+          overflow: "hidden",
+        }}
+      >
+        <div className="px-6 py-5 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <span className="text-base font-bold uppercase tracking-wide"
+              style={{ color: completed ? "#4CAF50" : "#9A9A9A", fontFamily: "var(--font-inter)", fontSize: "0.85rem" }}>
+              Day {dayNum} · {dayLabel}
+            </span>
+            {completed && (
+              <span style={{ color: "#4CAF50", fontSize: "1.3rem" }}>✓</span>
+            )}
+          </div>
+          <p className="font-black uppercase leading-tight"
+            style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)", fontSize: "1.56rem" }}>
+            {day.name}
+          </p>
+          <p style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)", fontSize: "1.04rem" }}>
+            {day.focus} · {day.duration} min
+          </p>
+          {!completed && (
+            <button
+              onClick={onMarkComplete}
+              disabled={marking}
+              className="w-full flex items-center justify-center font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
+              style={{
+                backgroundColor: "#C45B28",
+                color: "#0A0A0A",
+                borderRadius: "10px",
+                fontFamily: "var(--font-inter)",
+                fontSize: "1.3rem",
+                minHeight: "64px",
+              }}
+            >
+              {marking ? "Saving…" : "DONE"}
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
