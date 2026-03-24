@@ -1,678 +1,707 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useRef } from "react";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
-// ─── Phone frame mock ─────────────────────────────────────────────────────────
+// ─── Pillar Card ──────────────────────────────────────────────────────────────
 
-function PhoneFrame({ title, children }: { title: string; children: React.ReactNode }) {
+function PillarCard({
+  label,
+  tagline,
+  icon,
+}: {
+  label: string;
+  tagline: string;
+  icon: React.ReactNode;
+}) {
   return (
     <div
-      className="flex flex-col rounded-[2rem] overflow-hidden flex-shrink-0 w-[200px]"
       style={{
         backgroundColor: "#111827",
         border: "1px solid #1f2937",
-        boxShadow: "0 24px 60px rgba(0,0,0,0.6)",
+        borderRadius: "12px",
+        padding: "24px 20px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "12px",
       }}
     >
-      {/* Phone chrome */}
-      <div className="flex items-center justify-center pt-4 pb-2 px-6" style={{ backgroundColor: "#111827" }}>
-        <div className="w-16 h-1 rounded-full" style={{ backgroundColor: "#1f2937" }} />
-      </div>
-      {/* Screen */}
-      <div className="flex flex-col flex-1 px-4 py-4 gap-3" style={{ backgroundColor: "#111827" }}>
-        <p
-          className="text-[10px] font-semibold tracking-[0.2em] uppercase"
-          style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}
-        >
-          Build My Groundwork
-        </p>
-        <p
-          className="text-sm font-bold uppercase leading-tight"
-          style={{ fontFamily: "var(--font-inter)", color: "#f9fafb" }}
-        >
-          {title}
-        </p>
-        {children}
-      </div>
-      {/* Home bar */}
-      <div className="flex items-center justify-center pb-4 pt-2" style={{ backgroundColor: "#111827" }}>
-        <div className="w-10 h-1 rounded-full" style={{ backgroundColor: "#1f2937" }} />
-      </div>
+      <div style={{ color: "#f97316" }}>{icon}</div>
+      <p
+        style={{
+          fontFamily: "var(--font-oswald)",
+          fontSize: "18px",
+          fontWeight: 700,
+          color: "#f9fafb",
+          textTransform: "uppercase",
+          letterSpacing: "0.05em",
+          lineHeight: 1,
+        }}
+      >
+        {label}
+      </p>
+      <p
+        style={{
+          fontFamily: "var(--font-inter)",
+          fontSize: "14px",
+          color: "#9ca3af",
+          lineHeight: 1.5,
+        }}
+      >
+        {tagline}
+      </p>
     </div>
   );
 }
 
-function MockBar({ pct, color }: { pct: number; color: string }) {
+// ─── Icons ────────────────────────────────────────────────────────────────────
+
+function BodyIcon() {
   return (
-    <div className="h-1.5 w-full rounded-full" style={{ backgroundColor: "#1f2937" }}>
-      <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: color }} />
-    </div>
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+      <rect x="1" y="9" width="4" height="6" rx="0.5" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="5" y="10.5" width="2" height="3" rx="0.25" fill="currentColor" />
+      <rect x="7" y="11" width="10" height="2" fill="currentColor" />
+      <rect x="17" y="10.5" width="2" height="3" rx="0.25" fill="currentColor" />
+      <rect x="19" y="9" width="4" height="6" rx="0.5" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
   );
 }
 
-function MockCard({ children }: { children: React.ReactNode }) {
+function MindIcon() {
   return (
-    <div className="px-3 py-2.5 rounded" style={{ backgroundColor: "#111827", border: "1px solid #1f2937" }}>
-      {children}
-    </div>
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M12 4C8.5 4 6 6.5 6 10C6 12 7 13.5 8.5 14.5V17H15.5V14.5C17 13.5 18 12 18 10C18 6.5 15.5 4 12 4Z"
+        stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"
+      />
+      <line x1="9" y1="19" x2="15" y2="19" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="10" y1="21" x2="14" y2="21" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function HeartIcon() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M12 21C12 21 3 15 3 9C3 6.5 5 4.5 7.5 4.5C9.2 4.5 10.7 5.4 11.5 6.8C12.3 5.4 13.8 4.5 15.5 4.5C18 4.5 20 6.5 20 9C20 15 12 21 12 21Z"
+        stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function LeadIcon() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+      <circle cx="8" cy="8" r="3" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="16" cy="8" r="3" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M2 20C2 16 5 14 8 14C9.5 14 10.8 14.5 12 15.3C13.2 14.5 14.5 14 16 14C19 14 22 16 22 20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function FuelIcon() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+      <path d="M8 3h8l1 5H7L8 3Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <rect x="6" y="8" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.5" />
+      <line x1="9" y1="13" x2="15" y2="13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="12" y1="10" x2="12" y2="16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CoachIcon() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
-  const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const howRef = useRef<HTMLElement>(null);
+  const router = useRouter();
 
-  function scrollToHow() {
-    howRef.current?.scrollIntoView({ behavior: "smooth" });
-  }
-
-  function handleEmailSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSubmitted(true);
-  }
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        router.replace("/dashboard");
+      }
+    });
+  }, [router]);
 
   return (
     <main style={{ backgroundColor: "#0a0f1a", color: "#f9fafb" }} className="flex flex-col min-h-screen">
 
-      {/* ── 1. HERO ──────────────────────────────────────────────────────────── */}
-      <section
-        className="relative flex flex-col items-center justify-center text-center px-6 py-32 min-h-screen"
-        style={{ background: "linear-gradient(135deg, #0a0f1a 0%, #1c0d00 50%, #0a0f1a 100%)" }}
+      {/* ── NAV ─────────────────────────────────────────────────────────────── */}
+      <nav
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "20px 24px",
+          borderBottom: "1px solid #111827",
+        }}
       >
-        {/* Radial orange glow */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: "radial-gradient(ellipse 80% 50% at 50% 30%, rgba(249,115,22,0.15) 0%, transparent 70%)" }}
-        />
-
-        {/* Top nav */}
-        <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-8 py-6 z-20">
-          <Link
-            href="/"
-            className="text-xs font-semibold tracking-[0.3em] uppercase transition-opacity hover:opacity-70"
-            style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}
-          >
-            Build My Groundwork
-          </Link>
-          <div className="flex items-center gap-6">
-            <Link
-              href="/demo"
-              className="text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-70"
-              style={{ color: "#9ca3af", fontFamily: "var(--font-inter)" }}
-            >
-              Demo
-            </Link>
-            <Link
-              href="/login"
-              className="text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-70"
-              style={{ color: "#9ca3af", fontFamily: "var(--font-inter)" }}
-            >
-              Sign In
-            </Link>
-          </div>
-        </div>
-
-        {/* Subtle grid overlay */}
-        <div
-          className="absolute inset-0 pointer-events-none"
+        <span
           style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)",
-            backgroundSize: "60px 60px",
+            fontFamily: "var(--font-inter)",
+            fontSize: "11px",
+            fontWeight: 700,
+            letterSpacing: "0.25em",
+            textTransform: "uppercase",
+            color: "#f97316",
+          }}
+        >
+          Build My Groundwork
+        </span>
+        <Link
+          href="/login"
+          style={{
+            fontFamily: "var(--font-inter)",
+            fontSize: "11px",
+            fontWeight: 600,
+            letterSpacing: "0.15em",
+            textTransform: "uppercase",
+            color: "#9ca3af",
+          }}
+        >
+          Sign In
+        </Link>
+      </nav>
+
+      {/* ── HERO ────────────────────────────────────────────────────────────── */}
+      <section
+        style={{
+          padding: "80px 24px 72px",
+          maxWidth: "640px",
+          margin: "0 auto",
+          width: "100%",
+        }}
+      >
+        <div
+          style={{
+            width: "40px",
+            height: "3px",
+            backgroundColor: "#f97316",
+            marginBottom: "32px",
           }}
         />
 
-        {/* Accent line */}
-        <div className="w-12 h-0.5 mb-8" style={{ backgroundColor: "#f97316" }} />
-
-        <p
-          className="text-xs font-semibold tracking-[0.3em] uppercase mb-6"
-          style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}
-        >
-          For Superintendents · Foremen · Project Managers
-        </p>
-
         <h1
-          className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold uppercase leading-[1.05] mb-6 max-w-4xl"
-          style={{ fontFamily: "var(--font-oswald)", color: "#f9fafb" }}
+          style={{
+            fontFamily: "var(--font-oswald)",
+            fontSize: "clamp(42px, 10vw, 64px)",
+            fontWeight: 700,
+            lineHeight: 1.0,
+            textTransform: "uppercase",
+            color: "#f9fafb",
+            marginBottom: "24px",
+          }}
         >
-          You build everything
+          You run the job.
           <br />
-          for everyone else.
-          <br />
-          <span style={{ color: "#f97316" }}>Who&apos;s building you?</span>
+          <span style={{ color: "#f97316" }}>Who&apos;s running your recovery?</span>
         </h1>
 
-        <p className="text-base sm:text-lg max-w-xl mb-10 leading-relaxed" style={{ color: "#9ca3af", fontFamily: "var(--font-inter)" }}>
-          The all-in-one wellness platform built specifically for construction leaders.
-          Fitness. Mental health. Leadership.{" "}
-          <span style={{ color: "#9ca3af" }}>One app. Ten minutes a day.</span>
+        <p
+          style={{
+            fontFamily: "var(--font-inter)",
+            fontSize: "16px",
+            color: "#9ca3af",
+            lineHeight: 1.65,
+            marginBottom: "40px",
+            maxWidth: "480px",
+          }}
+        >
+          Groundwork is a daily 10-minute system built for construction leaders.
+          Fitness, stress tools, and leadership — programmed around a jobsite schedule, not a gym schedule.
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-4 items-center">
-          <Link
-            href="/login"
-            className="px-10 py-4 text-sm font-semibold uppercase tracking-widest transition-all duration-150 hover:opacity-90 active:scale-95"
-            style={{
-              backgroundColor: "#f97316",
-              color: "#0a0f1a",
-              fontFamily: "var(--font-inter)",
-              fontWeight: 600,
-              borderRadius: "8px",
-              minHeight: "48px",
-              display: "flex",
-              alignItems: "center",
-            }}
-          >
-            Start Free
-          </Link>
-          <Link
-            href="/demo"
-            className="px-10 py-4 text-sm font-semibold uppercase tracking-widest transition-all duration-150 hover:opacity-70 active:scale-95"
-            style={{
-              border: "1px solid #f97316",
-              color: "#f97316",
-              fontFamily: "var(--font-inter)",
-              fontWeight: 600,
-              backgroundColor: "transparent",
-              borderRadius: "8px",
-              minHeight: "48px",
-              display: "flex",
-              alignItems: "center",
-            }}
-          >
-            Try the Demo
-          </Link>
-          <button
-            onClick={scrollToHow}
-            className="px-10 py-4 text-sm font-semibold uppercase tracking-widest transition-all duration-150 hover:opacity-70 active:scale-95"
-            style={{
-              border: "1px solid #1f2937",
-              color: "#9ca3af",
-              fontFamily: "var(--font-inter)",
-              fontWeight: 600,
-              backgroundColor: "transparent",
-              borderRadius: "8px",
-              minHeight: "48px",
-            }}
-          >
-            See How It Works
-          </button>
-        </div>
-
-        {/* Scroll hint */}
-        <div className="absolute bottom-10 flex flex-col items-center gap-2 opacity-30">
-          <div className="w-px h-8" style={{ backgroundColor: "#f9fafb" }} />
-        </div>
+        <Link
+          href="/login"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "16px 40px",
+            backgroundColor: "#f97316",
+            color: "#0a0f1a",
+            fontFamily: "var(--font-inter)",
+            fontSize: "13px",
+            fontWeight: 700,
+            letterSpacing: "0.15em",
+            textTransform: "uppercase",
+            borderRadius: "8px",
+            minHeight: "52px",
+            textDecoration: "none",
+          }}
+        >
+          Start Day 1
+        </Link>
       </section>
 
-      {/* ── 2. HOW IT WORKS ──────────────────────────────────────────────────── */}
-      <section ref={howRef} className="px-6 py-24" style={{ borderTop: "1px solid #111827" }}>
-        <div className="max-w-4xl mx-auto">
-          <p
-            className="text-xs font-semibold tracking-[0.3em] uppercase mb-4"
-            style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}
-          >
-            How It Works
-          </p>
-          <h2
-            className="text-3xl sm:text-4xl font-bold uppercase mb-16 max-w-xl leading-tight"
-            style={{ fontFamily: "var(--font-oswald)", color: "#f9fafb" }}
-          >
-            Three moments. That&apos;s all it takes.
-          </h2>
+      {/* ── DIVIDER ─────────────────────────────────────────────────────────── */}
+      <div style={{ borderTop: "1px solid #111827" }} />
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-0 md:gap-0">
-            {[
-              {
-                step: "01",
-                title: "Start Your Day",
-                time: "5 min — Before the site",
-                body: "Quick workout, mindset set, fuel plan. Before the first phone call, before the crew shows up, before everything.",
-              },
-              {
-                step: "02",
-                title: "Jobsite Resets",
-                time: "2 min — In your truck",
-                body: "Stress tools, breathing, quick resets between the chaos. Use it on a break, between meetings, anywhere.",
-              },
-              {
-                step: "03",
-                title: "End-of-Day Shutdown",
-                time: "3 min — After the gate closes",
-                body: "Journal, gratitude, leave the job at the job. Show up at home like you mean it.",
-              },
-            ].map(({ step, title, time, body }, i) => (
-              <div
-                key={step}
-                className="flex flex-col gap-4 px-8 py-10 relative"
-                style={{
-                  borderTop: "1px solid #1f2937",
-                  borderLeft: "4px solid #374151",
-                }}
-              >
-                <span
-                  className="text-5xl font-bold leading-none"
-                  style={{ fontFamily: "var(--font-inter)", color: "#1f2937" }}
-                >
-                  {step}
-                </span>
-                <div>
-                  <h3
-                    className="text-xl font-bold uppercase mb-1"
-                    style={{ fontFamily: "var(--font-oswald)", color: "#f9fafb" }}
-                  >
-                    {title}
-                  </h3>
-                  <p className="text-xs mb-3" style={{ color: "#f97316", fontFamily: "var(--font-inter)", letterSpacing: "0.1em" }}>
-                    {time}
-                  </p>
-                  <p className="text-sm leading-relaxed" style={{ color: "#9ca3af", fontFamily: "var(--font-inter)" }}>
-                    {body}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── 3. PRODUCT PREVIEW ───────────────────────────────────────────────── */}
-      <section className="px-6 py-24 overflow-hidden" style={{ borderTop: "1px solid #111827", backgroundColor: "#0a0f1a" }}>
-        <div className="max-w-4xl mx-auto">
-          <p
-            className="text-xs font-semibold tracking-[0.3em] uppercase mb-4"
-            style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}
-          >
-            Inside the App
-          </p>
-          <h2
-            className="text-3xl sm:text-4xl font-bold uppercase mb-16 leading-tight"
-            style={{ fontFamily: "var(--font-oswald)", color: "#f9fafb" }}
-          >
-            Every tool you need.<br />Nothing you don&apos;t.
-          </h2>
-
-          {/* Phone frames row */}
-          <div className="flex gap-5 overflow-x-auto pb-6 -mx-6 px-6 snap-x snap-mandatory md:justify-center md:overflow-visible">
-
-            {/* Dashboard */}
-            <div className="snap-start flex-shrink-0">
-              <PhoneFrame title="Good Morning, Mike.">
-                <p className="text-[9px]" style={{ color: "#9ca3af", fontFamily: "var(--font-inter)" }}>Superintendent · Acme Construction</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-2xl font-bold" style={{ fontFamily: "var(--font-inter)", color: "#f97316" }}>7</span>
-                  <div>
-                    <p className="text-[9px] font-bold uppercase" style={{ fontFamily: "var(--font-inter)", color: "#f9fafb" }}>Day Streak</p>
-                    <p className="text-[8px]" style={{ color: "#9ca3af", fontFamily: "var(--font-inter)" }}>7 consecutive days</p>
-                  </div>
-                </div>
-                <p className="text-[8px] font-semibold tracking-widest uppercase mt-2 mb-1.5" style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}>Choose Your Pillar</p>
-                {["Body", "Mind", "Heart", "Lead"].map((p) => (
-                  <MockCard key={p}>
-                    <p className="text-[10px] font-bold uppercase" style={{ fontFamily: "var(--font-inter)", color: "#f9fafb" }}>{p}</p>
-                  </MockCard>
-                ))}
-              </PhoneFrame>
-            </div>
-
-            {/* Body */}
-            <div className="snap-start flex-shrink-0">
-              <PhoneFrame title="Body">
-                <p className="text-[8px] font-semibold tracking-widest uppercase mb-1" style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}>How much time?</p>
-                <div className="flex gap-1.5 flex-wrap mb-2">
-                  {["15 min", "30 min", "45 min", "1 hr"].map((t, i) => (
-                    <span
-                      key={t}
-                      className="text-[8px] font-bold uppercase px-2 py-1"
-                      style={{
-                        fontFamily: "var(--font-inter)",
-                        backgroundColor: i === 1 ? "#f97316" : "#111827",
-                        color: i === 1 ? "#0a0f1a" : "#9ca3af",
-                        border: `1px solid ${i === 1 ? "#f97316" : "#1f2937"}`,
-                      }}
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
-                {["Running", "Weightlifting", "Calisthenics", "Rucking"].map((d) => (
-                  <MockCard key={d}>
-                    <p className="text-[10px] font-bold uppercase" style={{ fontFamily: "var(--font-inter)", color: "#f9fafb" }}>{d}</p>
-                  </MockCard>
-                ))}
-              </PhoneFrame>
-            </div>
-
-            {/* Mind */}
-            <div className="snap-start flex-shrink-0">
-              <PhoneFrame title="Mind">
-                <p className="text-[8px] font-semibold tracking-widest uppercase mb-2" style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}>Daily Check-In</p>
-                <div className="flex gap-1.5 flex-wrap mb-3">
-                  {["Low", "Rough", "Mid", "Good", "High"].map((m, i) => {
-                    const colors = ["#5A4A4A", "#7A5A28", "#5A5248", "#4A6A4A", "#2A5A3A"];
-                    return (
-                      <span
-                        key={m}
-                        className="text-[8px] font-bold uppercase px-2 py-1"
-                        style={{ fontFamily: "var(--font-inter)", backgroundColor: colors[i], color: "#f9fafb" }}
-                      >
-                        {m}
-                      </span>
-                    );
-                  })}
-                </div>
-                <p className="text-[8px] font-semibold tracking-widest uppercase mb-1.5" style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}>Stress Tools</p>
-                {["Box Breathing", "5-Minute Reset", "Shutdown Ritual"].map((t) => (
-                  <MockCard key={t}>
-                    <p className="text-[10px] font-bold uppercase" style={{ fontFamily: "var(--font-inter)", color: "#f9fafb" }}>{t}</p>
-                  </MockCard>
-                ))}
-              </PhoneFrame>
-            </div>
-
-            {/* Heart */}
-            <div className="snap-start flex-shrink-0">
-              <PhoneFrame title="Heart">
-                <p className="text-[8px] font-semibold tracking-widest uppercase mb-1" style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}>Daily Journal</p>
-                <div
-                  className="w-full h-14 rounded px-2 py-2 mb-3"
-                  style={{ backgroundColor: "#111827", border: "1px solid #1f2937" }}
-                >
-                  <p className="text-[8px] leading-relaxed" style={{ color: "#9ca3af", fontFamily: "var(--font-inter)" }}>
-                    What&apos;s on your mind today...
-                  </p>
-                </div>
-                <p className="text-[8px] font-semibold tracking-widest uppercase mb-1.5" style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}>Gratitude</p>
-                {[1, 2, 3].map((n) => (
-                  <div
-                    key={n}
-                    className="w-full h-6 rounded mb-1.5"
-                    style={{ backgroundColor: "#111827", border: "1px solid #1f2937" }}
-                  />
-                ))}
-                <button
-                  className="w-full py-1.5 text-[9px] font-bold uppercase tracking-widest mt-1"
-                  style={{ backgroundColor: "#f97316", color: "#0a0f1a", fontFamily: "var(--font-inter)" }}
-                >
-                  Save Entry
-                </button>
-              </PhoneFrame>
-            </div>
-
-          </div>
-
-          <p className="text-xs text-center mt-8" style={{ color: "#9ca3af", fontFamily: "var(--font-inter)" }}>
-            Scroll to see more →
-          </p>
-        </div>
-      </section>
-
-      {/* ── 4. BUILT FOR THE JOBSITE ─────────────────────────────────────────── */}
-      <section className="px-6 py-24" style={{ borderTop: "1px solid #111827" }}>
-        <div className="max-w-4xl mx-auto">
-          <div className="max-w-2xl">
-            <p
-              className="text-xs font-semibold tracking-[0.3em] uppercase mb-4"
-              style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}
-            >
-              Built Different
-            </p>
-            <h2
-              className="text-3xl sm:text-4xl font-bold uppercase mb-12 leading-tight"
-              style={{ fontFamily: "var(--font-oswald)", color: "#f9fafb" }}
-            >
-              Built for guys who measure their day in minutes, not hours.
-            </h2>
-            <div className="flex flex-col gap-6">
-              {[
-                {
-                  lead: "No gym required.",
-                  body: "Train in your truck, hotel, or garage. Every workout fits where you actually are.",
-                },
-                {
-                  lead: "No therapy-speak.",
-                  body: "Real tools for real stress. Built around what a construction leader's day actually looks like.",
-                },
-                {
-                  lead: "No fluff.",
-                  body: "Everything earns its place or gets cut. If it doesn't help you perform, it's not in the app.",
-                },
-              ].map(({ lead, body }) => (
-                <div key={lead} className="flex gap-5 items-start">
-                  <div className="w-1 h-12 flex-shrink-0 mt-0.5" style={{ backgroundColor: "#f97316" }} />
-                  <div>
-                    <p
-                      className="text-lg font-bold uppercase mb-1"
-                      style={{ fontFamily: "var(--font-inter)", color: "#f9fafb" }}
-                    >
-                      {lead}
-                    </p>
-                    <p className="text-sm leading-relaxed" style={{ color: "#9ca3af", fontFamily: "var(--font-inter)" }}>
-                      {body}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── 5. THE NUMBERS ───────────────────────────────────────────────────── */}
-      <section className="px-6 py-24" style={{ borderTop: "1px solid #111827", backgroundColor: "#0a0f1a" }}>
-        <div className="max-w-4xl mx-auto">
-          <p
-            className="text-xs font-semibold tracking-[0.3em] uppercase mb-4"
-            style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}
-          >
-            The Reality
-          </p>
-          <h2
-            className="text-3xl sm:text-4xl font-bold uppercase mb-14 leading-tight max-w-lg"
-            style={{ fontFamily: "var(--font-inter)", color: "#f9fafb" }}
-          >
-            The industry has a problem nobody&apos;s talking about.
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[
-              {
-                stat: "4×",
-                copy: "Construction workers are 4× more likely to die by suicide than the national average.",
-              },
-              {
-                stat: "83%",
-                copy: "of construction workers report significant mental health struggles on the job.",
-              },
-              {
-                stat: "50+",
-                copy: "hours a week. The average super has zero recovery plan for what that does to a body and a mind.",
-              },
-            ].map(({ stat, copy }) => (
-              <div
-                key={stat}
-                className="flex flex-col gap-4 px-8 py-10"
-                style={{ backgroundColor: "#111827", border: "1px solid #374151", borderRadius: "12px" }}
-              >
-                <span
-                  className="text-5xl font-bold leading-none"
-                  style={{ fontFamily: "var(--font-inter)", color: "#f97316" }}
-                >
-                  {stat}
-                </span>
-                <p className="text-sm leading-relaxed" style={{ color: "#9ca3af", fontFamily: "var(--font-inter)" }}>
-                  {copy}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── 6. BUILT BY SOMEONE WHO GETS IT ──────────────────────────────────── */}
-      <section className="px-6 py-24" style={{ borderTop: "1px solid #111827", backgroundColor: "#0a0f1a" }}>
-        <div className="max-w-4xl mx-auto">
-          <div className="max-w-2xl">
-            <p
-              className="text-xs font-semibold tracking-[0.3em] uppercase mb-4"
-              style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}
-            >
-              The Origin
-            </p>
-            <div className="w-12 h-0.5 mb-8" style={{ backgroundColor: "#1f2937" }} />
-            <h2
-              className="text-xl sm:text-2xl font-bold uppercase leading-snug mb-8"
-              style={{ fontFamily: "var(--font-inter)", color: "#f9fafb" }}
-            >
-              Built by the Industry. For the Industry.
-            </h2>
-            <p className="text-sm leading-relaxed mb-4" style={{ color: "#9ca3af", fontFamily: "var(--font-inter)" }}>
-              Groundwork was created by construction professionals who got tired of watching good people
-              burn out, break down, and leave.
-            </p>
-            <p className="text-sm leading-relaxed" style={{ color: "#9ca3af", fontFamily: "var(--font-inter)" }}>
-              Every feature was designed on jobsites, not in boardrooms. This isn&apos;t a tech company
-              guessing what you need. This is the industry taking care of its own.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ── 7. EARLY ACCESS ──────────────────────────────────────────────────── */}
+      {/* ── THE 6 PILLARS ───────────────────────────────────────────────────── */}
       <section
-        className="px-6 py-28"
-        style={{ borderTop: "1px solid #111827", backgroundColor: "#0a0f1a" }}
+        style={{
+          padding: "72px 24px",
+          maxWidth: "720px",
+          margin: "0 auto",
+          width: "100%",
+        }}
       >
-        <div className="max-w-xl mx-auto text-center flex flex-col items-center">
-          <div className="w-12 h-0.5 mb-8" style={{ backgroundColor: "#f97316" }} />
-          <p
-            className="text-xs font-semibold tracking-[0.3em] uppercase mb-4"
-            style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}
-          >
-            Founding Member Access
-          </p>
-          <h2
-            className="text-3xl sm:text-4xl font-bold uppercase mb-4 leading-tight"
-            style={{ fontFamily: "var(--font-inter)", color: "#f9fafb" }}
-          >
-            Limited to the first 100.
-          </h2>
-          <p className="text-sm mb-2 leading-relaxed" style={{ color: "#9ca3af", fontFamily: "var(--font-inter)" }}>
-            Free during beta. No credit card. Just access to every tool we build, and your voice in what comes next.
-          </p>
-          <p className="text-xs mb-10" style={{ color: "#9ca3af", fontFamily: "var(--font-inter)" }}>
-            Open to Superintendents, Foremen, and Project Managers only.
-          </p>
+        <p
+          style={{
+            fontFamily: "var(--font-inter)",
+            fontSize: "11px",
+            fontWeight: 600,
+            letterSpacing: "0.3em",
+            textTransform: "uppercase",
+            color: "#f97316",
+            marginBottom: "12px",
+          }}
+        >
+          What&apos;s Inside
+        </p>
+        <h2
+          style={{
+            fontFamily: "var(--font-oswald)",
+            fontSize: "clamp(28px, 6vw, 40px)",
+            fontWeight: 700,
+            textTransform: "uppercase",
+            color: "#f9fafb",
+            lineHeight: 1.1,
+            marginBottom: "48px",
+          }}
+        >
+          Six pillars.<br />Everything you need. Nothing you don&apos;t.
+        </h2>
 
-          {submitted ? (
-            <div className="w-full py-6 flex flex-col items-center gap-2">
-              <p
-                className="text-xl font-bold uppercase"
-                style={{ fontFamily: "var(--font-inter)", color: "#f97316" }}
-              >
-                You&apos;re in.
-              </p>
-              <p className="text-sm" style={{ color: "#9ca3af", fontFamily: "var(--font-inter)" }}>
-                We&apos;ll be in touch before launch.
-              </p>
-            </div>
-          ) : (
-            <form onSubmit={handleEmailSubmit} className="w-full flex flex-col sm:flex-row gap-3">
-              <input
-                type="email"
-                required
-                placeholder="your@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="flex-1 px-5 py-4 text-sm outline-none focus:ring-2 focus:ring-[#f97316]"
-                style={{
-                  backgroundColor: "#111827",
-                  border: "1px solid #1f2937",
-                  borderRadius: "8px",
-                  color: "#f9fafb",
-                  fontFamily: "var(--font-inter)",
-                }}
-              />
-              <button
-                type="submit"
-                className="px-8 py-4 text-sm font-semibold uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-95 whitespace-nowrap"
-                style={{
-                  backgroundColor: "#f97316",
-                  color: "#0a0f1a",
-                  fontFamily: "var(--font-inter)",
-                  fontWeight: 600,
-                  borderRadius: "8px",
-                  minHeight: "48px",
-                }}
-              >
-                Claim My Spot
-              </button>
-            </form>
-          )}
-
-          <p className="text-xs mt-6" style={{ color: "#9ca3af", fontFamily: "var(--font-inter)" }}>
-            Or{" "}
-            <Link
-              href="/login"
-              className="underline transition-opacity hover:opacity-70"
-              style={{ color: "#9ca3af" }}
-            >
-              sign up now and start using the app today
-            </Link>
-            .
-          </p>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+            gap: "16px",
+          }}
+        >
+          <PillarCard
+            label="Body"
+            tagline="Train in a hotel room, parking lot, or garage. Every workout fits where you actually are."
+            icon={<BodyIcon />}
+          />
+          <PillarCard
+            label="Mind"
+            tagline="Box breathing, mood check-ins, and stress resets — for when the day is getting away from you."
+            icon={<MindIcon />}
+          />
+          <PillarCard
+            label="Heart"
+            tagline="End the day clean. Journal, wind down, leave the job at the gate."
+            icon={<HeartIcon />}
+          />
+          <PillarCard
+            label="Lead"
+            tagline="Daily prompts to be better with your crew. Not seminars. Not slideshows. Just real stuff."
+            icon={<LeadIcon />}
+          />
+          <PillarCard
+            label="Fuel"
+            tagline="Simple nutrition. Protein, calories, water. Track what moves the needle, skip the rest."
+            icon={<FuelIcon />}
+          />
+          <PillarCard
+            label="Coach"
+            tagline="A personal plan built around your time, goals, and what equipment you actually have."
+            icon={<CoachIcon />}
+          />
         </div>
       </section>
 
-      {/* ── 8. FOOTER ────────────────────────────────────────────────────────── */}
-      <footer
-        className="px-6 py-8 flex flex-col gap-4"
-        style={{ borderTop: "1px solid #111827" }}
+      {/* ── DIVIDER ─────────────────────────────────────────────────────────── */}
+      <div style={{ borderTop: "1px solid #111827" }} />
+
+      {/* ── SOCIAL PROOF / THE NUMBERS ──────────────────────────────────────── */}
+      <section
+        style={{
+          padding: "72px 24px",
+          maxWidth: "720px",
+          margin: "0 auto",
+          width: "100%",
+        }}
       >
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-          <Link
-            href="/"
-            className="text-xs font-semibold tracking-[0.2em] uppercase transition-opacity hover:opacity-70"
-            style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}
+        <p
+          style={{
+            fontFamily: "var(--font-inter)",
+            fontSize: "11px",
+            fontWeight: 600,
+            letterSpacing: "0.3em",
+            textTransform: "uppercase",
+            color: "#f97316",
+            marginBottom: "12px",
+          }}
+        >
+          Why It Matters
+        </p>
+        <h2
+          style={{
+            fontFamily: "var(--font-oswald)",
+            fontSize: "clamp(26px, 5vw, 36px)",
+            fontWeight: 700,
+            textTransform: "uppercase",
+            color: "#f9fafb",
+            lineHeight: 1.15,
+            marginBottom: "40px",
+            maxWidth: "520px",
+          }}
+        >
+          The industry has a problem nobody&apos;s talking about.
+        </h2>
+
+        {/* Headline Stat */}
+        <div
+          style={{
+            backgroundColor: "#0d1520",
+            border: "1px solid #374151",
+            borderLeft: "4px solid #f97316",
+            borderRadius: "8px",
+            padding: "28px 28px",
+            marginBottom: "32px",
+          }}
+        >
+          <p
+            style={{
+              fontFamily: "var(--font-oswald)",
+              fontSize: "clamp(36px, 8vw, 52px)",
+              fontWeight: 700,
+              color: "#f97316",
+              lineHeight: 1,
+              marginBottom: "8px",
+            }}
+          >
+            4×
+          </p>
+          <p
+            style={{
+              fontFamily: "var(--font-inter)",
+              fontSize: "15px",
+              color: "#f9fafb",
+              lineHeight: 1.5,
+              marginBottom: "12px",
+            }}
+          >
+            Construction has 4x the national suicide rate.
+          </p>
+          <p
+            style={{
+              fontFamily: "var(--font-inter)",
+              fontSize: "12px",
+              color: "#6b7280",
+              lineHeight: 1.4,
+            }}
+          >
+            Source: Construction Industry Alliance for Suicide Prevention
+          </p>
+          {/* CIASP Logo Placeholder */}
+          <div
+            style={{
+              marginTop: "20px",
+              padding: "12px 16px",
+              backgroundColor: "#111827",
+              border: "1px dashed #374151",
+              borderRadius: "6px",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <div
+              style={{
+                width: "28px",
+                height: "28px",
+                borderRadius: "4px",
+                backgroundColor: "#1f2937",
+              }}
+            />
+            <span
+              style={{
+                fontFamily: "var(--font-inter)",
+                fontSize: "11px",
+                color: "#4b5563",
+                letterSpacing: "0.05em",
+              }}
+            >
+              CIASP Logo
+            </span>
+          </div>
+        </div>
+
+        {/* User Quote Placeholders */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {[
+            {
+              quote: "I've been in this industry 22 years. This is the first thing built for guys like me.",
+              name: "Superintendent",
+              company: "Commercial GC, Texas",
+            },
+            {
+              quote: "Five minutes in the truck before the crew shows up. That's all it takes.",
+              name: "Foreman",
+              company: "Heavy Civil, Pacific Northwest",
+            },
+          ].map(({ quote, name, company }) => (
+            <div
+              key={name}
+              style={{
+                backgroundColor: "#111827",
+                border: "1px solid #1f2937",
+                borderRadius: "10px",
+                padding: "24px",
+              }}
+            >
+              <p
+                style={{
+                  fontFamily: "var(--font-inter)",
+                  fontSize: "15px",
+                  color: "#f9fafb",
+                  lineHeight: 1.6,
+                  marginBottom: "16px",
+                  fontStyle: "italic",
+                }}
+              >
+                &ldquo;{quote}&rdquo;
+              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "50%",
+                    backgroundColor: "#1f2937",
+                    flexShrink: 0,
+                  }}
+                />
+                <div>
+                  <p
+                    style={{
+                      fontFamily: "var(--font-inter)",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      color: "#f9fafb",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                    }}
+                  >
+                    {name}
+                  </p>
+                  <p
+                    style={{
+                      fontFamily: "var(--font-inter)",
+                      fontSize: "11px",
+                      color: "#6b7280",
+                    }}
+                  >
+                    {company}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── DIVIDER ─────────────────────────────────────────────────────────── */}
+      <div style={{ borderTop: "1px solid #111827" }} />
+
+      {/* ── ORIGIN ──────────────────────────────────────────────────────────── */}
+      <section
+        style={{
+          padding: "64px 24px",
+          maxWidth: "640px",
+          margin: "0 auto",
+          width: "100%",
+        }}
+      >
+        <p
+          style={{
+            fontFamily: "var(--font-inter)",
+            fontSize: "11px",
+            fontWeight: 600,
+            letterSpacing: "0.3em",
+            textTransform: "uppercase",
+            color: "#f97316",
+            marginBottom: "12px",
+          }}
+        >
+          The Origin
+        </p>
+        <p
+          style={{
+            fontFamily: "var(--font-inter)",
+            fontSize: "15px",
+            color: "#9ca3af",
+            lineHeight: 1.7,
+            marginBottom: "16px",
+          }}
+        >
+          Groundwork was built by people who grew up in construction. Who watched good men and women grind themselves into the ground and call it normal.
+        </p>
+        <p
+          style={{
+            fontFamily: "var(--font-inter)",
+            fontSize: "15px",
+            color: "#9ca3af",
+            lineHeight: 1.7,
+          }}
+        >
+          Every tool in this app was designed on jobsites, not in boardrooms. This is the industry taking care of its own.
+        </p>
+      </section>
+
+      {/* ── DIVIDER ─────────────────────────────────────────────────────────── */}
+      <div style={{ borderTop: "1px solid #111827" }} />
+
+      {/* ── BOTTOM CTA ──────────────────────────────────────────────────────── */}
+      <section
+        style={{
+          padding: "80px 24px",
+          maxWidth: "540px",
+          margin: "0 auto",
+          width: "100%",
+          textAlign: "center",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+        }}
+      >
+        <div
+          style={{
+            width: "40px",
+            height: "3px",
+            backgroundColor: "#f97316",
+            marginBottom: "32px",
+          }}
+        />
+        <h2
+          style={{
+            fontFamily: "var(--font-oswald)",
+            fontSize: "clamp(32px, 8vw, 48px)",
+            fontWeight: 700,
+            textTransform: "uppercase",
+            color: "#f9fafb",
+            lineHeight: 1.05,
+            marginBottom: "16px",
+          }}
+        >
+          Show up for yourself
+          <br />
+          <span style={{ color: "#f97316" }}>like you show up for the job.</span>
+        </h2>
+        <p
+          style={{
+            fontFamily: "var(--font-inter)",
+            fontSize: "14px",
+            color: "#9ca3af",
+            lineHeight: 1.6,
+            marginBottom: "40px",
+            maxWidth: "360px",
+          }}
+        >
+          Free during beta. No credit card. Built for Superintendents, Foremen, and Project Managers.
+        </p>
+        <Link
+          href="/login"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "18px 48px",
+            backgroundColor: "#f97316",
+            color: "#0a0f1a",
+            fontFamily: "var(--font-inter)",
+            fontSize: "14px",
+            fontWeight: 700,
+            letterSpacing: "0.15em",
+            textTransform: "uppercase",
+            borderRadius: "8px",
+            minHeight: "56px",
+            textDecoration: "none",
+          }}
+        >
+          Start Day 1
+        </Link>
+      </section>
+
+      {/* ── FOOTER ──────────────────────────────────────────────────────────── */}
+      <footer
+        style={{
+          borderTop: "1px solid #111827",
+          padding: "28px 24px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "16px",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "12px",
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "var(--font-inter)",
+              fontSize: "11px",
+              fontWeight: 700,
+              letterSpacing: "0.2em",
+              textTransform: "uppercase",
+              color: "#f97316",
+            }}
           >
             Build My Groundwork
-          </Link>
-          <div className="flex items-center gap-6">
-            <Link
-              href="/demo"
-              className="text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-70"
-              style={{ color: "#9ca3af", fontFamily: "var(--font-inter)" }}
-            >
-              Try Demo
-            </Link>
-            <Link
-              href="/privacy"
-              className="text-xs uppercase tracking-widest transition-opacity hover:opacity-70"
-              style={{ color: "#6b7280", fontFamily: "var(--font-inter)" }}
-            >
-              Privacy
-            </Link>
-            <Link
-              href="/terms"
-              className="text-xs uppercase tracking-widest transition-opacity hover:opacity-70"
-              style={{ color: "#6b7280", fontFamily: "var(--font-inter)" }}
-            >
-              Terms
-            </Link>
-            <Link
-              href="/contact"
-              className="text-xs uppercase tracking-widest transition-opacity hover:opacity-70"
-              style={{ color: "#6b7280", fontFamily: "var(--font-inter)" }}
-            >
-              Contact
-            </Link>
+          </span>
+          <div style={{ display: "flex", gap: "24px" }}>
+            {[
+              { label: "Privacy", href: "/privacy" },
+              { label: "Terms", href: "/terms" },
+              { label: "Contact", href: "/contact" },
+            ].map(({ label, href }) => (
+              <Link
+                key={href}
+                href={href}
+                style={{
+                  fontFamily: "var(--font-inter)",
+                  fontSize: "11px",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                  color: "#4b5563",
+                  textDecoration: "none",
+                }}
+              >
+                {label}
+              </Link>
+            ))}
           </div>
         </div>
-        <p className="text-xs text-center sm:text-left" style={{ color: "#6b7280", fontFamily: "var(--font-inter)" }}>
+        <p
+          style={{
+            fontFamily: "var(--font-inter)",
+            fontSize: "11px",
+            color: "#374151",
+          }}
+        >
           &copy; {new Date().getFullYear()} Groundwork. All rights reserved.
         </p>
       </footer>
