@@ -1,9 +1,20 @@
-"use client";
-
+import type { Metadata } from "next";
 import Link from "next/link";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import AuthRedirect from "@/components/AuthRedirect";
+
+export const metadata: Metadata = {
+  title: "Build My Groundwork — Wellness for Construction Professionals",
+  description:
+    "A daily 10-minute system built for construction leaders. Fitness, stress tools, and leadership — programmed around a jobsite schedule, not a gym schedule.",
+  openGraph: {
+    title: "Build My Groundwork — Wellness for Construction Professionals",
+    description:
+      "A daily 10-minute system built for construction leaders. Fitness, stress tools, and leadership — programmed around a jobsite schedule, not a gym schedule.",
+    url: "https://buildmygroundwork.com",
+    siteName: "Build My Groundwork",
+    type: "website",
+  },
+};
 
 // ─── Pillar Card ──────────────────────────────────────────────────────────────
 
@@ -127,18 +138,11 @@ function CoachIcon() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
-        router.replace("/dashboard");
-      }
-    });
-  }, [router]);
-
   return (
     <main style={{ backgroundColor: "#0a0f1a", color: "#f9fafb" }} className="flex flex-col min-h-screen">
+
+      {/* Redirect authenticated users to dashboard — renders nothing visible */}
+      <AuthRedirect />
 
       {/* ── NAV ─────────────────────────────────────────────────────────────── */}
       <nav
