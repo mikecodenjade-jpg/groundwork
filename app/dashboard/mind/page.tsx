@@ -229,7 +229,7 @@ export default function MindPage() {
           <Link
             href="/dashboard"
             className="flex items-center justify-center w-9 h-9 transition-opacity hover:opacity-60"
-            style={{ border: "1px solid #252525", color: "#9A9A9A" }}
+            style={{ border: "1px solid #252525", color: "#9A9A9A", borderRadius: "6px" }}
             aria-label="Back to dashboard"
           >
             <svg viewBox="0 0 20 20" fill="none" width={16} height={16}>
@@ -256,6 +256,13 @@ export default function MindPage() {
               Mind
             </h1>
           </div>
+          <a
+            href="#crisis"
+            className="ml-auto text-xs font-semibold transition-opacity hover:opacity-70"
+            style={{ color: "#DC2626", fontFamily: "var(--font-inter)" }}
+          >
+            Crisis support →
+          </a>
         </header>
 
         {/* Daily Check-In */}
@@ -373,6 +380,7 @@ export default function MindPage() {
             {/* Phase: Done */}
             {phase === "done" && (
               <div className="flex flex-col gap-4">
+                {/* Logged confirmation */}
                 <div className="flex items-center gap-4">
                   <div
                     className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
@@ -388,21 +396,110 @@ export default function MindPage() {
                       />
                     </svg>
                   </div>
-                  <div>
-                    <p
-                      className="text-sm font-bold"
-                      style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
-                    >
-                      {selectedMood?.label} — logged.
+                  <p
+                    className="text-sm font-bold"
+                    style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
+                  >
+                    {selectedMood?.label ?? "Mood"} — logged.
+                  </p>
+                </div>
+
+                {/* OK — Locked In */}
+                {selectedMood?.value === "ok_locked" && (
+                  <div className="flex flex-col gap-3">
+                    <p className="text-base font-bold" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                      Good. Use that energy.
                     </p>
-                    <p
-                      className="text-xs"
-                      style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                    <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                      Here&apos;s your plan — go get after it.
+                    </p>
+                    <Link
+                      href="/dashboard/body"
+                      className="flex items-center justify-center px-4 py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-80"
+                      style={{ backgroundColor: "#C45B28", color: "#0A0A0A", borderRadius: "8px", fontFamily: "var(--font-inter)" }}
                     >
-                      {selectedMood ? MOOD_MESSAGES[selectedMood.value] : ""}
+                      View Your Training →
+                    </Link>
+                  </div>
+                )}
+
+                {/* GOOD — Solid */}
+                {selectedMood?.value === "good_solid" && (
+                  <div className="flex flex-col gap-2">
+                    <p className="text-base font-bold" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                      Steady wins.
+                    </p>
+                    <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                      Keep the momentum going.
                     </p>
                   </div>
-                </div>
+                )}
+
+                {/* MID — Holding */}
+                {selectedMood?.value === "mid_holding" && (
+                  <div className="flex flex-col gap-3">
+                    <p className="text-base font-bold" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                      Holding is enough some days.
+                    </p>
+                    <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                      Pick one thing from your plan.
+                    </p>
+                    <Link
+                      href="/dashboard/body"
+                      className="flex items-center justify-center px-4 py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-80"
+                      style={{ backgroundColor: "#161616", color: "#E8E2D8", border: "1px solid #252525", borderRadius: "8px", fontFamily: "var(--font-inter)" }}
+                    >
+                      View Your Plan →
+                    </Link>
+                  </div>
+                )}
+
+                {/* LOW */}
+                {selectedMood?.value === "low" && (
+                  <div className="flex flex-col gap-3">
+                    <p className="text-base font-bold" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                      Noted. No judgment.
+                    </p>
+                    <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                      Here are some tools that might help.
+                    </p>
+                    <div className="flex flex-col gap-2">
+                      <button
+                        onClick={() => setActiveTool("Stress Reset")}
+                        className="flex items-center justify-center px-4 py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-80 active:scale-95"
+                        style={{ backgroundColor: "#161616", color: "#E8E2D8", border: "1px solid #252525", borderRadius: "8px", fontFamily: "var(--font-inter)" }}
+                      >
+                        Open Stress Reset →
+                      </button>
+                      <button
+                        onClick={() => setActiveTool("Box Breathing")}
+                        className="flex items-center justify-center px-4 py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-80 active:scale-95"
+                        style={{ backgroundColor: "#161616", color: "#E8E2D8", border: "1px solid #252525", borderRadius: "8px", fontFamily: "var(--font-inter)" }}
+                      >
+                        Open Box Breathing →
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* HIGH — Stressed */}
+                {selectedMood?.value === "high_stressed" && (
+                  <div className="flex flex-col gap-3">
+                    <p className="text-base font-bold" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                      That&apos;s real. Construction is relentless.
+                    </p>
+                    <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                      Try a 5-minute reset before anything else.
+                    </p>
+                    <button
+                      onClick={() => setActiveTool("Stress Reset")}
+                      className="flex items-center justify-center px-4 py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-80 active:scale-95"
+                      style={{ backgroundColor: "#C45B28", color: "#0A0A0A", borderRadius: "8px", fontFamily: "var(--font-inter)" }}
+                    >
+                      Start Stress Reset →
+                    </button>
+                  </div>
+                )}
 
                 <button
                   onClick={reset}
@@ -586,7 +683,7 @@ export default function MindPage() {
         </section>
 
         {/* If You're Struggling — Crisis Section */}
-        <section className="pb-28">
+        <section id="crisis" className="pb-28">
           <div
             className="px-8 py-7 flex flex-col gap-5"
             style={{

@@ -19,6 +19,35 @@ type TrendsData = {
 
 type Period = "week" | "month" | "quarter";
 
+type CheckinRow = {
+  mood: string;
+  created_at: string;
+};
+
+// ─── Mood color map (for dots/heatmap) ────────────────────────────────────────
+// green=locked in, yellow=solid, orange=holding, red-orange=low, red=stressed
+
+const MOOD_COLORS: Record<string, string> = {
+  "OK — Locked":     "#22C55E",
+  "GOOD — Solid":    "#EAB308",
+  "MID — Holding":   "#F97316",
+  "LOW":             "#EA580C",
+  "HIGH — Stressed": "#DC2626",
+};
+
+const MOOD_LABELS: Record<string, string> = {
+  "OK — Locked":     "Locked In",
+  "GOOD — Solid":    "Solid",
+  "MID — Holding":   "Holding",
+  "LOW":             "Low",
+  "HIGH — Stressed": "Stressed",
+};
+
+function moodColor(mood: string | undefined): string {
+  if (!mood) return "#252525";
+  return MOOD_COLORS[mood] ?? "#252525";
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function MoodTrendsPage() {
@@ -28,6 +57,35 @@ export default function MoodTrendsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
+  // Direct mood checkin data (no edge function needed)
+  const [checkins30, setCheckins30] = useState<CheckinRow[]>([]);
+  const [checkinsLoading, setCheckinsLoading] = useState(true);
+
+  // Load 30-day checkins directly from Supabase
+  useEffect(() => {
+    async function loadCheckins() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const since = new Date();
+      since.setDate(since.getDate() - 30);
+
+      const { data: rows } = await supabase
+        .from("mood_checkins")
+        .select("mood, created_at")
+        .eq("user_id", user.id)
+        .gte("created_at", since.toISOString())
+        .order("created_at", { ascending: true });
+
+      setCheckins30((rows as CheckinRow[]) ?? []);
+      setCheckinsLoading(false);
+    }
+    loadCheckins();
+  }, []);
+
+  // Load sentiment trends from edge function
   useEffect(() => {
     async function load() {
       setLoading(true);
@@ -57,6 +115,11 @@ export default function MoodTrendsPage() {
     }
     load();
   }, [period, router]);
+
+  // Build 7-day dots from checkins30
+  const dots7 = buildDots(checkins30, 7);
+  // Build 30-day heatmap cells
+  const cells30 = buildCells(checkins30, 30);
 
   return (
     <main
@@ -105,7 +168,127 @@ export default function MoodTrendsPage() {
           </div>
         </header>
 
-        {/* Period Selector */}
+        {/* ── 7-Day Mood Dots ─────────────────────────────────────────────── */}
+        <section>
+          <p
+            className="text-xs font-semibold tracking-[0.25em] uppercase mb-4"
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+          >
+            Last 7 Days
+          </p>
+          {checkinsLoading ? (
+            <div
+              className="h-20 animate-pulse rounded-xl"
+              style={{ backgroundColor: "#161616" }}
+            />
+          ) : (
+            <div
+              className="px-6 py-5 flex flex-col gap-3"
+              style={{
+                backgroundColor: "#161616",
+                border: "1px solid #252525",
+                borderRadius: "12px",
+              }}
+            >
+              <div className="flex items-center justify-between gap-2">
+                {dots7.map((dot, i) => (
+                  <div key={i} className="flex flex-col items-center gap-2 flex-1">
+                    <div
+                      className="w-8 h-8 rounded-full transition-all"
+                      style={{
+                        backgroundColor: dot.color,
+                        opacity: dot.mood ? 1 : 0.18,
+                        border: dot.mood
+                          ? `2px solid ${dot.color}`
+                          : "2px solid #252525",
+                      }}
+                      title={dot.mood ? MOOD_LABELS[dot.mood] ?? dot.mood : "No check-in"}
+                    />
+                    <span
+                      className="text-[10px] text-center"
+                      style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                    >
+                      {dot.dayLabel}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {/* Legend */}
+              <div className="flex flex-wrap gap-3 pt-1" style={{ borderTop: "1px solid #252525" }}>
+                {Object.entries(MOOD_COLORS).map(([mood, color]) => (
+                  <div key={mood} className="flex items-center gap-1.5">
+                    <div
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: color }}
+                    />
+                    <span
+                      className="text-[10px]"
+                      style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                    >
+                      {MOOD_LABELS[mood]}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* ── 30-Day Heatmap ──────────────────────────────────────────────── */}
+        <section>
+          <p
+            className="text-xs font-semibold tracking-[0.25em] uppercase mb-4"
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+          >
+            Last 30 Days
+          </p>
+          {checkinsLoading ? (
+            <div
+              className="h-32 animate-pulse rounded-xl"
+              style={{ backgroundColor: "#161616" }}
+            />
+          ) : (
+            <div
+              className="px-6 py-5"
+              style={{
+                backgroundColor: "#161616",
+                border: "1px solid #252525",
+                borderRadius: "12px",
+              }}
+            >
+              <div
+                className="grid gap-1.5"
+                style={{
+                  gridTemplateColumns: "repeat(10, 1fr)",
+                }}
+              >
+                {cells30.map((cell, i) => (
+                  <div
+                    key={i}
+                    className="aspect-square rounded"
+                    style={{
+                      backgroundColor: cell.color,
+                      opacity: cell.mood ? 1 : 0.15,
+                    }}
+                    title={
+                      cell.mood
+                        ? `${cell.dateLabel}: ${MOOD_LABELS[cell.mood] ?? cell.mood}`
+                        : `${cell.dateLabel}: No check-in`
+                    }
+                  />
+                ))}
+              </div>
+              <p
+                className="text-[10px] mt-3 text-right"
+                style={{ color: "#3A3A3A", fontFamily: "var(--font-inter)" }}
+              >
+                Oldest → Most recent
+              </p>
+            </div>
+          )}
+        </section>
+
+        {/* ── Period Selector (for sentiment data) ────────────────────────── */}
         <div className="flex gap-2">
           {(["week", "month", "quarter"] as const).map((p) => (
             <button
@@ -230,6 +413,75 @@ export default function MoodTrendsPage() {
   );
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Returns an array of N day entries (oldest → newest) with mood and color. */
+function buildDots(
+  checkins: CheckinRow[],
+  days: number
+): Array<{ mood: string | null; color: string; dayLabel: string }> {
+  const result: Array<{ mood: string | null; color: string; dayLabel: string }> = [];
+
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().slice(0, 10); // YYYY-MM-DD
+
+    // Find the last check-in for that day
+    const dayCheckins = checkins.filter(
+      (c) => c.created_at.slice(0, 10) === dateStr
+    );
+    const last = dayCheckins[dayCheckins.length - 1];
+
+    const label =
+      i === 0
+        ? "Today"
+        : i === 1
+        ? "Yest"
+        : d.toLocaleDateString("en-US", { weekday: "short" });
+
+    result.push({
+      mood: last?.mood ?? null,
+      color: moodColor(last?.mood),
+      dayLabel: label,
+    });
+  }
+
+  return result;
+}
+
+/** Returns an array of N day cells (oldest → newest) for the heatmap. */
+function buildCells(
+  checkins: CheckinRow[],
+  days: number
+): Array<{ mood: string | null; color: string; dateLabel: string }> {
+  const result: Array<{ mood: string | null; color: string; dateLabel: string }> = [];
+
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().slice(0, 10);
+
+    const dayCheckins = checkins.filter(
+      (c) => c.created_at.slice(0, 10) === dateStr
+    );
+    const last = dayCheckins[dayCheckins.length - 1];
+
+    const dateLabel = d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+
+    result.push({
+      mood: last?.mood ?? null,
+      color: moodColor(last?.mood),
+      dateLabel,
+    });
+  }
+
+  return result;
+}
+
 // ─── Trajectory Card ──────────────────────────────────────────────────────────
 
 function TrajectoryCard({
@@ -257,7 +509,6 @@ function TrajectoryCard({
       }}
     >
       <div className="flex items-center gap-3">
-        {/* Arrow icon */}
         <div
           className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
           style={{ backgroundColor: config.color }}
@@ -380,8 +631,7 @@ function SentimentChart({
   }
 
   function toY(score: number): number {
-    // score ranges from -1 to 1, map to chartH
-    const normalized = (score + 1) / 2; // 0..1
+    const normalized = (score + 1) / 2;
     return PAD_TOP + chartH - normalized * chartH;
   }
 
@@ -389,7 +639,6 @@ function SentimentChart({
     .map((p, i) => `${toX(i)},${toY(p.score)}`)
     .join(" ");
 
-  // Area fill path: line + close to bottom
   const areaPath =
     points.length > 0
       ? `M${toX(0)},${toY(points[0].score)} ` +
@@ -400,10 +649,8 @@ function SentimentChart({
         ` L${toX(points.length - 1)},${PAD_TOP + chartH} L${toX(0)},${PAD_TOP + chartH} Z`
       : "";
 
-  // Gridline scores
   const gridScores = [-1, -0.5, 0, 0.5, 1];
 
-  // Date labels: show first, middle, last
   const labelIndices: number[] = [];
   if (points.length <= 5) {
     points.forEach((_, i) => labelIndices.push(i));
@@ -433,7 +680,6 @@ function SentimentChart({
         style={{ height: "200px" }}
         preserveAspectRatio="none"
       >
-        {/* Gridlines */}
         {gridScores.map((s) => (
           <g key={s}>
             <line
@@ -457,12 +703,10 @@ function SentimentChart({
           </g>
         ))}
 
-        {/* Area fill */}
         {points.length > 1 && (
           <path d={areaPath} fill="rgba(196,91,40,0.15)" />
         )}
 
-        {/* Line */}
         {points.length > 1 && (
           <polyline
             points={linePoints}
@@ -474,7 +718,6 @@ function SentimentChart({
           />
         )}
 
-        {/* Points */}
         {points.map((p, i) => (
           <circle
             key={i}
@@ -487,7 +730,6 @@ function SentimentChart({
           />
         ))}
 
-        {/* X-axis date labels */}
         {labelIndices.map((idx) => (
           <text
             key={idx}
@@ -535,7 +777,10 @@ function EmotionBars({
           >
             {e.emotion}
           </span>
-          <div className="flex-1 h-5 relative" style={{ backgroundColor: "#0A0A0A", borderRadius: "4px" }}>
+          <div
+            className="flex-1 h-5 relative"
+            style={{ backgroundColor: "#0A0A0A", borderRadius: "4px" }}
+          >
             <div
               className="h-full transition-all duration-500"
               style={{
@@ -584,7 +829,6 @@ function CorrelationCard({ value }: { value: number }) {
     indicatorColor = "#5A1A1A";
   }
 
-  // Visual indicator: a bar from center showing correlation
   const barWidth = Math.abs(value) * 100;
   const isPositive = value >= 0;
 
@@ -620,7 +864,6 @@ function CorrelationCard({ value }: { value: number }) {
           </p>
         </div>
 
-        {/* Visual bar */}
         <div className="flex items-center gap-2">
           <span
             className="text-xs w-6 text-right shrink-0"
@@ -639,12 +882,10 @@ function CorrelationCard({ value }: { value: number }) {
               overflow: "hidden",
             }}
           >
-            {/* Center line */}
             <div
               className="absolute top-0 bottom-0 w-px"
               style={{ left: "50%", backgroundColor: "#3A3A3A" }}
             />
-            {/* Correlation bar */}
             <div
               className="absolute top-0 bottom-0 transition-all duration-500"
               style={{
