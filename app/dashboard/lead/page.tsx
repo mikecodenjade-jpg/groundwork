@@ -7,8 +7,9 @@ import { supabase } from "@/lib/supabase";
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
-const CREW_SCRIPTS = [
+const DAILY_CHECK_IN_SCRIPTS = [
   {
+    id: "seem-off",
     title: "Hey, you seem off today",
     tag: "Check-In",
     situation: "Someone on your crew isn't acting like themselves. They're quiet, distracted, or short-tempered. You don't know what's going on — but you notice.",
@@ -29,6 +30,7 @@ const CREW_SCRIPTS = [
     ],
   },
   {
+    id: "incident",
     title: "Let's talk about what happened",
     tag: "Incident",
     situation: "There was a safety incident or a near-miss. People are shaken. You need to address it without shutting anyone down or making them defensive.",
@@ -49,6 +51,7 @@ const CREW_SCRIPTS = [
     ],
   },
   {
+    id: "withdrawal",
     title: "I noticed you've been quiet",
     tag: "Withdrawal",
     situation: "Someone has pulled back. Still showing up, still doing the work — but something's different. They're not talking, not engaging, not themselves.",
@@ -69,6 +72,7 @@ const CREW_SCRIPTS = [
     ],
   },
   {
+    id: "mental-health",
     title: "It's okay to not be okay",
     tag: "Mental Health",
     situation: "Someone admitted they're struggling, or you want to normalize asking for help on your crew before it's a crisis.",
@@ -89,6 +93,7 @@ const CREW_SCRIPTS = [
     ],
   },
   {
+    id: "vulnerability",
     title: "I've been there too",
     tag: "Vulnerability",
     situation: "You want to connect with someone who's struggling — and the most powerful thing you have isn't authority, it's your own story.",
@@ -107,6 +112,198 @@ const CREW_SCRIPTS = [
       "Ask them: 'What do you need right now?'",
       "Stay in their corner. One conversation isn't the finish line.",
     ],
+  },
+];
+
+type Branch = {
+  trigger: string;
+  response: string;
+};
+
+type TalkingPoint = {
+  point: string;
+  detail: string;
+};
+
+type DosDonts = {
+  dos: string[];
+  donts: string[];
+  templates: Array<{ label: string; text: string }>;
+};
+
+type InteractiveScript =
+  | {
+      id: string;
+      title: string;
+      tag: string;
+      format: "branching";
+      situation: string;
+      steps: Array<{
+        step: string;
+        say: string;
+        branches: Branch[];
+      }>;
+    }
+  | {
+      id: string;
+      title: string;
+      tag: string;
+      format: "toolbox-talk";
+      situation: string;
+      timeEstimate: string;
+      intro: string;
+      talkingPoints: TalkingPoint[];
+      groupActivity: string;
+      closing: string;
+    }
+  | {
+      id: string;
+      title: string;
+      tag: string;
+      format: "dos-donts";
+      situation: string;
+      opening: string;
+      content: DosDonts;
+    };
+
+const DIFFICULT_CONVERSATION_SCRIPTS: InteractiveScript[] = [
+  {
+    id: "quiet-crew-member",
+    title: "Checking In On A Quiet Crew Member",
+    tag: "Difficult Conversations",
+    format: "branching",
+    situation: "Step-by-step conversation guide when someone has gone quiet. Follow the path based on how they respond.",
+    steps: [
+      {
+        step: "Open the door",
+        say: "\"Hey — got a quick second? I just wanted to check in. You've been a little quiet lately and I noticed. Everything good?\"",
+        branches: [
+          {
+            trigger: "If they say \"I'm fine\" or brush it off",
+            response: "\"Okay, I hear you. I'm not trying to pry. Just wanted you to know I see it. Door's open if that changes.\" Then let it go for today.",
+          },
+          {
+            trigger: "If they pause or look uncertain",
+            response: "\"You don't have to have it all figured out. I've got a few minutes right now if you want to talk.\" Then stop talking — let the silence work.",
+          },
+          {
+            trigger: "If they say something is actually wrong",
+            response: "Move to Step 2.",
+          },
+        ],
+      },
+      {
+        step: "Create space to talk",
+        say: "\"Let's step away from the crew for a sec. I want to actually hear what's going on.\"",
+        branches: [
+          {
+            trigger: "If they open up about personal stuff (family, money, health)",
+            response: "Listen more than you talk. Nod. Ask \"What's that been like?\" Don't jump to advice. At the end say: \"That sounds really hard. What do you need from me right now?\"",
+          },
+          {
+            trigger: "If they open up about work (conflict, feeling undervalued, burnout)",
+            response: "\"I appreciate you telling me. I want to understand it from your side.\" Get the full picture before you respond. Don't get defensive.",
+          },
+          {
+            trigger: "If they start to shut down mid-conversation",
+            response: "\"It's okay — you don't have to get into it all right now. I'm not going anywhere.\" Give them an out. Sometimes that's enough.",
+          },
+        ],
+      },
+      {
+        step: "Close with something concrete",
+        say: "\"Thanks for talking with me. Seriously. Here's what I'm going to do...\" — then name one small thing you'll actually do.",
+        branches: [
+          {
+            trigger: "If they need professional support",
+            response: "\"Our EAP can connect you with someone to talk to — it's free and confidential. I can get you the number today.\"",
+          },
+          {
+            trigger: "If it's a work issue you can fix",
+            response: "\"Let me look into that today. I'll come back to you by end of shift.\" — Then actually do it.",
+          },
+          {
+            trigger: "If there's nothing you can fix right now",
+            response: "\"I can't change everything, but I'm glad I know what's going on. I'll check back in with you tomorrow.\"",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "toolbox-talk-mental-health",
+    title: "Running A Toolbox Talk On Mental Health",
+    tag: "Difficult Conversations",
+    format: "toolbox-talk",
+    situation: "A 5-minute group script you can run at the start of the day. No experience required. Just read, pause, and mean it.",
+    timeEstimate: "5 minutes",
+    intro: "\"Before we get into the day, I want to say something that doesn't come up enough on the job. We talk about physical safety all the time. Hard hats, fall protection, lockout/tagout. But I want to talk about something just as real — mental health. It affects all of us. It's not a sign of weakness. And it belongs on this crew's radar.\"",
+    talkingPoints: [
+      {
+        point: "The numbers are real",
+        detail: "Construction workers are at a significantly higher risk than most other industries. That's not someone else's problem — it's ours. We look out for each other on the physical stuff. This is no different.",
+      },
+      {
+        point: "Signs to watch for",
+        detail: "In yourself and in others: pulling back from the crew, not sleeping, snapping more than usual, drinking more, talking like you don't see a way forward. These aren't just bad days. These are signals.",
+      },
+      {
+        point: "What to do when you see it",
+        detail: "You don't have to have the answers. Just ask: \"Hey, you okay?\" That simple question has saved lives. And if you're the one struggling — tell someone. Any one of us. Me. A friend. Or call 988, anytime, free, confidential.",
+      },
+      {
+        point: "This crew looks out for each other",
+        detail: "That's not just a saying. That means if someone goes quiet, we notice. If someone needs a moment, we give it. We don't leave people behind.",
+      },
+    ],
+    groupActivity: "\"Before we head out — I'm going to ask you to do one thing today. Check in with someone on this crew. Not about the job. Just ask how they're actually doing. That's it. One question. Let's go.\"",
+    closing: "\"If you ever want to talk privately — about anything — my door is open. No judgment. Now let's have a safe day.\"",
+  },
+  {
+    id: "someone-opens-up",
+    title: "Responding When Someone Opens Up",
+    tag: "Difficult Conversations",
+    format: "dos-donts",
+    situation: "Someone just told you something real. What you say in the next 30 seconds matters more than anything you'll say after.",
+    opening: "Someone just said something vulnerable to you. Maybe they said they're struggling. Maybe they broke down. Maybe they told you something they've never told anyone. Here's how to be someone worth opening up to.",
+    content: {
+      dos: [
+        "\"Thank you for telling me. That took guts.\"",
+        "\"I'm not going anywhere — take your time.\"",
+        "\"That sounds really hard. What's been the worst part?\"",
+        "\"What do you need from me right now?\"",
+        "Maintain eye contact. Put your phone away. Face them directly.",
+        "Let silence sit. Don't fill every pause.",
+        "Follow up the next day — even just a nod.",
+      ],
+      donts: [
+        "\"I know exactly how you feel\" — you don't.",
+        "\"Have you tried just...\" — unsolicited advice kills the conversation.",
+        "\"At least it's not...\" — minimizing shuts people down.",
+        "Looking at your phone or watch while they're talking.",
+        "Sharing your own story before they're done sharing theirs.",
+        "Telling other people on the crew what they told you.",
+        "Treating them differently at work the next day.",
+      ],
+      templates: [
+        {
+          label: "When you don't know what to say",
+          text: "\"I don't have the right words for this, but I hear you. And I'm really glad you told me.\"",
+        },
+        {
+          label: "When they seem to need professional support",
+          text: "\"What you're carrying sounds like more than anyone should carry alone. Would you be open to talking to someone who's trained for this? I can help you find that resource.\"",
+        },
+        {
+          label: "When they apologize for opening up",
+          text: "\"Don't apologize. This is exactly what I'm here for. You're not a burden.\"",
+        },
+        {
+          label: "When you need to end the conversation but don't want to leave them hanging",
+          text: "\"I need to get back to the crew, but I don't want to leave this here. Can we pick this up at the end of the day?\"",
+        },
+      ],
+    },
   },
 ];
 
@@ -169,7 +366,6 @@ export default function LeadPage() {
   const [planSaved, setPlanSaved] = useState(false);
 
   useEffect(() => {
-    // Check challenge completion for today
     async function loadChallengeStatus() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -185,7 +381,6 @@ export default function LeadPage() {
     }
     loadChallengeStatus();
 
-    // Load saved transition plan
     async function loadPlan() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -279,6 +474,7 @@ export default function LeadPage() {
             border: "1px solid #2a3545",
             color: "#E8E2D8",
             fontFamily: "var(--font-inter)",
+            whiteSpace: "nowrap",
           }}
         >
           {toast}
@@ -388,24 +584,77 @@ export default function LeadPage() {
             style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}>
             Crew Scripts
           </p>
-          <p className="text-sm mb-5" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+          <p className="text-sm mb-6" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
             Real language for hard moments. Use it, adapt it, make it yours.
           </p>
-          <div className="flex flex-col gap-4">
-            {CREW_SCRIPTS.map((s) => (
-              <ScriptCard
-                key={s.title}
-                title={s.title}
-                tag={s.tag}
-                situation={s.situation}
-                whatToSay={s.whatToSay}
-                notToSay={s.notToSay}
-                followUp={s.followUp}
-                isOpen={openScript === s.title}
-                onToggle={() => setOpenScript(openScript === s.title ? null : s.title)}
-                onToast={showToast}
-              />
-            ))}
+
+          {/* Category: Daily Check-ins */}
+          <div className="flex flex-col gap-3 mb-8">
+            <div className="flex items-center gap-3">
+              <span
+                className="text-xs font-bold uppercase tracking-widest px-3 py-1"
+                style={{
+                  color: "#f97316",
+                  border: "1px solid #f97316",
+                  borderRadius: "6px",
+                  fontFamily: "var(--font-inter)",
+                }}
+              >
+                Daily Check-ins
+              </span>
+              <div className="flex-1 h-px" style={{ backgroundColor: "#1e2d40" }} />
+              <span className="text-xs" style={{ color: "#4a5568", fontFamily: "var(--font-inter)" }}>
+                {DAILY_CHECK_IN_SCRIPTS.length} scripts
+              </span>
+            </div>
+            <div className="flex flex-col gap-4">
+              {DAILY_CHECK_IN_SCRIPTS.map((s) => (
+                <ScriptCard
+                  key={s.id}
+                  title={s.title}
+                  tag={s.tag}
+                  situation={s.situation}
+                  whatToSay={s.whatToSay}
+                  notToSay={s.notToSay}
+                  followUp={s.followUp}
+                  isOpen={openScript === s.id}
+                  onToggle={() => setOpenScript(openScript === s.id ? null : s.id)}
+                  onToast={showToast}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Category: Difficult Conversations */}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-3">
+              <span
+                className="text-xs font-bold uppercase tracking-widest px-3 py-1"
+                style={{
+                  color: "#e05c7a",
+                  border: "1px solid #e05c7a",
+                  borderRadius: "6px",
+                  fontFamily: "var(--font-inter)",
+                }}
+              >
+                Difficult Conversations
+              </span>
+              <div className="flex-1 h-px" style={{ backgroundColor: "#1e2d40" }} />
+              <span className="text-xs" style={{ color: "#4a5568", fontFamily: "var(--font-inter)" }}>
+                {DIFFICULT_CONVERSATION_SCRIPTS.length} scripts
+              </span>
+            </div>
+            <div className="flex flex-col gap-4">
+              {DIFFICULT_CONVERSATION_SCRIPTS.map((s) => (
+                <InteractiveScriptCard
+                  key={s.id}
+                  script={s}
+                  isOpen={openScript === s.id}
+                  onToggle={() => setOpenScript(openScript === s.id ? null : s.id)}
+                  onToast={showToast}
+                />
+              ))}
+            </div>
           </div>
         </section>
 
@@ -431,7 +680,6 @@ export default function LeadPage() {
             </div>
 
             <div className="px-8 py-7 flex flex-col gap-6">
-              {/* Where I want to be in 2 years */}
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-bold" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
                   Where I want to be in 2 years
@@ -446,7 +694,6 @@ export default function LeadPage() {
                 />
               </div>
 
-              {/* What's blocking me */}
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-bold" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
                   What&apos;s blocking me right now
@@ -461,7 +708,6 @@ export default function LeadPage() {
                 />
               </div>
 
-              {/* 3 skills to develop */}
               <div className="flex flex-col gap-3">
                 <label className="text-sm font-bold" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
                   3 skills I need to develop
@@ -488,7 +734,6 @@ export default function LeadPage() {
                 ))}
               </div>
 
-              {/* Who can help */}
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-bold" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
                   Who can help me get there
@@ -503,7 +748,6 @@ export default function LeadPage() {
                 />
               </div>
 
-              {/* Next move */}
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-bold" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
                   My next move by
@@ -527,7 +771,6 @@ export default function LeadPage() {
                 </div>
               </div>
 
-              {/* Save button */}
               <div className="flex items-center gap-4 pt-2">
                 <button
                   onClick={savePlan}
@@ -560,7 +803,7 @@ export default function LeadPage() {
   );
 }
 
-// ── Script Card ───────────────────────────────────────────────────────────────
+// ── Script Card (existing daily check-ins) ────────────────────────────────────
 
 function ScriptCard({
   title, tag, situation, whatToSay, notToSay, followUp, isOpen, onToggle, onToast,
@@ -589,7 +832,6 @@ function ScriptCard({
         transition: "border-color 0.2s",
       }}
     >
-      {/* Header — always visible */}
       <button
         onClick={onToggle}
         className="w-full text-left px-8 py-6 flex items-start justify-between gap-4"
@@ -624,11 +866,9 @@ function ScriptCard({
         </span>
       </button>
 
-      {/* Expanded content */}
       {isOpen && (
         <div className="px-8 pb-7 flex flex-col gap-6" style={{ borderTop: "1px solid #1e2d40" }}>
 
-          {/* What to say */}
           <div className="flex flex-col gap-3 pt-5">
             <div className="flex items-center justify-between">
               <p className="text-xs font-semibold uppercase tracking-widest"
@@ -664,7 +904,6 @@ function ScriptCard({
             ))}
           </div>
 
-          {/* What NOT to say */}
           <div className="flex flex-col gap-3">
             <p className="text-xs font-semibold uppercase tracking-widest"
               style={{ color: "#e05c7a", fontFamily: "var(--font-inter)" }}>
@@ -684,7 +923,6 @@ function ScriptCard({
             ))}
           </div>
 
-          {/* Follow-up actions */}
           <div className="flex flex-col gap-3">
             <p className="text-xs font-semibold uppercase tracking-widest"
               style={{ color: "#4a5568", fontFamily: "var(--font-inter)" }}>
@@ -704,6 +942,470 @@ function ScriptCard({
             ))}
           </div>
 
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Interactive Script Card (new difficult conversations) ──────────────────────
+
+function InteractiveScriptCard({
+  script, isOpen, onToggle, onToast,
+}: {
+  script: InteractiveScript;
+  isOpen: boolean;
+  onToggle: () => void;
+  onToast: (msg: string) => void;
+}) {
+  const [openBranch, setOpenBranch] = useState<string | null>(null);
+  const [openPoint, setOpenPoint] = useState<string | null>(null);
+
+  function copyText(text: string) {
+    navigator.clipboard.writeText(text).then(() => onToast("Copied to clipboard"));
+  }
+
+  const accent = "#e05c7a";
+
+  return (
+    <div
+      style={{
+        backgroundColor: "#111827",
+        border: `1px solid ${isOpen ? accent : "#1e2d40"}`,
+        borderRadius: "12px",
+        transition: "border-color 0.2s",
+      }}
+    >
+      {/* Header */}
+      <button
+        onClick={onToggle}
+        className="w-full text-left px-8 py-6 flex items-start justify-between gap-4"
+      >
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h3 className="text-xl font-bold uppercase"
+              style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}>
+              {script.title}
+            </h3>
+            <span
+              className="text-xs font-semibold uppercase tracking-widest px-2 py-0.5"
+              style={{ color: accent, border: `1px solid ${accent}40`, borderRadius: "8px", fontFamily: "var(--font-inter)" }}
+            >
+              {script.format === "branching" ? "Interactive" : script.format === "toolbox-talk" ? "Toolbox Talk" : "Reference"}
+            </span>
+          </div>
+          <p className="text-sm leading-relaxed" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+            {script.situation}
+          </p>
+        </div>
+        <span
+          className="text-lg shrink-0 mt-1"
+          style={{
+            color: accent,
+            display: "inline-block",
+            transition: "transform 0.2s",
+            transform: isOpen ? "rotate(90deg)" : "rotate(0deg)",
+          }}
+        >
+          ▶
+        </span>
+      </button>
+
+      {/* Expanded — Branching Format */}
+      {isOpen && script.format === "branching" && (
+        <div className="px-8 pb-8 flex flex-col gap-6" style={{ borderTop: "1px solid #1e2d40" }}>
+          <p className="text-xs pt-5" style={{ color: "#4a5568", fontFamily: "var(--font-inter)" }}>
+            Follow each step. Expand the branch that matches how they respond.
+          </p>
+
+          {script.steps.map((step, stepIdx) => (
+            <div key={stepIdx} className="flex flex-col gap-3">
+              {/* Step label */}
+              <div className="flex items-center gap-3">
+                <span
+                  className="text-xs font-bold uppercase tracking-widest px-2 py-0.5 shrink-0"
+                  style={{
+                    color: "#0a0f1a",
+                    backgroundColor: accent,
+                    borderRadius: "4px",
+                    fontFamily: "var(--font-inter)",
+                  }}
+                >
+                  Step {stepIdx + 1}
+                </span>
+                <span className="text-sm font-bold" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                  {step.step}
+                </span>
+              </div>
+
+              {/* What to say */}
+              <div
+                className="flex gap-3 px-4 py-3"
+                style={{ backgroundColor: "#0a0f1a", borderRadius: "8px", border: "1px solid #1e2d40" }}
+              >
+                <button
+                  onClick={() => copyText(step.say)}
+                  className="shrink-0 px-2 py-1 text-xs font-bold uppercase tracking-widest transition-opacity hover:opacity-80"
+                  style={{
+                    backgroundColor: "#111827",
+                    border: "1px solid #1e2d40",
+                    borderRadius: "4px",
+                    color: "#4a5568",
+                    fontFamily: "var(--font-inter)",
+                    alignSelf: "flex-start",
+                    minHeight: "28px",
+                  }}
+                >
+                  Copy
+                </button>
+                <p className="text-sm leading-relaxed italic flex-1"
+                  style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                  {step.say}
+                </p>
+              </div>
+
+              {/* Branches */}
+              <div className="flex flex-col gap-2 pl-2">
+                <p className="text-xs font-semibold uppercase tracking-widest"
+                  style={{ color: "#4a5568", fontFamily: "var(--font-inter)" }}>
+                  If they respond...
+                </p>
+                {step.branches.map((branch, bIdx) => {
+                  const branchKey = `${stepIdx}-${bIdx}`;
+                  const branchOpen = openBranch === branchKey;
+                  return (
+                    <div key={bIdx} style={{ borderRadius: "8px", overflow: "hidden", border: "1px solid #1e2d40" }}>
+                      <button
+                        onClick={() => setOpenBranch(branchOpen ? null : branchKey)}
+                        className="w-full text-left px-4 py-3 flex items-center justify-between gap-3"
+                        style={{
+                          backgroundColor: branchOpen ? "#1a1a2e" : "#0d1117",
+                          minHeight: "48px",
+                        }}
+                      >
+                        <span className="text-xs leading-snug"
+                          style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                          {branch.trigger}
+                        </span>
+                        <span
+                          className="text-sm shrink-0"
+                          style={{
+                            color: accent,
+                            transition: "transform 0.15s",
+                            transform: branchOpen ? "rotate(90deg)" : "rotate(0deg)",
+                            display: "inline-block",
+                          }}
+                        >
+                          ▶
+                        </span>
+                      </button>
+                      {branchOpen && (
+                        <div
+                          className="px-4 py-3 flex gap-3"
+                          style={{ backgroundColor: "#0d1117", borderTop: "1px solid #1e2d40" }}
+                        >
+                          <button
+                            onClick={() => copyText(branch.response)}
+                            className="shrink-0 px-2 py-1 text-xs font-bold uppercase tracking-widest transition-opacity hover:opacity-80"
+                            style={{
+                              backgroundColor: "#111827",
+                              border: "1px solid #1e2d40",
+                              borderRadius: "4px",
+                              color: "#4a5568",
+                              fontFamily: "var(--font-inter)",
+                              alignSelf: "flex-start",
+                              minHeight: "28px",
+                            }}
+                          >
+                            Copy
+                          </button>
+                          <p className="text-sm leading-relaxed"
+                            style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                            {branch.response}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Expanded — Toolbox Talk Format */}
+      {isOpen && script.format === "toolbox-talk" && (
+        <div className="px-8 pb-8 flex flex-col gap-6" style={{ borderTop: "1px solid #1e2d40" }}>
+
+          <div className="flex items-center gap-3 pt-5">
+            <span className="text-xs font-bold uppercase tracking-widest px-2 py-0.5"
+              style={{ color: "#0a0f1a", backgroundColor: accent, borderRadius: "4px", fontFamily: "var(--font-inter)" }}>
+              {script.timeEstimate}
+            </span>
+            <p className="text-xs" style={{ color: "#4a5568", fontFamily: "var(--font-inter)" }}>
+              Read at morning standup. Pause where it feels right.
+            </p>
+          </div>
+
+          {/* Intro */}
+          <div className="flex flex-col gap-2">
+            <p className="text-xs font-semibold uppercase tracking-widest"
+              style={{ color: accent, fontFamily: "var(--font-inter)" }}>
+              Opening — Read this first
+            </p>
+            <div
+              className="flex gap-3 px-4 py-4"
+              style={{ backgroundColor: "#0a0f1a", borderRadius: "8px", border: "1px solid #1e2d40" }}
+            >
+              <button
+                onClick={() => copyText(script.intro)}
+                className="shrink-0 px-2 py-1 text-xs font-bold uppercase tracking-widest transition-opacity hover:opacity-80 self-start"
+                style={{
+                  backgroundColor: "#111827",
+                  border: "1px solid #1e2d40",
+                  borderRadius: "4px",
+                  color: "#4a5568",
+                  fontFamily: "var(--font-inter)",
+                  minHeight: "28px",
+                }}
+              >
+                Copy
+              </button>
+              <p className="text-sm leading-relaxed italic flex-1"
+                style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                {script.intro}
+              </p>
+            </div>
+          </div>
+
+          {/* Talking Points */}
+          <div className="flex flex-col gap-3">
+            <p className="text-xs font-semibold uppercase tracking-widest"
+              style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+              Talking Points — tap to expand
+            </p>
+            {script.talkingPoints.map((tp, i) => {
+              const pointKey = `tp-${i}`;
+              const pointOpen = openPoint === pointKey;
+              return (
+                <div key={i} style={{ border: "1px solid #1e2d40", borderRadius: "8px", overflow: "hidden" }}>
+                  <button
+                    onClick={() => setOpenPoint(pointOpen ? null : pointKey)}
+                    className="w-full text-left px-4 py-3 flex items-center justify-between gap-3"
+                    style={{ backgroundColor: pointOpen ? "#1a1a2e" : "#0d1117", minHeight: "48px" }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-bold"
+                        style={{ color: accent, fontFamily: "var(--font-inter)" }}>
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <span className="text-sm font-semibold"
+                        style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                        {tp.point}
+                      </span>
+                    </div>
+                    <span
+                      className="text-sm shrink-0"
+                      style={{
+                        color: accent,
+                        transition: "transform 0.15s",
+                        transform: pointOpen ? "rotate(90deg)" : "rotate(0deg)",
+                        display: "inline-block",
+                      }}
+                    >
+                      ▶
+                    </span>
+                  </button>
+                  {pointOpen && (
+                    <div
+                      className="px-4 py-3 flex gap-3"
+                      style={{ backgroundColor: "#0d1117", borderTop: "1px solid #1e2d40" }}
+                    >
+                      <button
+                        onClick={() => copyText(tp.detail)}
+                        className="shrink-0 px-2 py-1 text-xs font-bold uppercase tracking-widest transition-opacity hover:opacity-80 self-start"
+                        style={{
+                          backgroundColor: "#111827",
+                          border: "1px solid #1e2d40",
+                          borderRadius: "4px",
+                          color: "#4a5568",
+                          fontFamily: "var(--font-inter)",
+                          minHeight: "28px",
+                        }}
+                      >
+                        Copy
+                      </button>
+                      <p className="text-sm leading-relaxed"
+                        style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                        {tp.detail}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Group Activity */}
+          <div className="flex flex-col gap-2">
+            <p className="text-xs font-semibold uppercase tracking-widest"
+              style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+              Group Activity
+            </p>
+            <div
+              className="flex gap-3 px-4 py-3"
+              style={{ backgroundColor: "#0a0f1a", borderRadius: "8px", border: `1px solid ${accent}30` }}
+            >
+              <button
+                onClick={() => copyText(script.groupActivity)}
+                className="shrink-0 px-2 py-1 text-xs font-bold uppercase tracking-widest transition-opacity hover:opacity-80 self-start"
+                style={{
+                  backgroundColor: "#111827",
+                  border: "1px solid #1e2d40",
+                  borderRadius: "4px",
+                  color: "#4a5568",
+                  fontFamily: "var(--font-inter)",
+                  minHeight: "28px",
+                }}
+              >
+                Copy
+              </button>
+              <p className="text-sm leading-relaxed italic flex-1"
+                style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                {script.groupActivity}
+              </p>
+            </div>
+          </div>
+
+          {/* Closing */}
+          <div className="flex flex-col gap-2">
+            <p className="text-xs font-semibold uppercase tracking-widest"
+              style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+              Closing
+            </p>
+            <div
+              className="flex gap-3 px-4 py-3"
+              style={{ backgroundColor: "#0a0f1a", borderRadius: "8px", border: "1px solid #1e2d40" }}
+            >
+              <button
+                onClick={() => copyText(script.closing)}
+                className="shrink-0 px-2 py-1 text-xs font-bold uppercase tracking-widest transition-opacity hover:opacity-80 self-start"
+                style={{
+                  backgroundColor: "#111827",
+                  border: "1px solid #1e2d40",
+                  borderRadius: "4px",
+                  color: "#4a5568",
+                  fontFamily: "var(--font-inter)",
+                  minHeight: "28px",
+                }}
+              >
+                Copy
+              </button>
+              <p className="text-sm leading-relaxed italic flex-1"
+                style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                {script.closing}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Expanded — Do's & Don'ts Format */}
+      {isOpen && script.format === "dos-donts" && (
+        <div className="px-8 pb-8 flex flex-col gap-6" style={{ borderTop: "1px solid #1e2d40" }}>
+
+          {/* Opening */}
+          <div
+            className="mt-5 px-4 py-4 flex gap-3"
+            style={{ backgroundColor: "#0a0f1a", borderRadius: "8px", border: "1px solid #1e2d40" }}
+          >
+            <div className="w-1 shrink-0" style={{ backgroundColor: accent }} />
+            <p className="text-sm leading-relaxed"
+              style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+              {script.opening}
+            </p>
+          </div>
+
+          {/* Do's */}
+          <div className="flex flex-col gap-3">
+            <p className="text-xs font-semibold uppercase tracking-widest"
+              style={{ color: "#4CAF50", fontFamily: "var(--font-inter)" }}>
+              Do this
+            </p>
+            {script.content.dos.map((item, i) => (
+              <div key={i} className="flex gap-3 items-start">
+                <span className="text-xs font-bold shrink-0 mt-0.5"
+                  style={{ color: "#4CAF50", fontFamily: "var(--font-inter)" }}>
+                  ✓
+                </span>
+                <p className="text-sm leading-relaxed"
+                  style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                  {item}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Don'ts */}
+          <div className="flex flex-col gap-3">
+            <p className="text-xs font-semibold uppercase tracking-widest"
+              style={{ color: "#e05c7a", fontFamily: "var(--font-inter)" }}>
+              Don&apos;t do this
+            </p>
+            {script.content.donts.map((item, i) => (
+              <div key={i} className="flex gap-3 items-start">
+                <span className="text-xs font-bold shrink-0 mt-0.5"
+                  style={{ color: "#e05c7a", fontFamily: "var(--font-inter)" }}>
+                  ✕
+                </span>
+                <p className="text-sm leading-relaxed"
+                  style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                  {item}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Response Templates */}
+          <div className="flex flex-col gap-3">
+            <p className="text-xs font-semibold uppercase tracking-widest"
+              style={{ color: accent, fontFamily: "var(--font-inter)" }}>
+              Response Templates — copy what fits
+            </p>
+            {script.content.templates.map((tpl, i) => (
+              <div
+                key={i}
+                className="flex flex-col gap-2 px-4 py-4"
+                style={{ backgroundColor: "#0a0f1a", borderRadius: "8px", border: "1px solid #1e2d40" }}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-semibold"
+                    style={{ color: "#4a5568", fontFamily: "var(--font-inter)" }}>
+                    {tpl.label}
+                  </span>
+                  <button
+                    onClick={() => copyText(tpl.text)}
+                    className="shrink-0 px-3 py-1 text-xs font-bold uppercase tracking-widest transition-opacity hover:opacity-80"
+                    style={{
+                      backgroundColor: "#111827",
+                      border: "1px solid #1e2d40",
+                      borderRadius: "4px",
+                      color: "#9A9A9A",
+                      fontFamily: "var(--font-inter)",
+                      minHeight: "28px",
+                    }}
+                  >
+                    Copy
+                  </button>
+                </div>
+                <p className="text-sm leading-relaxed italic"
+                  style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                  {tpl.text}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

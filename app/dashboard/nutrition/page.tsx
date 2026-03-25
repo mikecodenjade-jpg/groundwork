@@ -1042,6 +1042,28 @@ const [showHistory,    setShowHistory]    = useState(false);
             </div>
           </header>
 
+          {/* ── Cooler Prep Banner ───────────────────────────────────────── */}
+          <Link
+            href="/dashboard/fuel/cooler-prep"
+            className="flex items-center justify-between gap-4 px-6 py-4 transition-opacity hover:opacity-90"
+            style={{ backgroundColor: "#1A0A00", border: "1px solid #2A1A00", borderRadius: "12px" }}
+          >
+            <div className="flex items-center gap-4">
+              <span style={{ fontSize: "22px" }}>🧊</span>
+              <div>
+                <p className="text-sm font-bold" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                  Cooler Prep
+                </p>
+                <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                  20 job-ready meals that pack in a cooler
+                </p>
+              </div>
+            </div>
+            <svg viewBox="0 0 20 20" fill="none" width={16} height={16} style={{ flexShrink: 0, color: "#f97316" }}>
+              <path d="M7 4l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </Link>
+
           {/* ── Daily Summary ────────────────────────────────────────────── */}
           <section className="px-6 py-7 flex flex-col gap-6" style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}>
             <div className="flex items-center justify-between">
