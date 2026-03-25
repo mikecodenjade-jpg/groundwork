@@ -241,7 +241,7 @@ export default function ContentLibraryPage() {
                 className="text-sm py-8 text-center"
                 style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
               >
-                Content coming soon for this category.
+                More content on the way. Check back soon.
               </p>
             ) : (
               <div className="flex flex-col gap-4">
@@ -382,7 +382,7 @@ export default function ContentLibraryPage() {
                               className="text-sm"
                               style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
                             >
-                              Content coming soon.
+                              This one is coming soon. Stay tuned.
                             </p>
                           </div>
                         )}

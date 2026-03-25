@@ -648,7 +648,7 @@ function WeeklyTrendsChart({ data, goalCalories }: { data: WeeklyDay[]; goalCalo
           <rect x="24" y="16" width="6" height="20" rx="2" fill="#252525" />
           <rect x="34" y="8" width="6" height="28" rx="2" fill="#252525" />
         </svg>
-        <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>No data yet — log meals to see trends</p>
+        <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Fuel up. Log your first meal and see where you stand.</p>
       </div>
     );
   }
@@ -1331,7 +1331,7 @@ const [showHistory,    setShowHistory]    = useState(false);
                                   sub={`P: ${food.protein}g · C: ${food.carbs}g · F: ${food.fat}g`} />
                               ))}
                               {!apiLoading && apiResults.length === 0 && (
-                                <p className="px-3 py-1.5 text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>No results found.</p>
+                                <p className="px-3 py-1.5 text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Nothing came up. Try a different name.</p>
                               )}
                             </>
                           )}

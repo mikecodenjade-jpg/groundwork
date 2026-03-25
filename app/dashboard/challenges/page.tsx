@@ -509,10 +509,10 @@ export default function ChallengesPage() {
               className="text-2xl font-bold uppercase"
               style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
             >
-              No active challenges.
+            No challenges running.
             </h3>
             <p className="text-sm max-w-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-              Start one for your crew and build some momentum.
+              Start one for your crew. Give everyone a reason to show up this week.
             </p>
             <button
               onClick={() => setShowForm(true)}

@@ -580,7 +580,7 @@ export default function MeditatePage() {
                         className="text-sm"
                         style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
                       >
-                        No sessions yet. Start your first one above.
+                        Your first session is waiting. Hit play and go.
                       </p>
                     ) : (
                       <div className="flex flex-col gap-3">

@@ -342,7 +342,7 @@ export default function RunPage() {
                 className="text-sm text-center"
                 style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
               >
-                No runs yet. Lace up and hit Start.
+                Your first run starts here. Hit Start when you&apos;re ready.
               </p>
               <button
                 onClick={startRun}
@@ -483,7 +483,7 @@ export default function RunPage() {
               className="text-sm text-center py-6"
               style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
             >
-              No runs yet. Lace up and hit Start.
+              No runs logged yet. Get out there and the history fills itself in.
             </p>
           ) : (
             <div className="flex flex-col gap-3">
