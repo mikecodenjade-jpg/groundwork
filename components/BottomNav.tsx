@@ -2,8 +2,139 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 
-const TABS = [
+const MORE_ITEMS = [
+  {
+    label: "Heart",
+    href: "/dashboard/heart",
+    color: "#e05c7a",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" width={24} height={24}>
+        <path
+          d="M12 21C12 21 3 14 3 8.5C3 5.42 5.42 3 8.5 3C10.24 3 11.91 3.81 13 5.08C14.09 3.81 15.76 3 17.5 3C20.58 3 23 5.42 23 8.5C23 14 14 21 14 21"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M3 8.5C3 5.42 5.42 3 8.5 3C10.24 3 11.91 3.81 13 5.08"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+      </svg>
+    ),
+  },
+  {
+    label: "Lead",
+    href: "/dashboard/lead",
+    color: "#f97316",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" width={24} height={24}>
+        <path
+          d="M12 2L14.5 9H21L15.5 13.5L17.5 20.5L12 16L6.5 20.5L8.5 13.5L3 9H9.5L12 2Z"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinejoin="round"
+        />
+      </svg>
+    ),
+  },
+  {
+    label: "Coach",
+    href: "/dashboard/coach",
+    color: "#c45b28",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" width={24} height={24}>
+        <path
+          d="M4 4h16c.55 0 1 .45 1 1v10c0 .55-.45 1-1 1H8l-4 4V5c0-.55.45-1 1-1Z"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinejoin="round"
+        />
+        <line x1="8" y1="9" x2="16" y2="9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+        <line x1="8" y1="12" x2="13" y2="12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
+    label: "Crew Wall",
+    href: "/dashboard/crew",
+    color: "#2ab5b5",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" width={24} height={24}>
+        <circle cx="9" cy="7" r="3" stroke="currentColor" strokeWidth="1.8" />
+        <circle cx="17" cy="9" r="2.5" stroke="currentColor" strokeWidth="1.6" />
+        <path
+          d="M3 19C3 16.2 5.7 14 9 14C12.3 14 15 16.2 15 19"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+        <path
+          d="M17 14C19.2 14 21 15.8 21 18"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+        />
+      </svg>
+    ),
+  },
+  {
+    label: "Challenges",
+    href: "/dashboard/challenges",
+    color: "#eab308",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" width={24} height={24}>
+        <path
+          d="M8 6h8v8a4 4 0 01-8 0V6z"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinejoin="round"
+        />
+        <path d="M8 10H5a1 1 0 00-1 1v2a1 1 0 001 1h3" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+        <path d="M16 10h3a1 1 0 011 1v2a1 1 0 01-1 1h-3" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+        <path d="M12 18v3M9 21h6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
+    label: "Badges",
+    href: "/dashboard/badges",
+    color: "#a855f7",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" width={24} height={24}>
+        <path
+          d="M12 2L4 5.5V12c0 4.5 3.5 8 8 10 4.5-2 8-5.5 8-10V5.5L12 2z"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinejoin="round"
+        />
+        <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
+    label: "Settings",
+    href: "/dashboard/settings",
+    color: "#9a9a9a",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" width={24} height={24}>
+        <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
+        <path
+          d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+      </svg>
+    ),
+  },
+];
+
+const NAV_TABS = [
   {
     label: "Home",
     href: "/dashboard",
@@ -42,7 +173,6 @@ const TABS = [
           stroke="currentColor"
           strokeWidth="1.8"
           strokeLinejoin="round"
-          fill="none"
         />
       </svg>
     ),
@@ -60,17 +190,6 @@ const TABS = [
         />
         <line x1="12" y1="5" x2="12" y2="17" stroke="currentColor" strokeWidth="1.2" />
         <path d="M12 8.5C10.5 8.5 9 9.5 9 11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-      </svg>
-    ),
-  },
-  {
-    label: "More",
-    href: "/dashboard/more",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" width={24} height={24}>
-        <circle cx="5" cy="12" r="1.5" fill="currentColor" />
-        <circle cx="12" cy="12" r="1.5" fill="currentColor" />
-        <circle cx="19" cy="12" r="1.5" fill="currentColor" />
       </svg>
     ),
   },
@@ -93,21 +212,22 @@ const MORE_ROUTES = [
 function isActive(href: string, pathname: string): boolean {
   if (href === "/dashboard") return pathname === "/dashboard";
 
-  // Train covers: /dashboard/body, /dashboard/library (now in More), /dashboard/programs
   if (href === "/dashboard/body") {
     return (
-      pathname.startsWith("/dashboard/body") &&
-      !pathname.startsWith("/dashboard/body/measurements") &&
-      !pathname.startsWith("/dashboard/body/devices")
+      (pathname.startsWith("/dashboard/body") &&
+        !pathname.startsWith("/dashboard/body/measurements") &&
+        !pathname.startsWith("/dashboard/body/devices")) ||
+      pathname.startsWith("/dashboard/train")
     );
   }
 
-  // Fuel covers: /dashboard/nutrition
   if (href === "/dashboard/nutrition") {
-    return pathname.startsWith("/dashboard/nutrition");
+    return (
+      pathname.startsWith("/dashboard/nutrition") ||
+      pathname.startsWith("/dashboard/fuel")
+    );
   }
 
-  // Mind covers: /dashboard/mind, /dashboard/content, /dashboard/meditate
   if (href === "/dashboard/mind") {
     return (
       pathname.startsWith("/dashboard/mind") ||
@@ -116,67 +236,229 @@ function isActive(href: string, pathname: string): boolean {
     );
   }
 
-  // More covers all the overflow routes
-  if (href === "/dashboard/more") {
-    return MORE_ROUTES.some((r) => pathname.startsWith(r));
-  }
-
   return pathname.startsWith(href);
 }
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  useEffect(() => {
+    setMoreOpen(false);
+  }, [pathname]);
+
+  const moreActive = MORE_ROUTES.some((r) => pathname.startsWith(r));
 
   return (
-    <nav
-      className="fixed bottom-0 left-0 right-0 z-50 flex items-stretch"
-      style={{
-        backgroundColor: "#111827",
-        borderTop: "1px solid #1f2937",
-        height: "64px",
-      }}
-    >
-      {TABS.map(({ label, href, icon }) => {
-        const active = isActive(href, pathname);
-        return (
-          <Link
-            key={href}
-            href={href}
-            className="flex flex-1 flex-col items-center justify-center gap-1"
+    <>
+      {/* More full-screen overlay */}
+      {moreOpen && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 64,
+            zIndex: 40,
+            backgroundColor: "#0a0f1a",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          {/* Header */}
+          <div
             style={{
-              color: active ? "#f97316" : "#4b5563",
-              transition: "color 0.2s ease",
-              minWidth: 48,
-              minHeight: 48,
-              position: "relative",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "16px 24px",
+              paddingTop: "max(env(safe-area-inset-top, 0px), 16px)",
+              borderBottom: "1px solid #1a2332",
+              flexShrink: 0,
             }}
           >
-            {/* Active indicator line above icon */}
-            <div
-              style={{
-                position: "absolute",
-                top: 4,
-                left: "50%",
-                transform: "translateX(-50%)",
-                width: active ? 16 : 0,
-                height: 3,
-                borderRadius: 1.5,
-                backgroundColor: "#f97316",
-                transition: "width 0.2s ease",
-              }}
-            />
-            <div style={{ marginTop: 4 }}>
-              {icon}
-            </div>
             <span
-              className="text-[10px] font-semibold uppercase tracking-widest"
-              style={{ fontFamily: "var(--font-inter)" }}
+              style={{
+                fontSize: 22,
+                fontWeight: 700,
+                color: "#e8e2d8",
+                fontFamily: "var(--font-oswald)",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+              }}
             >
-              {label}
+              More
             </span>
-          </Link>
-        );
-      })}
-    </nav>
+            <button
+              onClick={() => setMoreOpen(false)}
+              aria-label="Close menu"
+              style={{
+                minWidth: 48,
+                minHeight: 48,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#6b7280",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" width={22} height={22}>
+                <path
+                  d="M18 6L6 18M6 6l12 12"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {/* Menu items */}
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            {MORE_ITEMS.map(({ label, href, color, icon }) => (
+              <Link
+                key={href}
+                href={href}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 16,
+                  padding: "0 24px",
+                  minHeight: 64,
+                  borderBottom: "1px solid #111827",
+                  color: "#e8e2d8",
+                  textDecoration: "none",
+                }}
+              >
+                <div style={{ color, flexShrink: 0, display: "flex" }}>
+                  {icon}
+                </div>
+                <span
+                  style={{
+                    fontSize: 16,
+                    fontWeight: 700,
+                    fontFamily: "var(--font-inter)",
+                    flex: 1,
+                  }}
+                >
+                  {label}
+                </span>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  width={16}
+                  height={16}
+                  style={{ color: "#374151", flexShrink: 0 }}
+                >
+                  <path
+                    d="M9 6l6 6-6 6"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Bottom nav bar */}
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-50 flex items-stretch"
+        style={{
+          backgroundColor: "#0a0f1a",
+          borderTop: "1px solid #1a2332",
+          height: 64,
+        }}
+      >
+        {NAV_TABS.map(({ label, href, icon }) => {
+          const active = isActive(href, pathname);
+          return (
+            <Link
+              key={href}
+              href={href}
+              className="flex flex-1 flex-col items-center justify-center gap-1"
+              style={{
+                color: active ? "#f97316" : "#4b5563",
+                transition: "color 0.2s ease",
+                minWidth: 48,
+                minHeight: 48,
+                position: "relative",
+                textDecoration: "none",
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  top: 4,
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  width: active ? 16 : 0,
+                  height: 3,
+                  borderRadius: 1.5,
+                  backgroundColor: "#f97316",
+                  transition: "width 0.2s ease",
+                }}
+              />
+              <div style={{ marginTop: 4 }}>{icon}</div>
+              <span
+                className="text-[10px] font-semibold uppercase tracking-widest"
+                style={{ fontFamily: "var(--font-inter)" }}
+              >
+                {label}
+              </span>
+            </Link>
+          );
+        })}
+
+        {/* More button */}
+        <button
+          onClick={() => setMoreOpen(!moreOpen)}
+          className="flex flex-1 flex-col items-center justify-center gap-1"
+          style={{
+            color: moreActive || moreOpen ? "#f97316" : "#4b5563",
+            transition: "color 0.2s ease",
+            minWidth: 48,
+            minHeight: 48,
+            position: "relative",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              top: 4,
+              left: "50%",
+              transform: "translateX(-50%)",
+              width: moreActive || moreOpen ? 16 : 0,
+              height: 3,
+              borderRadius: 1.5,
+              backgroundColor: "#f97316",
+              transition: "width 0.2s ease",
+            }}
+          />
+          <div style={{ marginTop: 4 }}>
+            <svg viewBox="0 0 24 24" fill="none" width={24} height={24}>
+              <circle cx="5" cy="12" r="1.5" fill="currentColor" />
+              <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+              <circle cx="19" cy="12" r="1.5" fill="currentColor" />
+            </svg>
+          </div>
+          <span
+            className="text-[10px] font-semibold uppercase tracking-widest"
+            style={{ fontFamily: "var(--font-inter)" }}
+          >
+            More
+          </span>
+        </button>
+      </nav>
+    </>
   );
 }

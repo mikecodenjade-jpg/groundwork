@@ -27,14 +27,12 @@ const MENU_ITEMS: MenuItem[] = [
           strokeWidth="1.8"
           strokeLinecap="round"
           strokeLinejoin="round"
-          fill="none"
         />
         <path
           d="M3 8.5C3 5.42 5.42 3 8.5 3C10.24 3 11.91 3.81 13 5.08"
           stroke="currentColor"
           strokeWidth="1.8"
           strokeLinecap="round"
-          fill="none"
         />
       </svg>
     ),
@@ -52,7 +50,6 @@ const MENU_ITEMS: MenuItem[] = [
           stroke="currentColor"
           strokeWidth="1.8"
           strokeLinejoin="round"
-          fill="none"
         />
       </svg>
     ),
@@ -77,22 +74,7 @@ const MENU_ITEMS: MenuItem[] = [
     ),
   },
   {
-    label: "Exercise Library",
-    description: "Browse and search all exercises with instructions",
-    href: "/dashboard/library",
-    color: "#22c55e",
-    bg: "#001a08",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" width={22} height={22}>
-        <rect x="3" y="3" width="7" height="9" rx="1" stroke="currentColor" strokeWidth="1.8" />
-        <rect x="14" y="3" width="7" height="9" rx="1" stroke="currentColor" strokeWidth="1.8" />
-        <rect x="3" y="16" width="7" height="5" rx="1" stroke="currentColor" strokeWidth="1.8" />
-        <rect x="14" y="16" width="7" height="5" rx="1" stroke="currentColor" strokeWidth="1.8" />
-      </svg>
-    ),
-  },
-  {
-    label: "Crew",
+    label: "Crew Wall",
     description: "Your people — share wins, stay connected",
     href: "/dashboard/crew",
     color: "#2ab5b5",
@@ -120,49 +102,42 @@ const MENU_ITEMS: MenuItem[] = [
     label: "Challenges",
     description: "Team competitions and personal targets",
     href: "/dashboard/challenges",
-    color: "#c45b28",
-    bg: "#1a0a00",
+    color: "#eab308",
+    bg: "#1a1400",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" width={22} height={22}>
         <path
-          d="M12 4L14.5 9H20L15.5 12.5L17.5 18L12 14.5L6.5 18L8.5 12.5L4 9H9.5L12 4Z"
+          d="M8 6h8v8a4 4 0 01-8 0V6z"
           stroke="currentColor"
           strokeWidth="1.8"
           strokeLinejoin="round"
-          fill="none"
         />
+        <path d="M8 10H5a1 1 0 00-1 1v2a1 1 0 001 1h3" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+        <path d="M16 10h3a1 1 0 011 1v2a1 1 0 01-1 1h-3" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+        <path d="M12 18v3M9 21h6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
       </svg>
     ),
   },
   {
-    label: "Body Measurements",
-    description: "Track inches, weight, and body composition over time",
-    href: "/dashboard/body/measurements",
-    color: "#3b82f6",
-    bg: "#00101a",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" width={22} height={22}>
-        <path d="M3 3h18v2H3zM3 8h12v2H3zM3 13h15v2H3zM3 18h9v2H3z" fill="currentColor" />
-        <path d="M19 14v6M16 17h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      </svg>
-    ),
-  },
-  {
-    label: "Connected Devices",
-    description: "Sync Apple Health, Garmin, Whoop, and more",
-    href: "/dashboard/body/devices",
-    color: "#8b5cf6",
+    label: "Badges",
+    description: "Earned achievements and milestones",
+    href: "/dashboard/badges",
+    color: "#a855f7",
     bg: "#0f0a1a",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" width={22} height={22}>
-        <rect x="7" y="2" width="10" height="20" rx="2" stroke="currentColor" strokeWidth="1.8" />
-        <circle cx="12" cy="18" r="1" fill="currentColor" />
-        <line x1="9" y1="6" x2="15" y2="6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+        <path
+          d="M12 2L4 5.5V12c0 4.5 3.5 8 8 10 4.5-2 8-5.5 8-10V5.5L12 2z"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinejoin="round"
+        />
+        <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
   },
   {
-    label: "Settings & Profile",
+    label: "Settings",
     description: "Account, notifications, preferences",
     href: "/dashboard/settings",
     color: "#9a9a9a",
@@ -185,12 +160,12 @@ export default function MorePage() {
   return (
     <main
       className="min-h-screen flex flex-col px-6 py-10"
-      style={{ backgroundColor: "#0A0A0A", color: "#E8E2D8" }}
+      style={{ backgroundColor: "#0a0f1a", color: "#E8E2D8" }}
     >
       <header className="max-w-2xl w-full mx-auto mb-8">
         <p
           className="text-xs font-semibold tracking-[0.3em] uppercase mb-4"
-          style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+          style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}
         >
           Groundwork
         </p>
@@ -209,8 +184,8 @@ export default function MorePage() {
             href={href}
             className="flex items-center gap-4 px-4 py-4 transition-all duration-150 hover:opacity-80 active:scale-[0.99]"
             style={{
-              backgroundColor: "#161616",
-              border: "1px solid #252525",
+              backgroundColor: "#0f1623",
+              border: "1px solid #1a2332",
               borderRadius: "12px",
             }}
           >
@@ -234,12 +209,12 @@ export default function MorePage() {
               </p>
               <p
                 className="text-xs mt-0.5 leading-snug"
-                style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                style={{ color: "#6b7280", fontFamily: "var(--font-inter)" }}
               >
                 {description}
               </p>
             </div>
-            <svg viewBox="0 0 24 24" fill="none" width={16} height={16} style={{ color: "#3A3A3A", flexShrink: 0 }}>
+            <svg viewBox="0 0 24 24" fill="none" width={16} height={16} style={{ color: "#374151", flexShrink: 0 }}>
               <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </Link>
