@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import BottomNav from "@/components/BottomNav";
 import { supabase } from "@/lib/supabase";
+import CrisisScreen from "@/components/CrisisScreen";
+import { detectCrisisKeywords } from "@/lib/crisisDetection";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -109,6 +111,7 @@ export default function CoachPage() {
   const [profileLoading, setProfileLoading] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
   const [welcomeShown, setWelcomeShown] = useState(false);
+  const [showCrisis, setShowCrisis] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -165,6 +168,12 @@ export default function CoachPage() {
     async (text: string) => {
       const trimmed = text.trim();
       if (!trimmed || loading) return;
+
+      // Crisis detection runs before any server call
+      if (detectCrisisKeywords(trimmed)) {
+        setShowCrisis(true);
+        return;
+      }
 
       // Create a session on first message if none active
       let sessionId = currentSessionId;
@@ -270,6 +279,8 @@ export default function CoachPage() {
   }
 
   const showWelcome = messages.length === 0 && !profileLoading;
+
+  if (showCrisis) return <CrisisScreen onDismiss={() => setShowCrisis(false)} />;
 
   return (
     <main

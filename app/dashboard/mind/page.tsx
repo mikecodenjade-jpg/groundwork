@@ -5,6 +5,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import BottomNav from "@/components/BottomNav";
 import { supabase } from "@/lib/supabase";
 import { queueAction, registerSync, cacheData, getCachedData } from "@/lib/offline-cache";
+import CrisisScreen from "@/components/CrisisScreen";
+import { assessMoodTier } from "@/lib/crisisDetection";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -82,6 +84,8 @@ export default function MindPage() {
   const [recentCheckins, setRecentCheckins] = useState<CheckinRow[]>([]);
   const [sentimentMap, setSentimentMap] = useState<Record<string, SentimentRow>>({});
   const [checkinsLoaded, setCheckinsLoaded] = useState(false);
+  const [showCrisis, setShowCrisis] = useState(false);
+  const [moodTier, setMoodTier] = useState<0 | 1 | 2>(0);
 
   // Load recent check-ins on mount
   useEffect(() => {
@@ -127,6 +131,29 @@ export default function MindPage() {
       setCheckinsLoaded(true);
     }
     loadRecent();
+  }, []);
+
+  // Check daily_checkins for passive mood tier
+  useEffect(() => {
+    async function checkTier() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase
+        .from("daily_checkins")
+        .select("mood")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(3);
+
+      if (data && data.length > 0) {
+        const moods = data.map((d) => d.mood as number);
+        const tier = assessMoodTier(moods);
+        setMoodTier(tier);
+        try { localStorage.setItem("gw_support_tier", String(tier)); } catch {}
+      }
+    }
+    checkTier();
   }, []);
 
   async function handleMoodSelect(mood: (typeof MOODS)[number]) {
@@ -256,14 +283,106 @@ export default function MindPage() {
               Mind
             </h1>
           </div>
-          <a
-            href="#crisis"
-            className="ml-auto text-xs font-semibold transition-opacity hover:opacity-70"
-            style={{ color: "#DC2626", fontFamily: "var(--font-inter)" }}
+          <button
+            onClick={() => setShowCrisis(true)}
+            className="ml-auto flex items-center gap-2 font-bold uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-[0.97]"
+            style={{
+              fontFamily: "var(--font-inter)",
+              fontSize: 13,
+              fontWeight: 700,
+              backgroundColor: "#DC2626",
+              color: "#fff",
+              borderRadius: 8,
+              border: "none",
+              padding: "10px 16px",
+              minHeight: 40,
+              cursor: "pointer",
+              WebkitTapHighlightColor: "transparent",
+            }}
           >
-            Crisis support →
-          </a>
+            <svg viewBox="0 0 20 20" fill="currentColor" width={14} height={14} aria-hidden>
+              <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+            </svg>
+            SOS
+          </button>
         </header>
+
+        {/* Tier 2 Banner — persistent low mood */}
+        {moodTier === 2 && (
+          <section
+            style={{
+              backgroundColor: "#081A2A",
+              border: "2px solid #1B7A9C",
+              borderRadius: "12px",
+              padding: "20px 24px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+            }}
+          >
+            <p
+              style={{
+                fontFamily: "var(--font-inter)",
+                fontSize: 11,
+                fontWeight: 600,
+                color: "#1B7A9C",
+                textTransform: "uppercase",
+                letterSpacing: "0.2em",
+              }}
+            >
+              Support Available
+            </p>
+            <p
+              style={{
+                fontFamily: "var(--font-oswald)",
+                fontSize: 22,
+                fontWeight: 700,
+                color: "#E8E2D8",
+                textTransform: "uppercase",
+                lineHeight: 1.2,
+              }}
+            >
+              You Don&apos;t Have to Carry This Alone
+            </p>
+            <p
+              style={{
+                fontFamily: "var(--font-inter)",
+                fontSize: 13,
+                color: "#9A9A9A",
+                lineHeight: 1.6,
+              }}
+            >
+              Everything here is private. Your employer never sees this. This is just for you.
+            </p>
+            <a
+              href="tel:988"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                minHeight: 52,
+                backgroundColor: "#1B7A9C",
+                color: "#fff",
+                borderRadius: "8px",
+                fontFamily: "var(--font-inter)",
+                fontSize: 14,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                textDecoration: "none",
+              }}
+            >
+              <svg viewBox="0 0 20 20" fill="currentColor" width={16} height={16} aria-hidden>
+                <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+              </svg>
+              Call 988 — Crisis Lifeline
+            </a>
+            <p style={{ fontFamily: "var(--font-inter)", fontSize: 11, color: "#9A9A9A" }}>
+              Free · Confidential · 24/7
+            </p>
+          </section>
+        )}
 
         {/* Daily Check-In */}
         <section
@@ -797,6 +916,9 @@ export default function MindPage() {
 
       </div>
       <BottomNav />
+
+      {/* Crisis Screen */}
+      {showCrisis && <CrisisScreen onDismiss={() => setShowCrisis(false)} />}
 
       {/* Tool Overlays */}
       {activeTool === "Box Breathing" && <BoxBreathingOverlay onClose={() => setActiveTool(null)} />}

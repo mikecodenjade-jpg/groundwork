@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import CrisisScreen from "@/components/CrisisScreen";
+import { detectCrisisKeywords } from "@/lib/crisisDetection";
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -201,6 +204,10 @@ export default function DailyCheckinModal() {
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [showCrisis, setShowCrisis] = useState(false);
+  const [isLateNight, setIsLateNight] = useState(false);
+  const [isReturning, setIsReturning] = useState(false);
+  const [simplified, setSimplified] = useState(false);
 
   useEffect(() => {
     async function check() {
@@ -227,33 +234,167 @@ export default function DailyCheckinModal() {
         setVisible(true);
       }
       setReady(true);
+
+      // Detect late-night login
+      const hour = new Date().getHours();
+      setIsLateNight(hour >= 22 || hour <= 4);
+
+      // Detect returning after 3+ day absence
+      const lastKey = "gw_checkin_last_date";
+      const lastDate = localStorage.getItem(lastKey);
+      if (lastDate) {
+        const diffDays = Math.floor(
+          (Date.now() - new Date(lastDate).getTime()) / 86400000
+        );
+        if (diffDays >= 3) setIsReturning(true);
+      }
+
+      // Tier 2: simplify check-in to mood only
+      const tier = parseInt(localStorage.getItem("gw_support_tier") ?? "0", 10);
+      if (tier >= 2) setSimplified(true);
     }
     check();
   }, []);
 
   async function handleSubmit() {
     if (!mood || !sleep || !energy || !userId) return;
+
+    // Crisis detection runs before any server call.
+    // If crisis keywords found in note, skip saving the note and surface resources.
+    if (note.trim() && detectCrisisKeywords(note)) {
+      setShowCrisis(true);
+      return;
+    }
+
     setSaving(true);
 
     await supabase.from("daily_checkins").insert({
       user_id: userId,
       mood,
-      sleep,
-      energy,
+      sleep: simplified ? null : sleep,
+      energy: simplified ? null : energy,
       note: note.trim() || null,
     });
+
+    // Record completion date for returning-user detection
+    try {
+      localStorage.setItem("gw_checkin_last_date", new Date().toISOString());
+    } catch {}
 
     updateStreakRecord(userId).catch(() => {});
     setSaving(false);
     setDone(true);
-    setTimeout(() => setVisible(false), 1800);
+
+    // Auto-dismiss only for normal mood — tier 1 users see support content first
+    if (mood >= 3) {
+      setTimeout(() => setVisible(false), 1800);
+    }
   }
 
+  if (showCrisis) return <CrisisScreen onDismiss={() => { setShowCrisis(false); setVisible(false); }} />;
   if (!ready || !visible) return null;
 
   // ── Done state ──────────────────────────────────────────────────────────────
 
   if (done) {
+    // Tier 1: mood < 3 — gentle support
+    if (mood !== null && mood < 3) {
+      const isSleepTool = isLateNight;
+      const toolHref = isSleepTool
+        ? "/dashboard/mind?tool=sleep-protocol"
+        : "/dashboard/mind?tool=box-breathing";
+      const toolLabel = isSleepTool ? "Sleep Protocol" : "Box Breathing";
+
+      const headline = isReturning
+        ? "Welcome back. No pressure. Just glad you are here."
+        : isLateNight
+        ? "Late night. Your mind needs rest."
+        : "Rough stretch. Here is a quick reset.";
+
+      return (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 100,
+            backgroundColor: "#0a0f1a",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 20,
+            padding: "40px 28px",
+            textAlign: "center",
+          }}
+        >
+          <p
+            style={{
+              fontFamily: "var(--font-oswald)",
+              fontSize: 26,
+              fontWeight: 700,
+              color: "#E8E2D8",
+              textTransform: "uppercase",
+              lineHeight: 1.2,
+              maxWidth: 320,
+            }}
+          >
+            {headline}
+          </p>
+          <Link
+            href={toolHref}
+            onClick={() => setVisible(false)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "100%",
+              maxWidth: 320,
+              minHeight: 56,
+              backgroundColor: "#f97316",
+              borderRadius: 12,
+              fontFamily: "var(--font-inter)",
+              fontSize: 14,
+              fontWeight: 700,
+              color: "#0a0f1a",
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+              textDecoration: "none",
+            }}
+          >
+            {toolLabel} — Start Now
+          </Link>
+          <p
+            style={{
+              fontFamily: "var(--font-inter)",
+              fontSize: 12,
+              color: "#9A9A9A",
+              maxWidth: 280,
+              lineHeight: 1.6,
+            }}
+          >
+            Everything here is private. Your employer never sees this.
+            This is just for you.
+          </p>
+          <button
+            onClick={() => setVisible(false)}
+            style={{
+              background: "none",
+              border: "none",
+              color: "#3A3A3A",
+              fontFamily: "var(--font-inter)",
+              fontSize: 13,
+              cursor: "pointer",
+              padding: "8px 0",
+              marginTop: 4,
+            }}
+          >
+            Continue
+          </button>
+        </div>
+      );
+    }
+
+    // Normal done state (mood >= 3)
     return (
       <div
         style={{
@@ -294,7 +435,7 @@ export default function DailyCheckinModal() {
     );
   }
 
-  const canSubmit = mood !== null && sleep !== null && energy !== null;
+  const canSubmit = mood !== null && (simplified || (sleep !== null && energy !== null));
 
   // ── Form ────────────────────────────────────────────────────────────────────
 
@@ -367,17 +508,36 @@ export default function DailyCheckinModal() {
           <PickerRow opts={MOOD_OPTS} selected={mood} onSelect={setMood} />
         </div>
 
-        {/* Sleep */}
-        <div>
-          <SectionLabel>Shut Eye Last Night</SectionLabel>
-          <PickerRow opts={SLEEP_OPTS} selected={sleep} onSelect={setSleep} />
-        </div>
+        {/* Sleep — hidden in simplified (Tier 2) mode */}
+        {!simplified && (
+          <div>
+            <SectionLabel>Shut Eye Last Night</SectionLabel>
+            <PickerRow opts={SLEEP_OPTS} selected={sleep} onSelect={setSleep} />
+          </div>
+        )}
 
-        {/* Energy */}
-        <div>
-          <SectionLabel>Tank Level</SectionLabel>
-          <PickerRow opts={ENERGY_OPTS} selected={energy} onSelect={setEnergy} />
-        </div>
+        {/* Energy — hidden in simplified (Tier 2) mode */}
+        {!simplified && (
+          <div>
+            <SectionLabel>Tank Level</SectionLabel>
+            <PickerRow opts={ENERGY_OPTS} selected={energy} onSelect={setEnergy} />
+          </div>
+        )}
+
+        {/* Privacy note in Tier 2 */}
+        {simplified && (
+          <p
+            style={{
+              fontFamily: "var(--font-inter)",
+              fontSize: 13,
+              color: "#9A9A9A",
+              lineHeight: 1.6,
+            }}
+          >
+            Everything here is private. Your employer never sees this.
+            This is just for you.
+          </p>
+        )}
 
         {/* Note */}
         <div>
