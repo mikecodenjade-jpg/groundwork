@@ -117,6 +117,18 @@ const MORE_ITEMS = [
     ),
   },
   {
+    label: "Financial",
+    href: "/dashboard/financial",
+    color: "#22c55e",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" width={24} height={24}>
+        <rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+        <path d="M2 10h20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        <path d="M6 15h4M15 15h3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
     label: "Settings",
     href: "/dashboard/settings",
     color: "#9a9a9a",
@@ -207,6 +219,7 @@ const MORE_ROUTES = [
   "/dashboard/body/measurements",
   "/dashboard/body/devices",
   "/dashboard/badges",
+  "/dashboard/financial",
 ];
 
 function isActive(href: string, pathname: string): boolean {
