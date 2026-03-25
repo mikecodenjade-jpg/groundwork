@@ -33,13 +33,40 @@ const WELCOME_KEY = "gw_coach_welcome_shown";
 const MAX_SESSIONS = 20;
 
 const QUICK_PROMPTS = [
-  "My crew is dragging and I don't know why",
-  "I'm behind schedule and the GC is on me",
-  "How do I handle a safety incident with my team",
-  "I want to move up but don't know the next step",
-  "I can't stop thinking about work when I'm home",
-  "One of my guys is struggling and I don't know what to say",
+  "My crew member is struggling and I do not know what to say",
+  "I cannot sleep and I have a pour at 5 AM",
+  "My PM gave me an impossible schedule",
+  "I want to get stronger but do not know where to start",
+  "I am eating like garbage and feel terrible",
+  "I am thinking about leaving construction, what are my options",
 ];
+
+// ─── Crisis detection ─────────────────────────────────────────────────────────
+
+const CRISIS_PATTERNS = [
+  /\bsuicid/i,
+  /\bkill (my)?self\b/i,
+  /\bend (it|my life)\b/i,
+  /\bdon'?t want to (be here|live)\b/i,
+  /\b(want|going) to die\b/i,
+  /\bhurt (my)?self\b/i,
+  /\bself.?harm\b/i,
+  /\bno reason to (live|go on)\b/i,
+  /\bcan'?t (go on|do this anymore)\b/i,
+  /\bgive up on (life|everything)\b/i,
+];
+
+const CRISIS_RESPONSE = `This sounds heavy. I want you to talk to someone who can really help right now.
+
+Call or text **988** (Suicide & Crisis Lifeline) — available 24/7.
+
+Text **HOME to 741741** (Crisis Text Line) — free, confidential, 24/7.
+
+You don't have to carry this alone. Please reach out.`;
+
+function isCrisisMessage(text: string): boolean {
+  return CRISIS_PATTERNS.some((pattern) => pattern.test(text));
+}
 
 // ─── Session helpers ──────────────────────────────────────────────────────────
 
@@ -81,6 +108,45 @@ function formatSessionDate(iso: string): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+// ─── Supabase sync ────────────────────────────────────────────────────────────
+
+async function loadSessionsFromSupabase(userId: string): Promise<Session[] | null> {
+  try {
+    const { data, error } = await supabase
+      .from("coach_conversations")
+      .select("session_id, title, messages, updated_at")
+      .eq("user_id", userId)
+      .order("updated_at", { ascending: false })
+      .limit(MAX_SESSIONS);
+    if (error) return null;
+    return (data ?? []).map((row) => ({
+      id: row.session_id as string,
+      title: row.title as string,
+      messages: row.messages as Message[],
+      updatedAt: row.updated_at as string,
+    }));
+  } catch {
+    return null;
+  }
+}
+
+async function saveSessionToSupabase(userId: string, session: Session): Promise<void> {
+  try {
+    await supabase.from("coach_conversations").upsert(
+      {
+        user_id: userId,
+        session_id: session.id,
+        title: session.title,
+        messages: session.messages,
+        updated_at: session.updatedAt,
+      },
+      { onConflict: "user_id,session_id" }
+    );
+  } catch {
+    // Silently fall back to localStorage
+  }
+}
+
 // ─── System prompt ────────────────────────────────────────────────────────────
 
 function buildSystemPrompt(profile: Profile | null): string {
@@ -105,6 +171,7 @@ export default function CoachPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [profileLoading, setProfileLoading] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
@@ -127,6 +194,15 @@ export default function CoachPage() {
         setProfileLoading(false);
         return;
       }
+      setUserId(user.id);
+
+      // Load sessions from Supabase; fall back to localStorage
+      const remoteSessions = await loadSessionsFromSupabase(user.id);
+      if (remoteSessions && remoteSessions.length > 0) {
+        setSessions(remoteSessions);
+        persistSessions(remoteSessions);
+      }
+
       const { data } = await supabase
         .from("user_profiles")
         .select("full_name, role, company")
@@ -200,6 +276,33 @@ export default function CoachPage() {
 
       let finalMessages: Message[];
 
+      // Crisis detection — intercept before hitting AI API
+      if (isCrisisMessage(trimmed)) {
+        const crisisMsg: Message = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: CRISIS_RESPONSE,
+        };
+        finalMessages = [...newMessages, crisisMsg];
+        setMessages(finalMessages);
+        setLoading(false);
+        const sid = sessionId;
+        setSessions((prev) => {
+          const updated = prev.map((s) => {
+            if (s.id !== sid) return s;
+            const title =
+              finalMessages.find((m) => m.role === "user")?.content.slice(0, 55) ??
+              s.title;
+            const updatedSession = { ...s, messages: finalMessages, title, updatedAt: new Date().toISOString() };
+            if (userId) saveSessionToSupabase(userId, updatedSession);
+            return updatedSession;
+          });
+          persistSessions(updated);
+          return updated;
+        });
+        return;
+      }
+
       try {
         const res = await fetch("/api/coach", {
           method: "POST",
@@ -240,12 +343,17 @@ export default function CoachPage() {
           const title =
             finalMessages.find((m) => m.role === "user")?.content.slice(0, 55) ??
             s.title;
-          return {
+          const updatedSession = {
             ...s,
             messages: finalMessages,
             title,
             updatedAt: new Date().toISOString(),
           };
+          // Sync to Supabase asynchronously
+          if (userId) {
+            saveSessionToSupabase(userId, updatedSession);
+          }
+          return updatedSession;
         });
         persistSessions(updated);
         return updated;
@@ -253,7 +361,7 @@ export default function CoachPage() {
 
       setLoading(false);
     },
-    [loading, messages, profile, currentSessionId, welcomeShown]
+    [loading, messages, profile, currentSessionId, welcomeShown, userId]
   );
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -387,24 +495,19 @@ export default function CoachPage() {
         {/* Welcome state */}
         {showWelcome && (
           <div className="flex flex-col gap-6 flex-1 justify-center max-w-lg mx-auto w-full">
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-3">
               <p
                 className="text-xs font-semibold tracking-[0.25em] uppercase"
                 style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
               >
                 AI Coach
               </p>
-              {!welcomeShown && (
-                <p
-                  className="text-sm leading-relaxed"
-                  style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
-                >
-                  This is your Coach. Think of it like talking to a foreman
-                  who&apos;s seen everything — crew problems, schedule pressure,
-                  career moves. Ask it anything about the job or yourself.
-                  It&apos;s private.
-                </p>
-              )}
+              <p
+                className="text-base leading-relaxed font-semibold"
+                style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
+              >
+                Hey{profile?.full_name ? ` ${profile.full_name.split(" ")[0]}` : ""}. I am your Coach. I know construction. I know the pressure. Ask me anything, whether it is about training, eating right, handling a tough crew situation, or just getting through a rough day.
+              </p>
             </div>
 
             <div className="flex flex-col gap-2">
@@ -425,12 +528,22 @@ export default function CoachPage() {
                     borderRadius: "8px",
                     color: "#E8E2D8",
                     fontFamily: "var(--font-inter)",
+                    minHeight: "48px",
                   }}
                 >
                   {prompt}
                 </button>
               ))}
             </div>
+
+            <p
+              className="text-[11px] text-center"
+              style={{ color: "#3A3A3A", fontFamily: "var(--font-inter)" }}
+            >
+              Coach is an AI assistant. For crisis support, call{" "}
+              <span style={{ color: "#9A9A9A" }}>988</span> or text{" "}
+              <span style={{ color: "#9A9A9A" }}>HOME to 741741</span>.
+            </p>
           </div>
         )}
 
@@ -530,15 +643,10 @@ export default function CoachPage() {
           className="text-center text-[10px] mt-1"
           style={{ color: "#2A2A2A", fontFamily: "var(--font-inter)" }}
         >
-          Coach gives advice, not therapy or legal counsel. If you&apos;re in crisis,{" "}
-          <Link
-            href="/dashboard/mind#crisis"
-            className="underline"
-            style={{ color: "#3A3A3A" }}
-          >
-            tap Mind → crisis support
-          </Link>
-          .
+          Coach is an AI assistant. For crisis support, call{" "}
+          <a href="tel:988" style={{ color: "#3A3A3A" }}>988</a>
+          {" "}or text{" "}
+          <a href="sms:741741?body=HOME" style={{ color: "#3A3A3A" }}>HOME to 741741</a>.
         </p>
       </div>
 
@@ -715,7 +823,7 @@ function MessageBubble({ message }: { message: Message }) {
         }}
       >
         {paragraphs.map((para, i) => (
-          <p key={i}>{para}</p>
+          <p key={i} dangerouslySetInnerHTML={{ __html: para.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>") }} />
         ))}
       </div>
     </div>
