@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
 import { supabase } from "@/lib/supabase";
+import CrisisScreen from "@/components/CrisisScreen";
 
 const ROLES = [
   "Superintendent",
@@ -27,6 +28,7 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [jobsiteMode, setJobsiteMode] = useState(false);
+  const [showCrisis, setShowCrisis] = useState(false);
 
   useEffect(() => {
     setJobsiteMode(localStorage.getItem("jobsite_mode") === "true");
@@ -367,6 +369,49 @@ export default function SettingsPage() {
           )}
         </section>
 
+        {/* Crisis Support */}
+        <section className="flex flex-col gap-4">
+          <p
+            className="text-xs font-semibold tracking-[0.25em] uppercase"
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+          >
+            Crisis Support
+          </p>
+          <div
+            className="flex flex-col gap-3 px-6 py-5"
+            style={{ backgroundColor: "#1A0808", border: "2px solid #5A1A1A", borderRadius: "12px" }}
+          >
+            <p
+              className="text-sm"
+              style={{ fontFamily: "var(--font-inter)", color: "#9A9A9A", lineHeight: 1.6 }}
+            >
+              If you or someone you know is in crisis, reach out immediately.
+              These resources are free, confidential, and available 24/7.
+            </p>
+            <button
+              onClick={() => setShowCrisis(true)}
+              className="w-full flex items-center justify-center gap-3 font-bold uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-[0.98]"
+              style={{
+                fontFamily: "var(--font-inter)",
+                fontSize: 15,
+                fontWeight: 700,
+                backgroundColor: "#DC2626",
+                color: "#fff",
+                borderRadius: "10px",
+                border: "none",
+                minHeight: "60px",
+                cursor: "pointer",
+                WebkitTapHighlightColor: "transparent",
+              }}
+            >
+              <svg viewBox="0 0 20 20" fill="currentColor" width={18} height={18} aria-hidden>
+                <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+              </svg>
+              SOS — Crisis Resources
+            </button>
+          </div>
+        </section>
+
         {/* Sign Out */}
         <section>
           <button
@@ -380,6 +425,7 @@ export default function SettingsPage() {
 
       </div>
       <BottomNav />
+      {showCrisis && <CrisisScreen onDismiss={() => setShowCrisis(false)} />}
     </main>
   );
 }
