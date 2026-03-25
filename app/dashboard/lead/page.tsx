@@ -9,73 +9,103 @@ import { supabase } from "@/lib/supabase";
 
 const CREW_SCRIPTS = [
   {
-    title: "Difficult Conversation",
-    tag: "Performance",
-    desc: "How to address underperformance without torching the relationship. Lead with the work, not the person.",
-    script: [
-      "\"I want to talk about [specific issue]. I've noticed [specific behavior], and it's affecting the crew.\"",
-      "\"I'm not here to pile on — I'm here because I need you locked in. What's going on?\"",
-      "\"Here's what I need to see by [specific date]. Can I count on you?\"",
+    title: "Hey, you seem off today",
+    tag: "Check-In",
+    situation: "Someone on your crew isn't acting like themselves. They're quiet, distracted, or short-tempered. You don't know what's going on — but you notice.",
+    whatToSay: [
+      "\"Hey, got a minute? I wanted to check in — you seem a little off today. Everything good?\"",
+      "\"Look, I'm not prying. But if something's going on, I've got time to listen. You don't have to carry it alone.\"",
+      "\"Even if it's nothing, I'd rather ask than not.\"",
+    ],
+    notToSay: [
+      "\"What's your problem today?\"",
+      "\"You need to get it together.\"",
+      "\"Just leave it at home — this is work.\"",
+    ],
+    followUp: [
+      "Give them space if they don't open up. The fact that you asked matters.",
+      "Follow up the next day — a nod, a quick check-in, nothing forced.",
+      "If something serious comes up, connect them to support privately.",
     ],
   },
   {
-    title: "New Guy on Site",
-    tag: "Onboarding",
-    desc: "How to bring someone onto your crew the right way — set expectations, establish culture, and make them want to stick around.",
-    script: [
-      "\"Welcome. Here's how we run things: safety first, no shortcuts, and we look out for each other.\"",
-      "\"If you don't know something, ask. Nobody here expects you to already know everything.\"",
-      "\"Do the work, show up on time, and you'll have a crew that has your back.\"",
+    title: "Let's talk about what happened",
+    tag: "Incident",
+    situation: "There was a safety incident or a near-miss. People are shaken. You need to address it without shutting anyone down or making them defensive.",
+    whatToSay: [
+      "\"I want to walk through what happened — not to put anyone on the spot, but so we all understand and it doesn't happen again.\"",
+      "\"Nobody's in trouble. We're trying to figure out what broke down so we can fix it.\"",
+      "\"What did you see? What was going through your head? Help me understand it from your position.\"",
+    ],
+    notToSay: [
+      "\"How did you not see that coming?\"",
+      "\"Somebody's getting written up for this.\"",
+      "\"We'll deal with this later\" — and then not deal with it.",
+    ],
+    followUp: [
+      "Follow up with the crew the next morning — brief, direct, no drama.",
+      "Document what changed. Let the crew see the result.",
+      "Check in privately with anyone who was directly involved.",
     ],
   },
   {
-    title: "Pushing Back Up",
-    tag: "Management",
-    desc: "How to handle pressure from above — unrealistic timelines, budget cuts, scope creep — without burning out your crew or your credibility.",
-    script: [
-      "\"I hear you on the deadline. Here's what I can deliver by then, and here's what gets cut to make that happen.\"",
-      "\"My crew is already at capacity. If we add this, something else has to move.\"",
-      "\"I'll make it work — but I need [specific resource/decision] from you by [date].\"",
+    title: "I noticed you've been quiet",
+    tag: "Withdrawal",
+    situation: "Someone has pulled back. Still showing up, still doing the work — but something's different. They're not talking, not engaging, not themselves.",
+    whatToSay: [
+      "\"I've noticed you've been kind of quiet lately. That's not like you. What's going on?\"",
+      "\"You don't have to tell me anything. I just wanted you to know I see it — and I'm not going to pretend I don't.\"",
+      "\"If you need time or if there's something I can help with, just say the word.\"",
+    ],
+    notToSay: [
+      "\"You've got to leave your personal stuff at home.\"",
+      "\"You need to be more of a team player.\"",
+      "\"If you can't be here mentally, maybe you need time off\" — said as a threat, not an offer.",
+    ],
+    followUp: [
+      "Don't hover — give them space, but keep the line open.",
+      "One more check-in the following week if nothing changes.",
+      "Know the warning signs: giving away gear, saying goodbye like it means more than it should, talking about being a burden.",
     ],
   },
   {
-    title: "Addressing Consistent Tardiness",
-    tag: "Accountability",
-    desc: "Keep it about the crew, not a personal attack. Direct, not aggressive.",
-    script: [
-      "\"Look, I've noticed you've been rolling in late. I need you here on time — not for me, for the crew. They notice. What's going on?\"",
+    title: "It's okay to not be okay",
+    tag: "Mental Health",
+    situation: "Someone admitted they're struggling, or you want to normalize asking for help on your crew before it's a crisis.",
+    whatToSay: [
+      "\"I want to say something and I mean it — it's okay to not be okay. We all go through hard stretches.\"",
+      "\"Asking for help isn't weakness. I've been there. A lot of guys on this crew have been there.\"",
+      "\"If you're carrying something you can't put down, there are people who can help. That's not a sign you can't handle this job.\"",
+    ],
+    notToSay: [
+      "\"Don't be so sensitive.\"",
+      "\"Everybody's got problems.\"",
+      "\"You can't let that stuff affect your work.\"",
+    ],
+    followUp: [
+      "Know your company's EAP number before you need it.",
+      "Follow up privately — not in front of the crew.",
+      "If someone is in immediate danger, don't leave them alone. Call 988.",
     ],
   },
   {
-    title: "Shutting Down Gossip on Site",
-    tag: "Culture",
-    desc: "Quick, direct, doesn't make it worse. Shut it down and move on.",
-    script: [
-      "\"Hey. Whatever's going on between you two, handle it off-site or come to me. I'm not letting it spread. We've got work to do.\"",
+    title: "I've been there too",
+    tag: "Vulnerability",
+    situation: "You want to connect with someone who's struggling — and the most powerful thing you have isn't authority, it's your own story.",
+    whatToSay: [
+      "\"I'm going to tell you something I don't usually talk about — because I think it might help.\"",
+      "\"There was a stretch where I wasn't okay. I kept pushing through alone and it made everything worse.\"",
+      "\"What changed for me was [your honest answer]. I'm not saying it'll be the same for you — but you don't have to figure it out alone.\"",
     ],
-  },
-  {
-    title: "Asking Your PM for More Resources",
-    tag: "Upward",
-    desc: "Flag it before it becomes a problem. Come with the situation, not a complaint.",
-    script: [
-      "\"I need to flag something before it becomes a problem. We're under-crewed for this phase and it's going to hit the schedule. Here's what I need and why.\"",
+    notToSay: [
+      "\"I had it worse and I figured it out.\"",
+      "\"My story proves you need to toughen up.\"",
+      "\"I'm only telling you this\" — and then immediately pivoting to performance expectations.",
     ],
-  },
-  {
-    title: "Recognizing a Crew Member",
-    tag: "Recognition",
-    desc: "Specific praise hits different than 'good job.' Call it out in front of the crew.",
-    script: [
-      "\"I want to call something out. [Name] handled [specific thing] today and it made a difference. That's the standard.\"",
-    ],
-  },
-  {
-    title: "When a Crew Member Is Going Through Something",
-    tag: "Support",
-    desc: "Brief, genuine, no pressure. Make them feel like a person, not a liability.",
-    script: [
-      "\"I'm not going to pry. But I see you're off. If you need a day, take it. If you need to talk, I'm here. Either way, I've got your back.\"",
+    followUp: [
+      "Sharing your story once is enough — don't repeat it for effect.",
+      "Ask them: 'What do you need right now?'",
+      "Stay in their corner. One conversation isn't the finish line.",
     ],
   },
 ];
@@ -139,18 +169,21 @@ export default function LeadPage() {
   const [planSaved, setPlanSaved] = useState(false);
 
   useEffect(() => {
-    // Restore challenge completion for today
-    try {
-      const stored = localStorage.getItem("lead_challenge");
-      if (stored) {
-        const { date, index } = JSON.parse(stored);
-        if (date === new Date().toDateString() && index === challengeIndex) {
-          setChallengeCompleted(true);
-        }
-      }
-    } catch {
-      // ignore
+    // Check challenge completion for today
+    async function loadChallengeStatus() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const today = new Date().toISOString().split("T")[0];
+      const { data } = await supabase
+        .from("leadership_challenges_completed")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("challenge_index", challengeIndex)
+        .eq("completed_date", today)
+        .maybeSingle();
+      if (data) setChallengeCompleted(true);
     }
+    loadChallengeStatus();
 
     // Load saved transition plan
     async function loadPlan() {
@@ -182,16 +215,18 @@ export default function LeadPage() {
     setTimeout(() => setToast(null), 2500);
   }
 
-  function toggleChallenge() {
+  async function toggleChallenge() {
     const next = !challengeCompleted;
     setChallengeCompleted(next);
     if (next) {
-      localStorage.setItem(
-        "lead_challenge",
-        JSON.stringify({ date: new Date().toDateString(), index: challengeIndex })
-      );
-    } else {
-      localStorage.removeItem("lead_challenge");
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const today = new Date().toISOString().split("T")[0];
+        await supabase.from("leadership_challenges_completed").upsert(
+          { user_id: user.id, challenge_index: challengeIndex, completed_date: today },
+          { onConflict: "user_id,challenge_index,completed_date" }
+        );
+      }
     }
   }
 
@@ -277,61 +312,32 @@ export default function LeadPage() {
           </div>
         </header>
 
-        {/* Crew Hub */}
+        {/* Team Pulse */}
         <section>
           <p className="text-xs font-semibold tracking-[0.25em] uppercase mb-4"
             style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}>
-            Crew Hub
+            Team Pulse
           </p>
-          <div className="grid grid-cols-2 gap-3">
-            <Link
-              href="/dashboard/challenges"
-              className="flex flex-col gap-3 px-5 py-5 transition-all duration-150 hover:opacity-80"
-              style={{ backgroundColor: "#111827", border: "1px solid #1e2d40", borderRadius: "12px" }}
-            >
-              <div className="w-10 h-10 flex items-center justify-center"
-                style={{ backgroundColor: "#1A0A00", border: "1px solid #3A1A00", borderRadius: "8px", color: "#f97316" }}>
-                <svg viewBox="0 0 24 24" fill="none" width={20} height={20}>
-                  <path d="M12 4L14.5 9H20L15.5 12.5L17.5 18L12 14.5L6.5 18L8.5 12.5L4 9H9.5L12 4Z"
-                    stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-sm font-bold uppercase leading-tight"
-                  style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
-                  Team Challenges
-                </p>
-                <p className="text-xs mt-1" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-                  Compete with your crew
-                </p>
-              </div>
-            </Link>
-            <Link
-              href="/dashboard/crew"
-              className="flex flex-col gap-3 px-5 py-5 transition-all duration-150 hover:opacity-80"
-              style={{ backgroundColor: "#111827", border: "1px solid #1e2d40", borderRadius: "12px" }}
-            >
-              <div className="w-10 h-10 flex items-center justify-center"
-                style={{ backgroundColor: "#001A1A", border: "1px solid #003A3A", borderRadius: "8px", color: "#2AB5B5" }}>
-                <svg viewBox="0 0 24 24" fill="none" width={20} height={20}>
-                  <circle cx="9" cy="7" r="3" stroke="currentColor" strokeWidth="1.8" />
-                  <circle cx="17" cy="9" r="2.5" stroke="currentColor" strokeWidth="1.6" />
-                  <path d="M3 19C3 16.2 5.7 14 9 14C12.3 14 15 16.2 15 19"
-                    stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                  <path d="M17 14C19.2 14 21 15.8 21 18"
-                    stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-sm font-bold uppercase leading-tight"
-                  style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
-                  Crew Wall
-                </p>
-                <p className="text-xs mt-1" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-                  Share wins and grinds
-                </p>
-              </div>
-            </Link>
+          <div
+            className="flex items-center gap-5 px-7 py-6"
+            style={{ backgroundColor: "#111827", border: "1px solid #1e2d40", borderRadius: "12px" }}
+          >
+            <div className="flex-shrink-0 flex items-center justify-center w-12 h-12 rounded-xl"
+              style={{ backgroundColor: "#1A0A00", border: "1px solid #2A1A00" }}>
+              <svg viewBox="0 0 24 24" fill="none" width={22} height={22}>
+                <path d="M3 12H7L9 6L12 18L15 10L17 14H21"
+                  stroke="#f97316" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-base font-bold uppercase leading-tight"
+                style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                Anonymous Team Mood Check
+              </p>
+              <p className="text-sm mt-1" style={{ color: "#4a5568", fontFamily: "var(--font-inter)" }}>
+                Coming soon
+              </p>
+            </div>
           </div>
         </section>
 
@@ -389,7 +395,12 @@ export default function LeadPage() {
             {CREW_SCRIPTS.map((s) => (
               <ScriptCard
                 key={s.title}
-                {...s}
+                title={s.title}
+                tag={s.tag}
+                situation={s.situation}
+                whatToSay={s.whatToSay}
+                notToSay={s.notToSay}
+                followUp={s.followUp}
                 isOpen={openScript === s.title}
                 onToggle={() => setOpenScript(openScript === s.title ? null : s.title)}
                 onToast={showToast}
@@ -552,47 +563,21 @@ export default function LeadPage() {
 // ── Script Card ───────────────────────────────────────────────────────────────
 
 function ScriptCard({
-  title, tag, desc, script, isOpen, onToggle, onToast,
+  title, tag, situation, whatToSay, notToSay, followUp, isOpen, onToggle, onToast,
 }: {
   title: string;
   tag: string;
-  desc: string;
-  script: string[];
+  situation: string;
+  whatToSay: string[];
+  notToSay: string[];
+  followUp: string[];
   isOpen: boolean;
   onToggle: () => void;
   onToast: (msg: string) => void;
 }) {
-  const storageKey = `custom_script_${title.replace(/\s+/g, "_")}`;
-  const [customizing, setCustomizing] = useState(false);
-  const [editValue, setEditValue] = useState("");
-  const [customText, setCustomText] = useState<string | null>(null);
-
-  useEffect(() => {
-    setCustomText(localStorage.getItem(storageKey));
-  }, [storageKey]);
-
   function handleCopy() {
-    const text = customText ?? script.join("\n\n");
+    const text = whatToSay.join("\n\n");
     navigator.clipboard.writeText(text).then(() => onToast("Copied to clipboard"));
-  }
-
-  function handleCustomize() {
-    setEditValue(customText ?? script.join("\n\n"));
-    setCustomizing(true);
-  }
-
-  function handleSaveCustom() {
-    localStorage.setItem(storageKey, editValue);
-    setCustomText(editValue);
-    setCustomizing(false);
-    onToast("Your version saved");
-  }
-
-  function handleReset() {
-    localStorage.removeItem(storageKey);
-    setCustomText(null);
-    setCustomizing(false);
-    onToast("Reset to original");
   }
 
   return (
@@ -621,17 +606,9 @@ function ScriptCard({
             >
               {tag}
             </span>
-            {customText && (
-              <span
-                className="text-xs font-semibold uppercase tracking-widest px-2 py-0.5"
-                style={{ color: "#f97316", border: "1px solid #f9731640", borderRadius: "8px", fontFamily: "var(--font-inter)" }}
-              >
-                Custom
-              </span>
-            )}
           </div>
           <p className="text-sm leading-relaxed" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-            {desc}
+            {situation}
           </p>
         </div>
         <span
@@ -649,114 +626,84 @@ function ScriptCard({
 
       {/* Expanded content */}
       {isOpen && (
-        <div className="px-8 pb-7 flex flex-col gap-4" style={{ borderTop: "1px solid #1e2d40" }}>
+        <div className="px-8 pb-7 flex flex-col gap-6" style={{ borderTop: "1px solid #1e2d40" }}>
 
-          {/* Action buttons */}
-          <div className="flex gap-3 pt-5">
-            <button
-              onClick={handleCopy}
-              className="px-4 py-2 text-xs font-bold uppercase tracking-widest transition-all duration-150 hover:opacity-80"
-              style={{
-                backgroundColor: "#0a0f1a",
-                border: "1px solid #1e2d40",
-                borderRadius: "6px",
-                color: "#9A9A9A",
-                fontFamily: "var(--font-inter)",
-              }}
-            >
-              Copy
-            </button>
-            <button
-              onClick={customizing ? () => setCustomizing(false) : handleCustomize}
-              className="px-4 py-2 text-xs font-bold uppercase tracking-widest transition-all duration-150 hover:opacity-80"
-              style={{
-                backgroundColor: customizing ? "#1a2535" : "#0a0f1a",
-                border: `1px solid ${customizing ? "#f97316" : "#1e2d40"}`,
-                borderRadius: "6px",
-                color: customizing ? "#f97316" : "#9A9A9A",
-                fontFamily: "var(--font-inter)",
-              }}
-            >
-              {customizing ? "Cancel" : "Customize"}
-            </button>
-            {customText && !customizing && (
+          {/* What to say */}
+          <div className="flex flex-col gap-3 pt-5">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-widest"
+                style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}>
+                What to say
+              </p>
               <button
-                onClick={handleReset}
+                onClick={handleCopy}
                 className="px-4 py-2 text-xs font-bold uppercase tracking-widest transition-all duration-150 hover:opacity-80"
                 style={{
                   backgroundColor: "#0a0f1a",
                   border: "1px solid #1e2d40",
                   borderRadius: "6px",
-                  color: "#666",
+                  color: "#9A9A9A",
                   fontFamily: "var(--font-inter)",
+                  minHeight: "36px",
                 }}
               >
-                Reset
+                Copy
               </button>
-            )}
+            </div>
+            {whatToSay.map((line, i) => (
+              <div key={i} className="flex gap-4 items-start">
+                <span className="text-xs font-bold shrink-0 mt-0.5"
+                  style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}>
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <p className="text-sm leading-relaxed italic"
+                  style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                  {line}
+                </p>
+              </div>
+            ))}
           </div>
 
-          {/* Customize editor */}
-          {customizing ? (
-            <div className="flex flex-col gap-3">
-              <p className="text-xs font-semibold uppercase tracking-widest"
-                style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}>
-                Edit your version
-              </p>
-              <textarea
-                rows={8}
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                className="w-full px-4 py-3 text-sm leading-relaxed outline-none focus:ring-2 focus:ring-[#f97316]"
-                style={{
-                  backgroundColor: "#0a0f1a",
-                  border: "1px solid #1e2d40",
-                  borderRadius: "8px",
-                  color: "#E8E2D8",
-                  fontFamily: "var(--font-inter)",
-                  resize: "vertical",
-                }}
-              />
-              <button
-                onClick={handleSaveCustom}
-                className="self-start px-6 py-2 text-xs font-bold uppercase tracking-widest"
-                style={{
-                  backgroundColor: "#f97316",
-                  color: "#0a0f1a",
-                  borderRadius: "6px",
-                  fontFamily: "var(--font-inter)",
-                }}
-              >
-                Save My Version
-              </button>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              <p className="text-xs font-semibold uppercase tracking-widest mb-1"
-                style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-                {customText ? "Your version" : "What to say"}
-              </p>
-              {customText ? (
-                <p className="text-sm leading-relaxed italic whitespace-pre-wrap"
+          {/* What NOT to say */}
+          <div className="flex flex-col gap-3">
+            <p className="text-xs font-semibold uppercase tracking-widest"
+              style={{ color: "#e05c7a", fontFamily: "var(--font-inter)" }}>
+              What NOT to say
+            </p>
+            {notToSay.map((line, i) => (
+              <div key={i} className="flex gap-4 items-start">
+                <span className="text-xs font-bold shrink-0 mt-0.5"
+                  style={{ color: "#e05c7a", fontFamily: "var(--font-inter)" }}>
+                  ✕
+                </span>
+                <p className="text-sm leading-relaxed"
                   style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-                  {customText}
+                  {line}
                 </p>
-              ) : (
-                script.map((line, i) => (
-                  <div key={i} className="flex gap-4 items-start">
-                    <span className="text-xs font-bold shrink-0 mt-0.5"
-                      style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}>
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <p className="text-sm leading-relaxed italic"
-                      style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-                      {line}
-                    </p>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
+              </div>
+            ))}
+          </div>
+
+          {/* Follow-up actions */}
+          <div className="flex flex-col gap-3">
+            <p className="text-xs font-semibold uppercase tracking-widest"
+              style={{ color: "#4a5568", fontFamily: "var(--font-inter)" }}>
+              Follow-up
+            </p>
+            {followUp.map((line, i) => (
+              <div key={i} className="flex gap-4 items-start">
+                <span className="text-xs font-bold shrink-0 mt-0.5"
+                  style={{ color: "#4a5568", fontFamily: "var(--font-inter)" }}>
+                  →
+                </span>
+                <p className="text-sm leading-relaxed"
+                  style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                  {line}
+                </p>
+              </div>
+            ))}
+          </div>
+
         </div>
       )}
     </div>

@@ -88,6 +88,10 @@ export default function HeartPage() {
   const [journalSaving, setJournalSaving] = useState(false);
   const [journalSaved, setJournalSaved] = useState(false);
 
+  const [connectionScore, setConnectionScore] = useState<number | null>(null);
+  const [connectionSaving, setConnectionSaving] = useState(false);
+  const [connectionSaved, setConnectionSaved] = useState(false);
+
   const [challengeCompleted, setChallengeCompleted] = useState(false);
   const [challengeSaving, setChallengeSaving] = useState(false);
 
@@ -123,6 +127,13 @@ export default function HeartPage() {
         gratitude_2: null,
         gratitude_3: null,
       });
+      if (gratitudeAnswer.trim()) {
+        await supabase.from("gratitude_entries").insert({
+          user_id: user.id,
+          prompt: todayGratitudePrompt,
+          entry: gratitudeAnswer.trim(),
+        });
+      }
     }
 
     setJournalSaving(false);
@@ -131,6 +142,21 @@ export default function HeartPage() {
     setAnswer2("");
     setGratitudeAnswer("");
     setTimeout(() => setJournalSaved(false), 3000);
+  }
+
+  async function handleConnectionScore(score: number) {
+    setConnectionScore(score);
+    setConnectionSaving(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from("connection_checkins").insert({
+        user_id: user.id,
+        score,
+      });
+    }
+    setConnectionSaving(false);
+    setConnectionSaved(true);
+    setTimeout(() => setConnectionSaved(false), 3000);
   }
 
   async function handleCompleteChallenge() {
@@ -345,6 +371,72 @@ export default function HeartPage() {
               className="w-full px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#f97316]"
               style={inputStyle}
             />
+          </div>
+        </section>
+
+        {/* Connection Check */}
+        <section style={{ backgroundColor: "#111827", border: "1px solid #1e2d40", borderRadius: "12px" }}>
+          <div className="px-8 py-6" style={{ borderBottom: "1px solid #1e2d40" }}>
+            <p className="text-xs font-semibold tracking-[0.25em] uppercase mb-1"
+              style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}>
+              Connection Check
+            </p>
+            <h2 className="text-2xl font-bold uppercase"
+              style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}>
+              How connected do you feel today?
+            </h2>
+            <p className="text-sm mt-1" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+              1 = Isolated. 5 = Solid.
+            </p>
+          </div>
+          <div className="px-8 py-6">
+            <div className="grid grid-cols-5 gap-3">
+              {[
+                { score: 1, label: "Isolated" },
+                { score: 2, label: "Off" },
+                { score: 3, label: "Okay" },
+                { score: 4, label: "Connected" },
+                { score: 5, label: "Solid" },
+              ].map(({ score, label }) => {
+                const selected = connectionScore === score;
+                return (
+                  <button
+                    key={score}
+                    onClick={() => handleConnectionScore(score)}
+                    disabled={connectionSaving || (connectionSaved && connectionScore !== null)}
+                    className="flex flex-col items-center gap-1.5 py-4 transition-all duration-150 active:scale-95 disabled:cursor-default"
+                    style={{
+                      backgroundColor: selected ? "#1A0A00" : "#0a0f1a",
+                      border: `1px solid ${selected ? "#f97316" : "#1e2d40"}`,
+                      borderRadius: "10px",
+                      minHeight: "72px",
+                    }}
+                  >
+                    <span
+                      className="text-2xl font-bold"
+                      style={{
+                        fontFamily: "var(--font-oswald)",
+                        color: selected ? "#f97316" : "#4a5568",
+                      }}
+                    >
+                      {score}
+                    </span>
+                    <span
+                      className="text-[9px] font-semibold uppercase tracking-wider leading-tight text-center"
+                      style={{ color: selected ? "#f97316" : "#4a5568", fontFamily: "var(--font-inter)" }}
+                    >
+                      {label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            {connectionSaved && connectionScore !== null && (
+              <p className="mt-4 text-xs font-semibold uppercase tracking-widest"
+                style={{ color: "#4CAF50", fontFamily: "var(--font-inter)" }}>
+                ✓ Logged
+              </p>
+            )}
           </div>
         </section>
 
