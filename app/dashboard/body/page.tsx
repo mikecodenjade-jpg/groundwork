@@ -281,6 +281,28 @@ export default function BodyPage() {
           </Link>
 
           <Link
+            href="/dashboard/train/jobsite-fit"
+            className="flex items-center justify-between px-6 py-4 transition-opacity hover:opacity-80"
+            style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
+          >
+            <div className="flex flex-col gap-0.5">
+              <span
+                className="text-sm font-bold uppercase tracking-wide"
+                style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
+              >
+                Jobsite Fit
+              </span>
+              <span
+                className="text-xs"
+                style={{ fontFamily: "var(--font-inter)", color: "#9A9A9A" }}
+              >
+                5–15 min guided bodyweight workouts · Audio cues · No equipment
+              </span>
+            </div>
+            <span style={{ color: "#C45B28" }}>›</span>
+          </Link>
+
+          <Link
             href="/dashboard/library"
             className="flex items-center justify-between px-6 py-4 transition-opacity hover:opacity-80"
             style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}
