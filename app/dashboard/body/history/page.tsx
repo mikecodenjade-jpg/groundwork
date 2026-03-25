@@ -108,10 +108,10 @@ export default function WorkoutHistoryPage() {
               className="text-2xl font-bold uppercase"
               style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
             >
-              No workouts logged yet.
+              Your first workout is waiting.
             </h3>
             <p className="text-sm max-w-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-              Start your first session and build that foundation.
+              Pick a program and let&apos;s go.
             </p>
             <Link
               href="/dashboard/body"
@@ -123,7 +123,7 @@ export default function WorkoutHistoryPage() {
                 fontFamily: "var(--font-inter)",
               }}
             >
-              Let&apos;s Get Moving &rarr;
+              Start Training &rarr;
             </Link>
           </div>
         ) : (

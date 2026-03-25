@@ -462,7 +462,7 @@ export default function SleepPage() {
               </div>
             ) : (
               <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-                No data for last night.
+                Nothing logged yet. Track your sleep tonight and see how you recover.
               </p>
             )}
           </div>

@@ -262,10 +262,10 @@ export default function ConnectedDevicesPage() {
                     className="text-base font-bold uppercase"
                     style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
                   >
-                    No devices connected yet
+                    No devices connected yet.
                   </p>
                   <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-                    Connect a wearable device below to start syncing your health data.
+                    Connect a wearable and your data shows up automatically. Less typing, more doing.
                   </p>
                 </div>
               ) : (

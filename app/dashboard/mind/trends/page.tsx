@@ -369,7 +369,7 @@ export default function MoodTrendsPage() {
               </p>
               {data.sentiment_over_time.length === 0 ? (
                 <div
-                  className="px-6 py-10 text-center text-sm"
+                  className="px-6 py-10 text-center flex flex-col items-center gap-4"
                   style={{
                     backgroundColor: "#161616",
                     border: "1px solid #252525",
@@ -378,7 +378,14 @@ export default function MoodTrendsPage() {
                     fontFamily: "var(--font-inter)",
                   }}
                 >
-                  No data yet. Check in daily to see your trends.
+                  <p className="text-sm">Your first check-in starts here. Takes 10 seconds.</p>
+                  <Link
+                    href="/dashboard/mind"
+                    className="px-6 py-2.5 text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-90"
+                    style={{ backgroundColor: "#C45B28", color: "#0A0A0A", borderRadius: "8px" }}
+                  >
+                    Check In Now &rarr;
+                  </Link>
                 </div>
               ) : (
                 <SentimentChart points={data.sentiment_over_time} />

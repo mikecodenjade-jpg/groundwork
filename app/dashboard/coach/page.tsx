@@ -632,7 +632,7 @@ function HistoryPanel({
             className="text-sm text-center py-8"
             style={{ color: "#3A3A3A", fontFamily: "var(--font-inter)" }}
           >
-            No past conversations yet.
+            Your coach is ready. Start a conversation.
           </p>
         )}
 

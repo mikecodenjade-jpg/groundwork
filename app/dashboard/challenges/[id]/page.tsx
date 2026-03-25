@@ -501,7 +501,7 @@ export default function ChallengeDetailPage() {
                     fontFamily: "var(--font-inter)",
                   }}
                 >
-                  No participants yet.
+                  Be the first one in. Invite your crew.
                 </p>
               )}
 
