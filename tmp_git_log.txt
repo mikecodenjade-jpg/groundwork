@@ -1,0 +1,3 @@
+b571029 feat: rebuild Lead and Heart pillars
+ff4c69d feat: build Coach page with session history and polish Mind pillar
+307a83a feat: add landing page with 6 pillars and rebuild 5-screen onboarding flow

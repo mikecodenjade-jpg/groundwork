@@ -1,0 +1,3 @@
+warning: in the working copy of 'app/dashboard/nutrition/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/dashboard/page.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'lib/programs.ts', LF will be replaced by CRLF the next time Git touches it

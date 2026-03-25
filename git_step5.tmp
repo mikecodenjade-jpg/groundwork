@@ -1,0 +1,8 @@
+[main e40a336] feat: add streak tracking, daily check-ins, mood history, and badge/dashboard updates
+ 12 files changed, 2282 insertions(+), 232 deletions(-)
+ create mode 100644 components/DailyCheckinModal.tsx
+ create mode 100644 components/MoodHistoryChart.tsx
+ create mode 100644 components/StreakTracker.tsx
+ create mode 100644 lib/streaks.ts
+ create mode 100644 supabase/migrations/018_user_streaks.sql
+ create mode 100644 supabase/migrations/019_daily_checkins.sql

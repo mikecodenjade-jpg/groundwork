@@ -121,7 +121,10 @@
       "Bash(ls \"C:\\\\Users\\\\mjone\\\\groundwork\\\\app\\\\dashboard\\\\mind\"\" 2>/dev/null || echo \"dir not found \")",
       "Bash(dir \"C:/Users/mjone/groundwork/app/dashboard/mind/\")",
       "Bash(cmd /c dir \"C:\\\\Users\\\\mjone\\\\groundwork\\\\app\\\\dashboard\\\\mind\")",
-      "Bash(node -e \"console.log\\(''hello''\\)\")"
+      "Bash(node -e \"console.log\\(''hello''\\)\")",
+      "Bash(find C:Usersmjonegroundworkappcomponents -type f \\\\\\(-name *.tsx -o -name *.ts \\\\\\))",
+      "Bash(find C:Usersmjonegroundworkappcomponents -type f -name *.tsx)",
+      "Bash(find C:Usersmjonegroundwork -maxdepth 2 \\\\\\(-name package.json -o -name tailwind.config.* -o -name next.config.* \\\\\\))"
     ]
   }
 }
