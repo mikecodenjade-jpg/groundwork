@@ -163,8 +163,8 @@ export const PROGRAMS: Program[] = [
   {
     slug: "power-block",
     name: "Power Block Training",
-    tagline: "The Flagship Programme",
-    description: "16-week periodized strength programme. 4 days/week. Built to get you seriously strong.",
+    tagline: "The Flagship Program",
+    description: "16-week periodized strength program. 4 days/week. Built to get you seriously strong.",
     totalWeeks: 16,
     workouts: "64",
     timePerDay: "30-45 min",

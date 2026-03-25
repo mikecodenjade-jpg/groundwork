@@ -6,7 +6,10 @@ export type BadgeSlug =
   | "head-right" | "open-book" | "fuel-smart"
   | "mile-marker" | "10-miler" | "marathon-man"
   | "phase-1-complete" | "halfway-there" | "program-graduate"
-  | "full-send" | "perfect-week";
+  | "full-send" | "perfect-week"
+  // Construction milestone streak badges
+  | "foundation-laid" | "first-floor-up" | "framing-complete"
+  | "under-roof" | "fit-out" | "cert-of-occupancy";
 
 export type BadgeDef = {
   slug: BadgeSlug;
@@ -50,11 +53,18 @@ export const BADGE_DEFS: BadgeDef[] = [
   { slug: "halfway-there",    title: "Halfway There",       description: "Reach week 8 of the 16-week program. Keep going.",              category: "Programs"    },
   { slug: "program-graduate", title: "Program Graduate",    description: "Complete an entire structured program. See it through.",        category: "Programs"    },
   // Elite
-  { slug: "full-send",        title: "Full Send",           description: "Score 100/100 on your daily score — all 4 pillars in one day.", category: "Elite"       },
-  { slug: "perfect-week",     title: "Perfect Week",        description: "Score 100 every day for 7 days straight. Pure discipline.",     category: "Elite"       },
+  { slug: "full-send",           title: "Full Send",                description: "Score 100/100 on your daily score — all 4 pillars in one day.", category: "Elite"       },
+  { slug: "perfect-week",        title: "Perfect Week",             description: "Score 100 every day for 7 days straight. Pure discipline.",     category: "Elite"       },
+  // Streak Milestones
+  { slug: "foundation-laid",   title: "3 Day Streak",  description: "3 days straight. You showed up. Keep going.",             category: "Streak Milestones" },
+  { slug: "first-floor-up",    title: "1 Week Strong", description: "7 days in a row. One week done. The habit is forming.",   category: "Streak Milestones" },
+  { slug: "framing-complete",  title: "2 Weeks",       description: "14 days straight. Two weeks in. You're serious.",         category: "Streak Milestones" },
+  { slug: "under-roof",        title: "30 Days",       description: "30 days of showing up. Most people quit before this.",    category: "Streak Milestones" },
+  { slug: "fit-out",           title: "60 Days",       description: "60 days strong. Two months. This is who you are now.",    category: "Streak Milestones" },
+  { slug: "cert-of-occupancy", title: "90 Days",       description: "90 days straight. Not many people get here. You did.",   category: "Streak Milestones" },
 ];
 
-export const BADGE_CATEGORIES = ["Consistency", "Training", "Mind & Fuel", "Running", "Programs", "Elite"] as const;
+export const BADGE_CATEGORIES = ["Streak Milestones", "Consistency", "Training", "Mind & Fuel", "Running", "Programs", "Elite"] as const;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -95,6 +105,14 @@ export function computeEarnedSlugs(data: ActivityData): BadgeSlug[] {
   if (maxStreak >= 7)                        earned.push("week-strong");
   if (maxStreak >= 30)                       earned.push("iron-month");
   if (maxStreak >= 90)                       earned.push("unbreakable");
+
+  // Build Milestones (construction-themed streak badges)
+  if (maxStreak >= 3)                        earned.push("foundation-laid");
+  if (maxStreak >= 7)                        earned.push("first-floor-up");
+  if (maxStreak >= 14)                       earned.push("framing-complete");
+  if (maxStreak >= 30)                       earned.push("under-roof");
+  if (maxStreak >= 60)                       earned.push("fit-out");
+  if (maxStreak >= 90)                       earned.push("cert-of-occupancy");
 
   // Training
   if (workoutDates.length >= 1)             earned.push("first-blood");

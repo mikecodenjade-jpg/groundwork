@@ -162,6 +162,64 @@ const BADGE_ICONS: Record<BadgeSlug, React.ReactNode> = {
       <circle cx="16" cy="16" r="2" fill="currentColor" />
     </svg>
   ),
+  // Build Milestone icons — construction phases
+  "foundation-laid": (
+    <svg viewBox="0 0 32 32" fill="none" width={32} height={32}>
+      <rect x="4" y="22" width="24" height="4" rx="1" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <rect x="8" y="18" width="16" height="4" rx="1" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <line x1="12" y1="26" x2="12" y2="30" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <line x1="20" y1="26" x2="20" y2="30" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <line x1="8" y1="22" x2="6" y2="18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="24" y1="22" x2="26" y2="18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  ),
+  "first-floor-up": (
+    <svg viewBox="0 0 32 32" fill="none" width={32} height={32}>
+      <rect x="6" y="18" width="20" height="10" rx="1" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <line x1="6" y1="18" x2="6" y2="8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <line x1="26" y1="18" x2="26" y2="8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <line x1="4" y1="28" x2="28" y2="28" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <line x1="6" y1="8" x2="26" y2="8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <line x1="13" y1="18" x2="13" y2="28" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.5" />
+    </svg>
+  ),
+  "framing-complete": (
+    <svg viewBox="0 0 32 32" fill="none" width={32} height={32}>
+      <line x1="8" y1="28" x2="8" y2="10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+      <line x1="24" y1="28" x2="24" y2="10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+      <line x1="8" y1="10" x2="16" y2="4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+      <line x1="24" y1="10" x2="16" y2="4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+      <line x1="8" y1="28" x2="24" y2="28" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+      <line x1="8" y1="19" x2="24" y2="19" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.5" />
+      <line x1="16" y1="4" x2="16" y2="28" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.4" />
+    </svg>
+  ),
+  "under-roof": (
+    <svg viewBox="0 0 32 32" fill="none" width={32} height={32}>
+      <path d="M4 14L16 4L28 14" stroke="currentColor" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+      <rect x="7" y="14" width="18" height="14" rx="1" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <rect x="13" y="20" width="6" height="8" rx="1" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <line x1="16" y1="4" x2="16" y2="14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.4" />
+    </svg>
+  ),
+  "fit-out": (
+    <svg viewBox="0 0 32 32" fill="none" width={32} height={32}>
+      <rect x="5" y="5" width="22" height="22" rx="2" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <line x1="5" y1="12" x2="27" y2="12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.5" />
+      <line x1="14" y1="12" x2="14" y2="27" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.5" />
+      <path d="M9 18L12 21L19 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  "cert-of-occupancy": (
+    <svg viewBox="0 0 32 32" fill="none" width={32} height={32}>
+      <rect x="6" y="4" width="20" height="24" rx="2" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <line x1="10" y1="11" x2="22" y2="11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="10" y1="15" x2="22" y2="15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="10" y1="19" x2="17" y2="19" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="22" cy="22" r="5" fill="currentColor" opacity="0.15" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M19.5 22L21.2 23.7L24.5 20.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────

@@ -42,67 +42,111 @@ const FITNESS_GOAL_OPTIONS: { value: FitnessGoal; label: string }[] = [
 
 // ─── Meal constants ───────────────────────────────────────────────────────────
 
-type MealType = "breakfast" | "lunch" | "dinner" | "snack";
+type MealType = "before_shift" | "break" | "lunch" | "after_work" | "evening";
 
 const MEALS: { type: MealType; label: string }[] = [
-  { type: "breakfast", label: "Breakfast" },
-  { type: "lunch",     label: "Lunch"     },
-  { type: "dinner",    label: "Dinner"    },
-  { type: "snack",     label: "Snacks"    },
+  { type: "before_shift", label: "Before Shift" },
+  { type: "break",        label: "Break"         },
+  { type: "lunch",        label: "Lunch"          },
+  { type: "after_work",   label: "After Work"     },
+  { type: "evening",      label: "Evening"        },
 ];
 
 type FoodEntry = { name: string; cal: number; protein: number; carbs: number; fat: number };
 
 const QUICK_FOODS: FoodEntry[] = [
-  { name: "Eggs (2 large)",          cal: 140, protein: 12, carbs:  1, fat: 10 },
-  { name: "Chicken Breast",          cal: 165, protein: 31, carbs:  0, fat:  3.6 },
-  { name: "Protein Shake",           cal: 160, protein: 30, carbs:  5, fat:  2 },
-  { name: "White Rice (1 cup)",      cal: 206, protein:  4, carbs: 45, fat:  0.4 },
-  { name: "Banana",                  cal: 105, protein:  1, carbs: 27, fat:  0 },
-  { name: "Oatmeal (1 cup)",         cal: 158, protein:  6, carbs: 27, fat:  3 },
-  { name: "Peanut Butter (2 tbsp)", cal: 190, protein:  8, carbs:  6, fat: 16 },
-  { name: "Protein Bar",             cal: 200, protein: 20, carbs: 24, fat:  6 },
-  { name: "Steak (8oz)",            cal: 540, protein: 56, carbs:  0, fat: 34 },
-  { name: "Ground Beef (6oz 80/20)",cal: 430, protein: 38, carbs:  0, fat: 30 },
-  { name: "Sweet Potato",           cal: 103, protein:  2, carbs: 24, fat:  0 },
-  { name: "Broccoli (1 cup)",       cal:  55, protein:  4, carbs: 11, fat:  0 },
-  { name: "Almonds (1oz)",          cal: 164, protein:  6, carbs:  6, fat: 14 },
-  { name: "Greek Yogurt (1 cup)",   cal: 130, protein: 17, carbs:  9, fat:  4 },
-  { name: "Turkey Sandwich",        cal: 370, protein: 28, carbs: 38, fat: 10 },
-  { name: "Burrito Bowl",           cal: 650, protein: 42, carbs: 72, fat: 18 },
+  // Quick protein
+  { name: "Protein Shake",               cal: 160, protein: 30, carbs:  5, fat:  2 },
+  { name: "Eggs (2 large)",              cal: 140, protein: 12, carbs:  1, fat: 10 },
+  { name: "Protein Bar",                 cal: 200, protein: 20, carbs: 24, fat:  6 },
+  { name: "Greek Yogurt (cup)",          cal: 130, protein: 17, carbs:  9, fat:  4 },
+  { name: "Beef Jerky (1 bag)",          cal: 100, protein: 14, carbs:  6, fat:  3 },
+  { name: "Hard-Boiled Eggs (2)",        cal: 140, protein: 12, carbs:  1, fat: 10 },
+  // Meals
+  { name: "Chicken Breast (grilled)",    cal: 165, protein: 31, carbs:  0, fat:  4 },
+  { name: "Breakfast Burrito",           cal: 480, protein: 22, carbs: 48, fat: 20 },
+  { name: "Grilled Chicken Sandwich",    cal: 400, protein: 30, carbs: 38, fat: 14 },
+  { name: "Chipotle Chicken Bowl",       cal: 650, protein: 52, carbs: 72, fat: 18 },
+  { name: "McDonald's Egg McMuffin",     cal: 300, protein: 17, carbs: 30, fat: 12 },
+  { name: "Subway 6\" Chicken Teriyaki", cal: 345, protein: 26, carbs: 48, fat:  6 },
+  { name: "Chick-fil-A Grilled Nuggets", cal: 380, protein: 47, carbs:  9, fat:  9 },
+  // Snacks & sides
+  { name: "Banana",                      cal: 105, protein:  1, carbs: 27, fat:  0 },
+  { name: "Mixed Nuts (1 oz)",           cal: 170, protein:  5, carbs:  6, fat: 15 },
+  { name: "PB&J Sandwich",               cal: 370, protein: 13, carbs: 48, fat: 14 },
 ];
 
 const FAST_FOOD = [
-  { place: "Chick-fil-A",    item: "Grilled Nuggets (12-count)",          name: "Chick-fil-A Grilled Nuggets",          cal: 380, protein: 47, carbs:  9, fat:  9 },
-  { place: "Whataburger",    item: "Grilled Chicken Sandwich (no bun)",   name: "Whataburger Grilled Chicken",          cal: 310, protein: 34, carbs:  6, fat: 16 },
-  { place: "Chipotle",       item: "Bowl — Double Chicken, No Rice",      name: "Chipotle Double Chicken Bowl",         cal: 520, protein: 62, carbs: 28, fat: 18 },
-  { place: "McDonald's",     item: "Egg McMuffin",                        name: "McDonald's Egg McMuffin",              cal: 300, protein: 17, carbs: 30, fat: 12 },
-  { place: "Subway",         item: "Rotisserie Chicken (6-inch)",         name: "Subway Rotisserie Chicken",            cal: 440, protein: 36, carbs: 48, fat:  8 },
-  { place: "Wendy's",        item: "Grilled Chicken Sandwich (no bun)",   name: "Wendy's Grilled Chicken",              cal: 290, protein: 34, carbs:  4, fat: 14 },
-  { place: "Taco Bell",      item: "Power Menu Bowl — Chicken",           name: "Taco Bell Power Menu Bowl",            cal: 470, protein: 26, carbs: 50, fat: 16 },
-  { place: "Sonic",          item: "Grilled Chicken Sandwich",            name: "Sonic Grilled Chicken",                cal: 340, protein: 33, carbs: 38, fat:  7 },
-  { place: "Raising Cane's", item: "3 Chicken Fingers",                   name: "Raising Cane's Chicken Fingers",       cal: 340, protein: 29, carbs: 23, fat: 14 },
-  { place: "Popeyes",        item: "Blackened Chicken Tenders (3-piece)", name: "Popeyes Blackened Chicken Tenders",    cal: 170, protein: 28, carbs:  4, fat:  5 },
+  { place: "Chick-fil-A",    item: "Grilled Nuggets (12-count)",          name: "Chick-fil-A Grilled Nuggets",       cal: 380, protein: 47, carbs:  9, fat:  9 },
+  { place: "Chick-fil-A",    item: "Grilled Chicken Sandwich",            name: "Chick-fil-A Grilled Chicken",       cal: 320, protein: 28, carbs: 31, fat:  7 },
+  { place: "McDonald's",     item: "Egg McMuffin",                        name: "McDonald's Egg McMuffin",           cal: 300, protein: 17, carbs: 30, fat: 12 },
+  { place: "McDonald's",     item: "McDouble",                            name: "McDonald's McDouble",               cal: 400, protein: 22, carbs: 35, fat: 19 },
+  { place: "Subway",         item: "6\" Rotisserie Chicken",              name: "Subway Rotisserie Chicken (6\")",   cal: 350, protein: 32, carbs: 40, fat:  7 },
+  { place: "Subway",         item: "6\" Turkey Breast",                   name: "Subway Turkey Breast (6\")",        cal: 280, protein: 22, carbs: 40, fat:  4 },
+  { place: "Chipotle",       item: "Chicken Bowl (no rice, double protein)", name: "Chipotle Double Chicken Bowl",   cal: 520, protein: 62, carbs: 28, fat: 18 },
+  { place: "Wendy's",        item: "Grilled Chicken Sandwich",            name: "Wendy's Grilled Chicken",           cal: 340, protein: 34, carbs: 36, fat:  8 },
+  { place: "Raising Cane's", item: "3 Chicken Fingers (no sauce)",        name: "Raising Cane's 3 Fingers",          cal: 340, protein: 29, carbs: 23, fat: 14 },
+  { place: "Popeyes",        item: "Blackened Chicken Tenders (3-piece)", name: "Popeyes Blackened Tenders",         cal: 170, protein: 28, carbs:  4, fat:  5 },
+  { place: "Wawa",           item: "Grilled Chicken Hoagie",              name: "Wawa Grilled Chicken Hoagie",       cal: 380, protein: 28, carbs: 48, fat:  8 },
+  { place: "Taco Bell",      item: "Power Menu Bowl — Chicken",           name: "Taco Bell Power Bowl",              cal: 470, protein: 26, carbs: 50, fat: 16 },
 ];
 
-type JobsiteFood = { category: string; name: string; desc: string; cal: number; protein: number; carbs: number; fat: number };
+// ─── UK Jobsite Venue Swap Guide ──────────────────────────────────────────────
 
-const JOBSITE_FOODS: JobsiteFood[] = [
-  // GAS STATION GRABS
-  { category: "GAS STATION GRABS", name: "Beef Jerky (1 bag)",          desc: "High-protein grab-and-go staple",                    cal: 100, protein: 14, carbs:  6, fat:  3 },
-  { category: "GAS STATION GRABS", name: "String Cheese (2 sticks)",    desc: "Easy protein, no prep needed",                       cal: 160, protein: 14, carbs:  2, fat: 10 },
-  { category: "GAS STATION GRABS", name: "Hard-Boiled Eggs (2-pack)",   desc: "Real food in a cooler or on the go",                 cal: 140, protein: 12, carbs:  1, fat: 10 },
-  { category: "GAS STATION GRABS", name: "Mixed Nuts (small bag)",      desc: "Healthy fats and protein, shelf stable",             cal: 170, protein:  6, carbs:  8, fat: 14 },
-  { category: "GAS STATION GRABS", name: "Protein Bar (average)",       desc: "Not ideal but beats skipping a meal",                cal: 230, protein: 20, carbs: 25, fat:  8 },
-  { category: "GAS STATION GRABS", name: "Greek Yogurt Cup",            desc: "Protein and probiotics, grab from the cooler",       cal: 130, protein: 15, carbs: 12, fat:  2 },
-  // TACO TRUCK
-  { category: "TACO TRUCK",        name: "Chicken Street Tacos (3)",    desc: "Street tacos — better macros than fast food",        cal: 420, protein: 30, carbs: 36, fat: 15 },
-  { category: "TACO TRUCK",        name: "Burrito Bowl (no tortilla)",  desc: "High protein, skip the wrap",                        cal: 460, protein: 40, carbs: 35, fat: 16 },
-  // REGIONAL PICKS
-  { category: "REGIONAL PICKS",    name: "Wawa Turkey Hoagie",          desc: "Mid-Atlantic staple — solid macros",                 cal: 380, protein: 28, carbs: 48, fat:  8 },
-  { category: "REGIONAL PICKS",    name: "Buc-ee's Brisket Sandwich",   desc: "Texas legend — high protein, watch the fat",         cal: 520, protein: 35, carbs: 40, fat: 22 },
-  { category: "REGIONAL PICKS",    name: "QuikTrip Roller Grill Chicken", desc: "Surprisingly clean — protein without the carbs",   cal: 180, protein: 22, carbs:  4, fat:  8 },
-  { category: "REGIONAL PICKS",    name: "Casey's Breakfast Pizza (2 slices)", desc: "Midwest staple when nothing else is open",     cal: 340, protein: 16, carbs: 36, fat: 14 },
+type JobsiteVenue = {
+  venue: string;
+  defaultPick: string;
+  defaultCal: number;
+  defaultProtein: number;
+  swapPick: string;
+  swapCal: number;
+  swapProtein: number;
+  swapCarbs: number;
+  swapFat: number;
+  swapDesc: string;
+};
+
+const JOBSITE_VENUES: JobsiteVenue[] = [
+  {
+    venue: "Gas Station",
+    defaultPick: "Hot dog + chips + energy drink",
+    defaultCal: 580, defaultProtein: 14,
+    swapPick: "Beef jerky + hard-boiled eggs + water",
+    swapCal: 240, swapProtein: 26, swapCarbs: 7, swapFat: 13,
+    swapDesc: "340 fewer calories, 12g more protein. Same grab-and-go.",
+  },
+  {
+    venue: "McDonald's",
+    defaultPick: "Big Mac Meal (large fries + Coke)",
+    defaultCal: 1080, defaultProtein: 30,
+    swapPick: "McDouble + side salad + water",
+    swapCal: 440, swapProtein: 26, swapCarbs: 38, swapFat: 22,
+    swapDesc: "640 fewer calories. Skip the fries and soda.",
+  },
+  {
+    venue: "Subway",
+    defaultPick: "12\" Meatball Marinara + chips + soda",
+    defaultCal: 980, defaultProtein: 38,
+    swapPick: "6\" Rotisserie Chicken + water (no cheese)",
+    swapCal: 350, swapProtein: 32, swapCarbs: 40, swapFat: 7,
+    swapDesc: "630 fewer calories, nearly the same protein.",
+  },
+  {
+    venue: "Chick-fil-A",
+    defaultPick: "Chicken Sandwich Meal (large fries + lemonade)",
+    defaultCal: 1150, defaultProtein: 36,
+    swapPick: "Grilled Nuggets (12ct) + side salad + water",
+    swapCal: 430, swapProtein: 49, swapCarbs: 14, swapFat: 11,
+    swapDesc: "720 fewer calories, 13g more protein. Their best option.",
+  },
+  {
+    venue: "Wawa / Sheetz",
+    defaultPick: "Classic hoagie + chips + fountain soda",
+    defaultCal: 890, defaultProtein: 28,
+    swapPick: "Grilled chicken hoagie + water",
+    swapCal: 380, swapProtein: 28, swapCarbs: 48, swapFat: 8,
+    swapDesc: "510 fewer calories. Same protein, skip the chips and soda.",
+  },
 ];
 
 type MealPrepRecipe = { name: string; tagline: string; prepTime: string; totalMeals: number; cal: number; protein: number; carbs: number; fat: number; coolerRating: number; instructions: string };
@@ -119,7 +163,7 @@ const MEAL_PREP_RECIPES: MealPrepRecipe[] = [
   },
   {
     name: "Slow Cooker Pulled Pork",
-    tagline: "Set it before your shift. Done when you're back.",
+    tagline: "Set it in the morning. Ready when you're home.",
     prepTime: "15 min active / 8 hr cook",
     totalMeals: 6,
     cal: 490, protein: 38, carbs: 42, fat: 12,
@@ -128,7 +172,7 @@ const MEAL_PREP_RECIPES: MealPrepRecipe[] = [
   },
   {
     name: "Egg Muffins",
-    tagline: "Grab 3, eat on the way to the site.",
+    tagline: "Make 12, grab 3 each morning — done.",
     prepTime: "15 min",
     totalMeals: 4,
     cal: 220, protein: 18, carbs: 3, fat: 12,
@@ -227,19 +271,21 @@ type HydrationLog = {
 };
 
 const WATER_QUICK_ADD = [
-  { label: "8 oz", ml: 237 },
-  { label: "12 oz", ml: 355 },
-  { label: "16 oz", ml: 473 },
-  { label: "24 oz", ml: 710 },
-  { label: "32 oz", ml: 946 },
+  { label: "1 glass",    ml: 250  },
+  { label: "2 glasses",  ml: 500  },
+  { label: "500ml",      ml: 500  },
+  { label: "750ml",      ml: 750  },
+  { label: "1 litre",    ml: 1000 },
 ];
-const DAILY_GOAL_ML = 2840; // ~96 oz / 12 cups
+const DAILY_GOAL_ML  = 2000; // 8 glasses
+const GLASS_ML       = 250;
+const DAILY_GOAL_GLASSES = Math.round(DAILY_GOAL_ML / GLASS_ML); // 8
 
 function coerceLog(d: Record<string, unknown>): FoodLog {
   return {
     id:         d.id as string,
     name:       (d.name as string) ?? "",
-    meal_type:  ((d.meal_type as string) || "snack") as MealType,
+    meal_type:  ((d.meal_type as string) || "lunch") as MealType,
     calories:   (d.calories  as number) ?? 0,
     protein_g:  (d.protein_g as number) ?? 0,
     carb_g:     (d.carb_g    as number) ?? 0,
@@ -256,12 +302,18 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
 }
 
-/** Auto-detect meal type based on current time of day */
+/** Auto-detect meal slot based on current time of day */
 function detectMealType(): MealType {
   const hour = new Date().getHours();
-  if (hour < 11) return "breakfast";
-  if (hour < 15) return "lunch";
-  return "dinner";
+  if (hour < 9)  return "before_shift";
+  if (hour < 11) return "break";
+  if (hour < 14) return "lunch";
+  if (hour < 18) return "after_work";
+  return "evening";
+}
+
+function mealLabel(type: MealType): string {
+  return MEALS.find((m) => m.type === type)?.label ?? type;
 }
 
 // ─── Calorie Ring ─────────────────────────────────────────────────────────────
@@ -811,9 +863,12 @@ export default function NutritionPage() {
   const [goals,          setGoals]          = useState<NutritionGoals>(DEFAULT_GOALS);
   const [showGoalsModal, setShowGoalsModal] = useState(false);
   const [expandedMeals,  setExpandedMeals]  = useState<Set<MealType>>(
-    new Set<MealType>(["breakfast", "lunch", "dinner", "snack"])
+    new Set<MealType>(["before_shift", "break", "lunch", "after_work", "evening"])
   );
   const [addingTo,       setAddingTo]       = useState<MealType | null>(null);
+  const [lastLoggedFood, setLastLoggedFood] = useState<{ food: FoodEntry; mealType: MealType } | null>(null);
+  const [selectedVenue,  setSelectedVenue]  = useState<string | null>(null);
+  const [venuePicker,    setVenuePicker]    = useState<string | null>(null);
   const [search,         setSearch]         = useState("");
   const [apiResults,     setApiResults]     = useState<FoodEntry[]>([]);
   const [apiLoading,     setApiLoading]     = useState(false);
@@ -954,6 +1009,19 @@ export default function NutritionPage() {
     { calories: 0, protein: 0, carbs: 0, fat: 0 }
   );
 
+  // ── Daily score / grade ────────────────────────────────────────────────────
+  const totalMlHydration = hydrationLogs.reduce((s, l) => s + l.amount_ml, 0);
+  const proteinScore  = Math.round(Math.min(1, totals.protein  / goals.protein)  * 50);
+  const calorieScore  = totals.calories > 0
+    ? (totals.calories > goals.calories * 1.1
+        ? Math.max(0, Math.round(30 - ((totals.calories - goals.calories * 1.1) / (goals.calories * 0.4)) * 30))
+        : Math.round((totals.calories / goals.calories) * 30))
+    : 0;
+  const hydrationScore = Math.round(Math.min(1, totalMlHydration / DAILY_GOAL_ML) * 20);
+  const dailyScore  = proteinScore + calorieScore + hydrationScore;
+  const scoreGrade  = dailyScore >= 90 ? "A" : dailyScore >= 75 ? "B" : dailyScore >= 60 ? "C" : dailyScore >= 40 ? "D" : "F";
+  const scoreColor  = scoreGrade === "A" ? "#4CAF50" : scoreGrade === "B" ? "#8BC34A" : scoreGrade === "C" ? "#C45B28" : scoreGrade === "D" ? "#FF9800" : "#E87070";
+
   function logsForMeal(type: MealType)  { return todayLogs.filter((l) => l.meal_type === type); }
   function mealCalories(type: MealType) { return logsForMeal(type).reduce((a, l) => a + (l.calories ?? 0), 0); }
 
@@ -987,7 +1055,8 @@ export default function NutritionPage() {
         setTodayLogs((prev) => [...prev, coerceLog(data as Record<string, unknown>)]);
         // Auto-expand the meal section so the user sees it
         setExpandedMeals((prev) => { const n = new Set(prev); n.add(mealType); return n; });
-        flash(`${food.name} added to ${mealType}`);
+        setLastLoggedFood({ food, mealType });
+        flash(`Fuelled up — ${food.name} logged`);
       }
     } catch (err) {
       console.error("addFood error:", err);
@@ -1102,9 +1171,21 @@ export default function NutritionPage() {
           {/* ── Daily Summary ────────────────────────────────────────────── */}
           <section className="px-6 py-7 flex flex-col gap-6" style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}>
             <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold tracking-[0.25em] uppercase" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>
-                Today&apos;s Summary
-              </p>
+              <div className="flex items-center gap-3">
+                <p className="text-xs font-semibold tracking-[0.25em] uppercase" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>
+                  Today&apos;s Fuel
+                </p>
+                {/* Daily score badge */}
+                {!loading && totals.calories > 0 && (
+                  <span
+                    className="text-xs font-bold px-2 py-0.5 rounded"
+                    style={{ backgroundColor: `${scoreColor}22`, color: scoreColor, border: `1px solid ${scoreColor}55`, fontFamily: "var(--font-inter)" }}
+                    title={`Score: ${dailyScore}/100 — Protein: ${proteinScore}/50, Calories: ${calorieScore}/30, Hydration: ${hydrationScore}/20`}
+                  >
+                    {scoreGrade}
+                  </span>
+                )}
+              </div>
               <button
                 onClick={() => setShowGoalsModal(true)}
                 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest px-3 py-1.5 transition-opacity hover:opacity-80"
@@ -1114,7 +1195,7 @@ export default function NutritionPage() {
                   <circle cx="10" cy="10" r="3" stroke="currentColor" strokeWidth="1.8" />
                   <path d="M10 2v2M10 16v2M4.22 4.22l1.42 1.42M14.36 14.36l1.42 1.42M2 10h2M16 10h2M4.22 15.78l1.42-1.42M14.36 5.64l1.42-1.42" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                 </svg>
-                Set Goals
+                Goals
               </button>
             </div>
 
@@ -1124,6 +1205,15 @@ export default function NutritionPage() {
               <div className="flex flex-col sm:flex-row items-center gap-8">
                 <CalorieRing consumed={totals.calories} goal={goals.calories} />
                 <div className="flex-1 flex flex-col gap-4 w-full">
+                  {/* Remaining calories row */}
+                  <div className="flex items-center justify-between px-3 py-2.5" style={{ backgroundColor: "#0A0A0A", borderRadius: "8px" }}>
+                    <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                      {totals.calories > goals.calories ? "Over target" : "Remaining"}
+                    </span>
+                    <span className="text-base font-bold" style={{ color: totals.calories > goals.calories ? "#E87070" : "#E8E2D8", fontFamily: "var(--font-inter)" }}>
+                      {Math.abs(goals.calories - totals.calories)} cal
+                    </span>
+                  </div>
                   {[
                     { label: "Protein", val: totals.protein, target: goals.protein, color: "#C45B28" },
                     { label: "Carbs",   val: totals.carbs,   target: goals.carbs,   color: "#5A8070" },
@@ -1201,9 +1291,32 @@ export default function NutritionPage() {
                 Quick Add
               </p>
               <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-                Adds to {detectMealType()}
+                → {mealLabel(detectMealType())}
               </p>
             </div>
+
+            {/* Repeat last meal */}
+            {lastLoggedFood && (
+              <button
+                disabled={saving}
+                onClick={() => addFood(detectMealType(), lastLoggedFood.food)}
+                className="flex items-center justify-between px-4 py-3 w-full text-left transition-all active:scale-[0.98] disabled:opacity-40"
+                style={{ backgroundColor: "#161616", border: "1px solid #C45B2855", borderRadius: "10px", fontFamily: "var(--font-inter)" }}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <svg viewBox="0 0 20 20" fill="none" width={14} height={14} className="shrink-0" style={{ color: "#C45B28" }}>
+                    <path d="M4 10a6 6 0 1 0 1.06-3.42" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                    <path d="M2 6l2.06.58L6 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "#C45B28" }}>Repeat Last</p>
+                    <p className="text-sm font-semibold truncate" style={{ color: "#E8E2D8" }}>{lastLoggedFood.food.name}</p>
+                  </div>
+                </div>
+                <span className="text-sm font-bold shrink-0 ml-3" style={{ color: "#C45B28" }}>{lastLoggedFood.food.cal} cal</span>
+              </button>
+            )}
+
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {QUICK_FOODS.slice(0, 6).map((food) => (
                 <button
@@ -1242,10 +1355,10 @@ export default function NutritionPage() {
               </svg>
               <div>
                 <p className="text-sm font-semibold" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
-                  Nothing logged yet today. Fuel up!
+                  Nothing logged yet today.
                 </p>
                 <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-                  Track your first meal to hit your protein goals.
+                  Log your first meal to start tracking your protein and calories.
                 </p>
               </div>
             </div>
@@ -1427,102 +1540,119 @@ export default function NutritionPage() {
             );
           })}
 
-          {/* ── Jobsite Eating Guide ─────────────────────────────────────── */}
+          {/* ── Jobsite Food Guide ──────────────────────────────────────── */}
           <section className="flex flex-col gap-4">
             <div>
-              <p className="text-xs font-semibold tracking-[0.25em] uppercase mb-1" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>JOBSITE-APPROVED OPTIONS</p>
-              <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>High-protein picks for when you&apos;re stuck near the jobsite. Tap Add to log it.</p>
+              <p className="text-xs font-semibold tracking-[0.25em] uppercase mb-1" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>EATING OUT GUIDE</p>
+              <h2 className="text-xl font-bold uppercase mb-1" style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}>Where Are You Eating?</h2>
+              <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Select a spot and we&apos;ll show you a smarter option.</p>
             </div>
 
-            {/* Drive-through chains */}
-            <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Drive-Through Chains</p>
-            <div className="flex flex-col gap-3">
-              {FAST_FOOD.map((ff, idx) => {
-                const isPicking = fastFoodPicker === idx;
-                return (
-                  <div key={ff.place} className="px-5 py-5 flex flex-col gap-3" style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}>
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0">
-                        <h3 className="text-sm font-bold uppercase" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>{ff.place}</h3>
-                        <p className="text-xs mt-0.5" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>{ff.item}</p>
-                        <p className="text-xs mt-1" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>P: {ff.protein}g · C: {ff.carbs}g · F: {ff.fat}g</p>
-                      </div>
-                      <div className="flex flex-col items-end gap-2 shrink-0">
-                        <span className="text-sm font-bold" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>{ff.cal} cal</span>
-                        <button onClick={() => setFastFoodPicker(isPicking ? null : idx)}
-                          className="text-xs font-semibold uppercase tracking-widest px-3 py-1.5 transition-opacity hover:opacity-80"
-                          style={{ backgroundColor: isPicking ? "#252525" : "#161616", color: isPicking ? "#9A9A9A" : "#C45B28", border: `1px solid ${isPicking ? "#252525" : "#C45B28"}`, borderRadius: "6px", fontFamily: "var(--font-inter)" }}>
-                          {isPicking ? "Cancel" : "Add"}
-                        </button>
+            {/* Venue selector tabs */}
+            <div className="flex flex-wrap gap-2">
+              {JOBSITE_VENUES.map((v) => (
+                <button
+                  key={v.venue}
+                  onClick={() => setSelectedVenue(selectedVenue === v.venue ? null : v.venue)}
+                  className="px-4 py-2.5 text-sm font-bold uppercase tracking-widest transition-all active:scale-95"
+                  style={{
+                    backgroundColor: selectedVenue === v.venue ? "#C45B28" : "#161616",
+                    color:           selectedVenue === v.venue ? "#0A0A0A" : "#9A9A9A",
+                    border:          `1px solid ${selectedVenue === v.venue ? "#C45B28" : "#252525"}`,
+                    borderRadius:    "8px",
+                    fontFamily:      "var(--font-inter)",
+                    minHeight:       "48px",
+                  }}
+                >
+                  {v.venue}
+                </button>
+              ))}
+            </div>
+
+            {/* Swap card for selected venue */}
+            {selectedVenue && (() => {
+              const v = JOBSITE_VENUES.find((x) => x.venue === selectedVenue)!;
+              const calDiff    = v.defaultCal - v.swapCal;
+              const protDiff   = v.swapProtein - v.defaultProtein;
+              const isPicking  = venuePicker === v.venue;
+              return (
+                <div className="flex flex-col gap-4 px-5 py-5" style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}>
+                  {/* Default vs swap comparison */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Usual pick */}
+                    <div className="flex flex-col gap-2 px-3 py-3" style={{ backgroundColor: "#0A0A0A", borderRadius: "8px", border: "1px solid #2A1A1A" }}>
+                      <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#E87070", fontFamily: "var(--font-inter)" }}>Usual Pick</p>
+                      <p className="text-xs font-semibold leading-snug" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>{v.defaultPick}</p>
+                      <div className="flex gap-3 mt-1">
+                        <div><p className="text-sm font-bold" style={{ color: "#E87070", fontFamily: "var(--font-inter)" }}>{v.defaultCal}</p><p className="text-[10px]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>cal</p></div>
+                        <div><p className="text-sm font-bold" style={{ color: "#E87070", fontFamily: "var(--font-inter)" }}>{v.defaultProtein}g</p><p className="text-[10px]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>protein</p></div>
                       </div>
                     </div>
-                    {isPicking && (
-                      <div className="flex flex-col gap-2 pt-2" style={{ borderTop: "1px solid #252525" }}>
-                        <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Add to:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {MEALS.map(({ type, label }) => (
-                            <button key={type} disabled={saving}
-                              onClick={async () => { setFastFoodPicker(null); await addFood(type, { name: ff.name, cal: ff.cal, protein: ff.protein, carbs: ff.carbs, fat: ff.fat }); }}
-                              className="px-4 py-2 text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-80 disabled:opacity-40"
-                              style={{ backgroundColor: "#252525", color: "#E8E2D8", borderRadius: "6px", fontFamily: "var(--font-inter)" }}>
-                              {label}
-                            </button>
-                          ))}
-                        </div>
+                    {/* Better swap */}
+                    <div className="flex flex-col gap-2 px-3 py-3" style={{ backgroundColor: "#0A0A0A", borderRadius: "8px", border: "1px solid #1A2A1A" }}>
+                      <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#4CAF50", fontFamily: "var(--font-inter)" }}>Better Swap</p>
+                      <p className="text-xs font-semibold leading-snug" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>{v.swapPick}</p>
+                      <div className="flex gap-3 mt-1">
+                        <div><p className="text-sm font-bold" style={{ color: "#4CAF50", fontFamily: "var(--font-inter)" }}>{v.swapCal}</p><p className="text-[10px]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>cal</p></div>
+                        <div><p className="text-sm font-bold" style={{ color: "#4CAF50", fontFamily: "var(--font-inter)" }}>{v.swapProtein}g</p><p className="text-[10px]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>protein</p></div>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Savings summary */}
+                  <div className="flex items-center gap-3 px-3 py-2.5" style={{ backgroundColor: "#0D1B0D", border: "1px solid #1E3A1E", borderRadius: "8px" }}>
+                    <svg viewBox="0 0 20 20" fill="none" width={14} height={14} className="shrink-0">
+                      <path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm0 5v4l2.5 2.5" stroke="#4CAF50" strokeWidth="1.8" strokeLinecap="round" />
+                    </svg>
+                    <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                      {v.swapDesc}
+                    </p>
+                  </div>
+
+                  {/* Diff pills */}
+                  <div className="flex gap-2">
+                    {calDiff > 0 && (
+                      <span className="text-[11px] font-bold px-2 py-1 rounded" style={{ backgroundColor: "#1A2A1A", color: "#4CAF50", fontFamily: "var(--font-inter)" }}>
+                        -{calDiff} cal
+                      </span>
+                    )}
+                    {protDiff > 0 && (
+                      <span className="text-[11px] font-bold px-2 py-1 rounded" style={{ backgroundColor: "#1A2A1A", color: "#4CAF50", fontFamily: "var(--font-inter)" }}>
+                        +{protDiff}g protein
+                      </span>
                     )}
                   </div>
-                );
-              })}
-            </div>
 
-            {/* Gas Station, Taco Truck, Regional */}
-            {(["GAS STATION GRABS", "TACO TRUCK", "REGIONAL PICKS"] as const).map((cat) => {
-              const items = JOBSITE_FOODS.filter((f) => f.category === cat);
-              return (
-                <div key={cat} className="flex flex-col gap-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>{cat}</p>
-                  {items.map((jf, idx) => {
-                    const key = `jf-${cat}-${idx}`;
-                    const isPicking = fastFoodPicker === key;
-                    return (
-                      <div key={key} className="px-5 py-5 flex flex-col gap-3" style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}>
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="min-w-0">
-                            <h3 className="text-sm font-bold" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>{jf.name}</h3>
-                            <p className="text-xs mt-0.5" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>{jf.desc}</p>
-                            <p className="text-xs mt-1" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>P: {jf.protein}g · C: {jf.carbs}g · F: {jf.fat}g</p>
-                          </div>
-                          <div className="flex flex-col items-end gap-2 shrink-0">
-                            <span className="text-sm font-bold" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>{jf.cal} cal</span>
-                            <button onClick={() => setFastFoodPicker(isPicking ? null : key)}
-                              className="text-xs font-semibold uppercase tracking-widest px-3 py-1.5 transition-opacity hover:opacity-80"
-                              style={{ backgroundColor: isPicking ? "#252525" : "#161616", color: isPicking ? "#9A9A9A" : "#C45B28", border: `1px solid ${isPicking ? "#252525" : "#C45B28"}`, borderRadius: "6px", fontFamily: "var(--font-inter)" }}>
-                              {isPicking ? "Cancel" : "Add"}
-                            </button>
-                          </div>
-                        </div>
-                        {isPicking && (
-                          <div className="flex flex-col gap-2 pt-2" style={{ borderTop: "1px solid #252525" }}>
-                            <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Add to:</p>
-                            <div className="flex flex-wrap gap-2">
-                              {MEALS.map(({ type, label }) => (
-                                <button key={type} disabled={saving}
-                                  onClick={async () => { setFastFoodPicker(null); await addFood(type, { name: jf.name, cal: jf.cal, protein: jf.protein, carbs: jf.carbs, fat: jf.fat }); }}
-                                  className="px-4 py-2 text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-80 disabled:opacity-40"
-                                  style={{ backgroundColor: "#252525", color: "#E8E2D8", borderRadius: "6px", fontFamily: "var(--font-inter)" }}>
-                                  {label}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                  {/* Log swap button */}
+                  <button
+                    onClick={() => setVenuePicker(isPicking ? null : v.venue)}
+                    className="py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-[0.98]"
+                    style={{ backgroundColor: isPicking ? "#252525" : "#C45B28", color: isPicking ? "#9A9A9A" : "#0A0A0A", borderRadius: "8px", fontFamily: "var(--font-inter)", minHeight: "48px" }}
+                  >
+                    {isPicking ? "Cancel" : "Log the Better Swap"}
+                  </button>
+
+                  {isPicking && (
+                    <div className="flex flex-col gap-2">
+                      <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Add to which slot?</p>
+                      <div className="flex flex-wrap gap-2">
+                        {MEALS.map(({ type, label }) => (
+                          <button key={type} disabled={saving}
+                            onClick={async () => {
+                              setVenuePicker(null);
+                              await addFood(type, { name: `${v.venue} — ${v.swapPick}`, cal: v.swapCal, protein: v.swapProtein, carbs: v.swapCarbs, fat: v.swapFat });
+                            }}
+                            className="px-4 py-2.5 text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-80 disabled:opacity-40"
+                            style={{ backgroundColor: "#252525", color: "#E8E2D8", borderRadius: "6px", fontFamily: "var(--font-inter)", minHeight: "44px" }}>
+                            {label}
+                          </button>
+                        ))}
                       </div>
-                    );
-                  })}
+                    </div>
+                  )}
                 </div>
               );
-            })}
+            })()}
           </section>
 
           {/* ── Meal Prep Sunday ─────────────────────────────────────────── */}
@@ -1530,7 +1660,7 @@ export default function NutritionPage() {
             <div>
               <p className="text-xs font-semibold tracking-[0.25em] uppercase mb-1" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>MEAL PREP SUNDAY</p>
               <h2 className="text-xl font-bold uppercase mb-1" style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}>Cook once. Eat all week.</h2>
-              <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Survives a cooler on a 100° jobsite.</p>
+              <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Prep once. Eat clean all week.</p>
             </div>
             <div className="flex flex-col gap-4">
               {MEAL_PREP_RECIPES.map((recipe) => {
@@ -1624,7 +1754,7 @@ export default function NutritionPage() {
                             <div key={log.id} className="px-5 py-3 flex items-center justify-between gap-4">
                               <div className="min-w-0">
                                 <p className="text-sm font-semibold truncate" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>{log.name}</p>
-                                <p className="text-xs capitalize" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>{log.meal_type}</p>
+                                <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>{mealLabel(log.meal_type)}</p>
                               </div>
                               <span className="text-sm font-bold shrink-0" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>{log.calories} cal</span>
                             </div>
@@ -1645,37 +1775,56 @@ export default function NutritionPage() {
             Hydration
           </p>
           <div style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}>
-            {/* Summary */}
+            {/* Summary — glasses */}
             <div className="px-6 py-5" style={{ borderBottom: "1px solid #252525" }}>
               {(() => {
-                const totalMl = hydrationLogs.reduce((s, l) => s + l.amount_ml, 0);
-                const totalOz = Math.round(totalMl / 29.574);
-                const goalOz = Math.round(DAILY_GOAL_ML / 29.574);
-                const pctVal = Math.min(100, Math.round((totalMl / DAILY_GOAL_ML) * 100));
+                const totalMl      = hydrationLogs.reduce((s, l) => s + l.amount_ml, 0);
+                const glassesHad   = Math.floor(totalMl / GLASS_ML);
+                const pctVal       = Math.min(100, Math.round((totalMl / DAILY_GOAL_ML) * 100));
                 return (
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-end justify-between">
-                      <div>
-                        <span className="text-3xl font-bold" style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}>
-                          {totalOz}
-                        </span>
-                        <span className="text-sm ml-1" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-                          / {goalOz} oz
-                        </span>
+                  <div className="flex flex-col gap-4">
+                    {/* Glass icons — tap-to-add */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex gap-1.5 flex-wrap">
+                        {Array.from({ length: DAILY_GOAL_GLASSES }).map((_, i) => (
+                          <button
+                            key={i}
+                            disabled={hydrationLoading}
+                            onClick={() => { if (i >= glassesHad) logWater(GLASS_ML); }}
+                            title={i < glassesHad ? "Logged" : "Tap to add 1 glass"}
+                            className="transition-transform active:scale-90"
+                            style={{ background: "none", border: "none", padding: 0, cursor: i < glassesHad ? "default" : "pointer" }}
+                          >
+                            <svg viewBox="0 0 18 24" width={18} height={24} fill="none">
+                              <path d="M3 4h12l-1.5 14a1 1 0 01-1 .9H5.5a1 1 0 01-1-.9L3 4z"
+                                fill={i < glassesHad ? "#3B8BEB" : "#252525"}
+                                stroke={i < glassesHad ? "#3B8BEB" : "#3A3A3A"}
+                                strokeWidth="1"
+                              />
+                              <line x1="3" y1="4" x2="15" y2="4" stroke={i < glassesHad ? "#3B8BEB" : "#3A3A3A"} strokeWidth="1.5" strokeLinecap="round" />
+                            </svg>
+                          </button>
+                        ))}
                       </div>
-                      <span className="text-sm font-semibold" style={{ color: pctVal >= 100 ? "#4CAF50" : "#C45B28", fontFamily: "var(--font-inter)" }}>
-                        {pctVal}%
-                      </span>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold" style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}>
+                          {glassesHad}<span className="text-sm font-normal ml-1" style={{ color: "#9A9A9A" }}>/ {DAILY_GOAL_GLASSES}</span>
+                        </p>
+                        <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>glasses</p>
+                      </div>
                     </div>
                     <div style={{ backgroundColor: "#252525", borderRadius: "4px", height: "6px" }}>
                       <div style={{
-                        backgroundColor: pctVal >= 100 ? "#4CAF50" : "#C45B28",
+                        backgroundColor: pctVal >= 100 ? "#4CAF50" : "#3B8BEB",
                         width: `${pctVal}%`,
                         height: "100%",
                         borderRadius: "4px",
                         transition: "width 0.3s ease",
                       }} />
                     </div>
+                    <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                      {Math.round(totalMl)} ml logged — {DAILY_GOAL_GLASSES} glasses = {DAILY_GOAL_ML} ml goal
+                    </p>
                   </div>
                 );
               })()}
@@ -1684,15 +1833,15 @@ export default function NutritionPage() {
             <div className="px-6 py-5">
               <p className="text-xs font-semibold uppercase tracking-widest mb-3"
                 style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-                Quick Add
+                Add Water
               </p>
               <div className="flex flex-wrap gap-2">
-                {WATER_QUICK_ADD.map(({ label, ml }) => (
+                {WATER_QUICK_ADD.map(({ label, ml }, idx) => (
                   <button
-                    key={ml}
+                    key={idx}
                     onClick={() => logWater(ml)}
                     disabled={hydrationLoading}
-                    className="px-4 py-2 text-sm font-bold uppercase tracking-widest transition-all active:scale-95"
+                    className="px-4 py-2.5 text-sm font-bold uppercase tracking-widest transition-all active:scale-95"
                     style={{
                       backgroundColor: "#0A0A0A",
                       border: "1px solid #252525",
@@ -1700,6 +1849,7 @@ export default function NutritionPage() {
                       color: "#E8E2D8",
                       fontFamily: "var(--font-inter)",
                       opacity: hydrationLoading ? 0.5 : 1,
+                      minHeight: "48px",
                     }}
                   >
                     + {label}
@@ -1719,7 +1869,7 @@ export default function NutritionPage() {
                         {new Date(log.logged_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
                       </span>
                       <span className="text-sm font-semibold" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
-                        +{Math.round(log.amount_ml / 29.574)} oz
+                        +{Math.round(log.amount_ml / GLASS_ML * 10) / 10} glasses ({log.amount_ml} ml)
                       </span>
                     </div>
                   ))}

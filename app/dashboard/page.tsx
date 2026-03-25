@@ -6,6 +6,14 @@ import { supabase } from "@/lib/supabase";
 import { getProgramBySlug, getWeeks } from "@/lib/programs";
 import { todayQuote } from "@/lib/quotes";
 import BottomNav from "@/components/BottomNav";
+import {
+  getCurrentMilestone,
+  getNextMilestone,
+  get30DayGrid,
+  calcMaxStreak,
+} from "@/lib/streaks";
+import DailyCheckinModal from "@/components/DailyCheckinModal";
+import StreakTracker from "@/components/StreakTracker";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -364,6 +372,8 @@ export default function DashboardPage() {
   });
   const [weekly, setWeekly] = useState({ done: 0, total: 7 });
   const [weeklyDaysDone, setWeeklyDaysDone] = useState<boolean[]>(Array(7).fill(false));
+  const [longestStreak, setLongestStreak] = useState(0);
+  const [streakGrid, setStreakGrid] = useState<boolean[]>([]);
   const [workout, setWorkout] = useState<{ slug: string; name: string } | null>(null);
   const [selectedTime, setSelectedTime] = useState<15 | 30 | 45 | 60 | null>(null);
   const [totalWorkouts, setTotalWorkouts] = useState(0);
@@ -481,8 +491,13 @@ export default function DashboardPage() {
       // ── Streak & weekly ──
       const workoutDates = (workoutsRes.data ?? []).map((r) => r.created_at);
       const moodDates = (moodsRes.data ?? []).map((r) => r.created_at);
-      const allActivityDates = [...workoutDates, ...moodDates];
-      setStreak(calcStreak(allActivityDates));
+      const journalDates = (journalsRes.data ?? []).map((r) => r.created_at);
+      const mealDatesAll = (mealsRes.data ?? []).map((r) => r.logged_at);
+      const allActivityDates = [...workoutDates, ...moodDates, ...journalDates, ...mealDatesAll];
+      const currentStr = calcStreak(allActivityDates);
+      setStreak(currentStr);
+      setLongestStreak(calcMaxStreak(allActivityDates));
+      setStreakGrid(get30DayGrid(allActivityDates));
       setTotalWorkouts((workoutsRes.data ?? []).length);
       setWeekly(calcWeeklyDays(allActivityDates));
       setWeeklyDaysDone(calcWeeklyDaysDone(allActivityDates));
@@ -716,56 +731,107 @@ export default function DashboardPage() {
             </h1>
           )}
 
-          {/* Streak badge */}
-          <div className="mt-4 flex items-center gap-3">
-            {!loading && streak === 0 ? (
-              <div
-                className="flex items-center gap-2 px-4 py-2"
-                style={{
-                  backgroundColor: "#1A0C00",
-                  border: "1px solid #3A1800",
-                  borderRadius: "8px",
-                }}
-              >
-                <span className="text-xl leading-none" role="img" aria-label="fire">🔥</span>
-                <span
-                  className="text-xs font-semibold uppercase tracking-widest"
-                  style={{ fontFamily: "var(--font-inter)", color: "#C45B28" }}
-                >
-                  Day 1 starts now.
-                </span>
-              </div>
-            ) : (
-              <div
-                className="flex items-center gap-2 px-4 py-2"
-                style={{
-                  backgroundColor: "#0D1B2A",
-                  border: "1px solid #1E3A5F",
-                  borderRadius: "8px",
-                }}
-              >
-                <span
-                  className="text-2xl font-bold leading-none"
-                  style={{ fontFamily: "var(--font-oswald)", color: "#C45B28" }}
-                >
-                  {loading ? "\u2013" : streak}
-                </span>
-                <span
-                  className="text-xs font-semibold uppercase tracking-widest"
-                  style={{ fontFamily: "var(--font-inter)", color: "#9A9A9A" }}
-                >
-                  Day Streak
-                </span>
-              </div>
-            )}
-            {!loading && streak > 0 && (
+          {/* ── Streak Tracker ─────────────────────────────────────────── */}
+          <div className="mt-5">
+            <StreakWidget
+              streak={loading ? null : streak}
+              longestStreak={loading ? null : longestStreak}
+              grid={streakGrid}
+            />
+          </div>
+        </section>
+
+        {/* ─── Today's Groundwork ──────────────────────────────────────── */}
+        <section>
+          <div
+            className="px-5 py-5 flex flex-col gap-4"
+            style={{
+              backgroundColor: "#111111",
+              border: "1px solid #252525",
+              borderRadius: "12px",
+            }}
+          >
+            {/* Header row */}
+            <div className="flex items-center justify-between">
               <p
-                className="text-xs"
-                style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                className="text-[10px] font-semibold tracking-[0.25em] uppercase"
+                style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
               >
-                {streak === 1 ? "Day one. Keep going." : `${streak} days straight.`}
+                Today&apos;s Groundwork
               </p>
-            )}
+              <span
+                className="text-sm font-bold"
+                style={{ fontFamily: "var(--font-oswald)", color: calcScore(score) === 100 ? "#4CAF50" : "#C45B28" }}
+              >
+                {loading ? "–" : `${calcScore(score)}%`}
+              </span>
+            </div>
+
+            {/* Progress bar */}
+            <div
+              className="w-full h-1.5 rounded-full overflow-hidden"
+              style={{ backgroundColor: "#1E1E1E" }}
+            >
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: loading ? "0%" : `${calcScore(score)}%`,
+                  backgroundColor: calcScore(score) === 100 ? "#4CAF50" : "#C45B28",
+                }}
+              />
+            </div>
+
+            {/* Task rows */}
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { key: "workout", label: "Train", sub: "Log a workout",     done: score.workout, href: "/dashboard/body"      },
+                { key: "checkin", label: "Check In", sub: "Mood & mindset", done: score.checkin, href: "/dashboard/today"     },
+                { key: "journal", label: "Reflect", sub: "Write it down",   done: score.journal, href: "/dashboard/today"     },
+                { key: "meal",    label: "Fuel Up", sub: "Log a meal",      done: score.meal,    href: "/dashboard/nutrition" },
+              ].map(({ key, label, sub, done, href }) => (
+                <Link
+                  key={key}
+                  href={done ? "#" : href}
+                  aria-disabled={done}
+                  className="flex items-center gap-3 px-4 py-3 transition-opacity"
+                  style={{
+                    backgroundColor: done ? "#0D1A0D" : "#161616",
+                    border: `1px solid ${done ? "#1A3A1A" : "#252525"}`,
+                    borderRadius: "10px",
+                    opacity: loading ? 0.4 : 1,
+                    pointerEvents: loading ? "none" : "auto",
+                  }}
+                >
+                  <div
+                    className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center"
+                    style={{
+                      backgroundColor: done ? "#1A4A1A" : "#1E1E1E",
+                      border: `1.5px solid ${done ? "#2A6A2A" : "#3A3A3A"}`,
+                    }}
+                  >
+                    {done && (
+                      <svg viewBox="0 0 12 12" fill="none" width={10} height={10}>
+                        <path d="M2 6L5 9L10 3" stroke="#4CAF50" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </div>
+                  <div>
+                    <p
+                      className="text-xs font-bold uppercase leading-none"
+                      style={{ color: done ? "#4CAF50" : "#E8E2D8", fontFamily: "var(--font-inter)" }}
+                    >
+                      {label}
+                    </p>
+                    <p
+                      className="text-[10px] mt-0.5"
+                      style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+                    >
+                      {done ? "Done" : sub}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -1977,6 +2043,11 @@ export default function DashboardPage() {
           </div>
         </section>
 
+        {/* ─── Check-In Streak ─────────────────────────────────────────────────── */}
+        <section>
+          <StreakTracker />
+        </section>
+
         {/* ─── 10. Crew ────────────────────────────────────────────────────────── */}
         <section>
           <p
@@ -2125,6 +2196,7 @@ export default function DashboardPage() {
         </svg>
       </Link>
 
+      <DailyCheckinModal />
       <BottomNav />
     </main>
   );
@@ -2476,6 +2548,210 @@ function ActivityIcon({ type }: { type: ActivityItem["type"] }) {
       }}
     >
       {cfg.icon}
+    </div>
+  );
+}
+
+// ─── StreakWidget ──────────────────────────────────────────────────────────────
+
+function StreakWidget({
+  streak,
+  longestStreak,
+  grid,
+}: {
+  streak: number | null;
+  longestStreak: number | null;
+  grid: boolean[];
+}) {
+  if (streak === null) {
+    return (
+      <div
+        className="animate-pulse rounded-xl"
+        style={{ height: 180, backgroundColor: "#161616", border: "1px solid #1E1E1E" }}
+      />
+    );
+  }
+
+  const milestone = getCurrentMilestone(streak);
+  const next = getNextMilestone(streak);
+
+  return (
+    <div
+      className="flex flex-col gap-4 px-5 py-5"
+      style={{
+        backgroundColor: "#111111",
+        border: `1px solid ${streak > 0 ? "#2A1600" : "#252525"}`,
+        borderRadius: "12px",
+      }}
+    >
+      {/* Row 1: count + milestone + badges link */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-baseline gap-2">
+            <span
+              className="text-5xl font-black leading-none"
+              style={{ fontFamily: "var(--font-oswald)", color: streak > 0 ? "#C45B28" : "#3A3A3A" }}
+            >
+              {streak}
+            </span>
+            <span
+              className="text-sm font-semibold uppercase tracking-widest self-end mb-1"
+              style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+            >
+              day streak
+            </span>
+          </div>
+          {milestone ? (
+            <span
+              className="text-xs font-bold uppercase tracking-widest"
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+            >
+              {milestone.name}
+            </span>
+          ) : (
+            <span
+              className="text-xs"
+              style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+            >
+              {streak === 0 ? "Day 1 starts now." : streak < 3 ? `${3 - streak} day${3 - streak !== 1 ? "s" : ""} to your first streak.` : ""}
+            </span>
+          )}
+          {milestone && (
+            <span
+              className="text-[11px]"
+              style={{ color: "#555555", fontFamily: "var(--font-inter)" }}
+            >
+              {milestone.tagline}
+            </span>
+          )}
+        </div>
+        <Link
+          href="/dashboard/badges"
+          className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 transition-opacity hover:opacity-70"
+          style={{
+            backgroundColor: "#1A0C00",
+            border: "1px solid #3A1800",
+            borderRadius: "8px",
+            color: "#C45B28",
+          }}
+        >
+          <svg viewBox="0 0 16 16" fill="none" width={12} height={12}>
+            <path d="M8 2L9.5 5.5H13L10.5 7.5L11.5 11L8 9L4.5 11L5.5 7.5L3 5.5H6.5L8 2Z"
+              stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+          </svg>
+          <span className="text-[10px] font-semibold uppercase tracking-widest"
+            style={{ fontFamily: "var(--font-inter)" }}>
+            Badges
+          </span>
+        </Link>
+      </div>
+
+      {/* Next milestone progress bar */}
+      {next && streak > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between">
+            <span
+              className="text-[10px] font-semibold uppercase tracking-widest"
+              style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
+            >
+              Next: {next.name}
+            </span>
+            <span
+              className="text-[10px]"
+              style={{ color: "#555555", fontFamily: "var(--font-inter)" }}
+            >
+              {next.days - streak} day{next.days - streak !== 1 ? "s" : ""} away
+            </span>
+          </div>
+          <div
+            className="w-full h-1.5 rounded-full overflow-hidden"
+            style={{ backgroundColor: "#1E1E1E" }}
+          >
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${Math.min(100, Math.round((streak / next.days) * 100))}%`,
+                backgroundColor: "#C45B28",
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* 30-day activity grid */}
+      {grid.length === 30 && (
+        <div className="flex flex-col gap-2">
+          <p
+            className="text-[10px] font-semibold uppercase tracking-widest"
+            style={{ color: "#3A3A3A", fontFamily: "var(--font-inter)" }}
+          >
+            Last 30 Days
+          </p>
+          <div
+            className="grid gap-1"
+            style={{ gridTemplateColumns: "repeat(10, 1fr)" }}
+          >
+            {grid.map((active, i) => (
+              <div
+                key={i}
+                className="rounded-sm"
+                style={{
+                  aspectRatio: "1",
+                  backgroundColor: active ? "#C45B28" : "#1E1E1E",
+                  opacity: active ? 1 : 0.6,
+                }}
+                title={active ? "Active" : "Rest day"}
+              />
+            ))}
+          </div>
+          <div className="flex justify-between">
+            <span className="text-[9px]" style={{ color: "#2A2A2A", fontFamily: "var(--font-inter)" }}>
+              30 days ago
+            </span>
+            <span className="text-[9px]" style={{ color: "#2A2A2A", fontFamily: "var(--font-inter)" }}>
+              Today
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Personal best — only show when not at streak record */}
+      {longestStreak !== null && longestStreak > 0 && longestStreak > streak && (
+        <div
+          className="flex items-center justify-between pt-1"
+          style={{ borderTop: "1px solid #1E1E1E" }}
+        >
+          <span
+            className="text-[10px] uppercase tracking-widest"
+            style={{ color: "#3A3A3A", fontFamily: "var(--font-inter)" }}
+          >
+            Personal best
+          </span>
+          <span
+            className="text-xs font-bold"
+            style={{ color: "#555555", fontFamily: "var(--font-oswald)" }}
+          >
+            {longestStreak} days
+          </span>
+        </div>
+      )}
+      {longestStreak !== null && longestStreak > 0 && longestStreak === streak && streak > 0 && (
+        <div
+          className="flex items-center justify-between pt-1"
+          style={{ borderTop: "1px solid #1E1E1E" }}
+        >
+          <span
+            className="text-[10px] font-semibold uppercase tracking-widest"
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+          >
+            New personal best
+          </span>
+          <svg viewBox="0 0 16 16" fill="none" width={14} height={14}>
+            <path d="M8 2L9.5 5.5H13L10.5 7.5L11.5 11L8 9L4.5 11L5.5 7.5L3 5.5H6.5L8 2Z"
+              fill="#C45B28" />
+          </svg>
+        </div>
+      )}
     </div>
   );
 }

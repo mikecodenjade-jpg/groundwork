@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
+import MoodHistoryChart from "@/components/MoodHistoryChart";
 import { supabase } from "@/lib/supabase";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -23,6 +24,55 @@ type CheckinRow = {
   mood: string;
   created_at: string;
 };
+
+type DailyCheckinRow = {
+  id: string;
+  mood: number;
+  sleep: number;
+  energy: number;
+  note: string | null;
+  created_at: string;
+};
+
+const DAILY_MOOD_LABELS: Record<number, { label: string; color: string }> = {
+  1: { label: "In the Mud",  color: "#ef4444" },
+  2: { label: "Struggling",  color: "#f97316" },
+  3: { label: "Getting By",  color: "#eab308" },
+  4: { label: "Good to Go",  color: "#84cc16" },
+  5: { label: "Rock Solid",  color: "#22c55e" },
+};
+
+const DAILY_SLEEP_LABELS: Record<number, { label: string; color: string }> = {
+  1: { label: "Didn't Sleep",     color: "#ef4444" },
+  2: { label: "Rough Night",      color: "#f97316" },
+  3: { label: "Got By",           color: "#eab308" },
+  4: { label: "Decent Rest",      color: "#84cc16" },
+  5: { label: "Slept Like a Log", color: "#22c55e" },
+};
+
+const DAILY_ENERGY_LABELS: Record<number, { label: string; color: string }> = {
+  1: { label: "Running on Empty", color: "#ef4444" },
+  2: { label: "Low Tank",         color: "#f97316" },
+  3: { label: "Half Charge",      color: "#eab308" },
+  4: { label: "Charged Up",       color: "#84cc16" },
+  5: { label: "Full Battery",     color: "#22c55e" },
+};
+
+function dailyMetricDot(v: number): string {
+  if (v >= 4) return "#22c55e";
+  if (v === 3) return "#eab308";
+  return "#ef4444";
+}
+
+function relativeDate(iso: string): string {
+  const d = new Date(iso);
+  const todayMs = new Date().setHours(0, 0, 0, 0);
+  const dayMs = new Date(d).setHours(0, 0, 0, 0);
+  const diff = Math.floor((todayMs - dayMs) / 86400000);
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Yesterday";
+  return `${diff}d ago`;
+}
 
 // ─── Mood color map (for dots/heatmap) ────────────────────────────────────────
 // green=locked in, yellow=solid, orange=holding, red-orange=low, red=stressed
@@ -60,6 +110,39 @@ export default function MoodTrendsPage() {
   // Direct mood checkin data (no edge function needed)
   const [checkins30, setCheckins30] = useState<CheckinRow[]>([]);
   const [checkinsLoading, setCheckinsLoading] = useState(true);
+
+  // New daily_checkins data (mood + sleep + energy)
+  const [dailyCheckins, setDailyCheckins] = useState<DailyCheckinRow[]>([]);
+  const [dailyLoading, setDailyLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadDaily() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) { setDailyLoading(false); return; }
+
+      const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+
+      const { data } = await supabase
+        .from("daily_checkins")
+        .select("id, mood, sleep, energy, note, created_at")
+        .eq("user_id", user.id)
+        .gte("created_at", sevenDaysAgo)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      setDailyCheckins((data as DailyCheckinRow[]) ?? []);
+      setDailyLoading(false);
+    }
+    loadDaily();
+  }, []);
+
+  function dailyAvg(field: "mood" | "sleep" | "energy"): string {
+    if (dailyCheckins.length === 0) return "—";
+    const sum = dailyCheckins.reduce((s, c) => s + c[field], 0);
+    return (sum / dailyCheckins.length).toFixed(1);
+  }
 
   // Load 30-day checkins directly from Supabase
   useEffect(() => {
@@ -167,6 +250,128 @@ export default function MoodTrendsPage() {
             </h1>
           </div>
         </header>
+
+        {/* ── Daily Check-In Averages (new) ───────────────────────────────── */}
+        <section>
+          <p
+            className="text-xs font-semibold tracking-[0.25em] uppercase mb-3"
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+          >
+            7-Day Average · Daily Check-In
+          </p>
+          <div style={{ display: "flex", gap: 8 }}>
+            {[
+              { label: "Mood",   value: dailyLoading ? "–" : dailyAvg("mood"),   color: "#8B5CF6" },
+              { label: "Sleep",  value: dailyLoading ? "–" : dailyAvg("sleep"),  color: "#3b82f6" },
+              { label: "Energy", value: dailyLoading ? "–" : dailyAvg("energy"), color: "#f97316" },
+            ].map(({ label, value, color }) => (
+              <div
+                key={label}
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 4,
+                  padding: "14px 8px",
+                  backgroundColor: "#161616",
+                  border: "1px solid #252525",
+                  borderRadius: 10,
+                }}
+              >
+                <span style={{ fontFamily: "var(--font-oswald)", fontSize: 26, fontWeight: 700, color, lineHeight: 1 }}>
+                  {value}
+                </span>
+                <span style={{ fontFamily: "var(--font-inter)", fontSize: 9, fontWeight: 600, color: "#9A9A9A", textTransform: "uppercase" as const, letterSpacing: "0.1em" }}>
+                  {label}
+                </span>
+                <span style={{ fontFamily: "var(--font-inter)", fontSize: 9, color: "#3A3A3A" }}>/ 5</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ── Mood / Sleep / Energy Chart (new) ──────────────────────────── */}
+        <section>
+          <MoodHistoryChart />
+        </section>
+
+        {/* ── Recent Daily Check-Ins (new) ────────────────────────────────── */}
+        {!dailyLoading && dailyCheckins.length > 0 && (
+          <section>
+            <p
+              className="text-xs font-semibold tracking-[0.25em] uppercase mb-3"
+              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+            >
+              Recent Check-Ins
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {dailyCheckins.slice(0, 5).map((c) => {
+                const mInfo = DAILY_MOOD_LABELS[Math.round(c.mood)];
+                const sInfo = DAILY_SLEEP_LABELS[Math.round(c.sleep)];
+                const eInfo = DAILY_ENERGY_LABELS[Math.round(c.energy)];
+                return (
+                  <div
+                    key={c.id}
+                    style={{
+                      backgroundColor: "#161616",
+                      border: "1px solid #252525",
+                      borderRadius: 12,
+                      padding: "14px 16px",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span style={{ fontFamily: "var(--font-inter)", fontSize: 11, color: "#9A9A9A", textTransform: "uppercase" as const, letterSpacing: "0.1em" }}>
+                        {relativeDate(c.created_at)}
+                      </span>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        {[{ l: "M", v: c.mood }, { l: "S", v: c.sleep }, { l: "E", v: c.energy }].map(({ l, v }) => (
+                          <div key={l} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                            <div style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: dailyMetricDot(v) }} />
+                            <span style={{ fontFamily: "var(--font-inter)", fontSize: 10, color: "#9A9A9A" }}>
+                              {l}: <span style={{ color: dailyMetricDot(v), fontWeight: 600 }}>{v}</span>
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 5, flexWrap: "wrap" as const }}>
+                      {[
+                        { info: mInfo, v: c.mood },
+                        { info: sInfo, v: c.sleep },
+                        { info: eInfo, v: c.energy },
+                      ].map(({ info, v }, i) => (
+                        <span
+                          key={i}
+                          style={{
+                            fontFamily: "var(--font-inter)",
+                            fontSize: 10,
+                            fontWeight: 600,
+                            color: info?.color ?? "#9A9A9A",
+                            padding: "2px 8px",
+                            borderRadius: 4,
+                            border: `1px solid ${info?.color ?? "#252525"}33`,
+                            backgroundColor: `${info?.color ?? "#252525"}11`,
+                          }}
+                        >
+                          {info?.label ?? v}
+                        </span>
+                      ))}
+                    </div>
+                    {c.note && (
+                      <p style={{ fontFamily: "var(--font-inter)", fontSize: 12, color: "#9A9A9A", fontStyle: "italic", margin: 0 }}>
+                        &ldquo;{c.note}&rdquo;
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {/* ── 7-Day Mood Dots ─────────────────────────────────────────────── */}
         <section>
