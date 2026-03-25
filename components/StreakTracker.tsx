@@ -3,17 +3,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-
-// ─── Constants ─────────────────────────────────────────────────────────────────
-
-const MILESTONES = [
-  { days: 3,  label: "Triple Set",    emoji: "🔥" },
-  { days: 7,  label: "Full Week",     emoji: "⚡" },
-  { days: 14, label: "Two Weeks",     emoji: "💪" },
-  { days: 30, label: "Monthly Grind", emoji: "🏗️"  },
-  { days: 60, label: "Two Month Run", emoji: "🔩" },
-  { days: 90, label: "Foundation",    emoji: "🏆" },
-];
+import {
+  STREAK_MILESTONES,
+  isReturningAfterBreak,
+} from "@/lib/streaks";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -59,6 +52,7 @@ export default function StreakTracker() {
   const [current, setCurrent] = useState(0);
   const [longest, setLongest] = useState(0);
   const [checkedDays, setCheckedDays] = useState<Set<string>>(new Set());
+  const [returning, setReturning] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -71,23 +65,47 @@ export default function StreakTracker() {
         return;
       }
 
-      const ninetyDaysAgo = new Date(Date.now() - 90 * 86400000).toISOString();
+      const cutoff = new Date(Date.now() - 95 * 86400000).toISOString();
 
-      const { data } = await supabase
-        .from("daily_checkins")
-        .select("created_at")
-        .eq("user_id", user.id)
-        .gte("created_at", ninetyDaysAgo)
-        .order("created_at", { ascending: false });
+      const [checkins, workouts, journals, meals] = await Promise.all([
+        supabase
+          .from("daily_checkins")
+          .select("created_at")
+          .eq("user_id", user.id)
+          .gte("created_at", cutoff),
+        supabase
+          .from("workout_logs")
+          .select("created_at")
+          .eq("user_id", user.id)
+          .gte("created_at", cutoff),
+        supabase
+          .from("journal_entries")
+          .select("created_at")
+          .eq("user_id", user.id)
+          .gte("created_at", cutoff),
+        supabase
+          .from("meal_logs")
+          .select("logged_at")
+          .eq("user_id", user.id)
+          .gte("logged_at", cutoff),
+      ]);
 
-      if (data) {
-        const dates = data.map((d) => new Date(d.created_at).toLocaleDateString("en-CA"));
-        const { current: c, longest: l } = calcStreak(dates);
-        setCurrent(c);
-        setLongest(l);
-        setCheckedDays(new Set(dates));
-      }
+      const allTimestamps = [
+        ...(checkins.data ?? []).map((r) => r.created_at),
+        ...(workouts.data ?? []).map((r) => r.created_at),
+        ...(journals.data ?? []).map((r) => r.created_at),
+        ...(meals.data ?? []).map((r) => r.logged_at),
+      ];
 
+      const dateDates = allTimestamps.map((ts) =>
+        new Date(ts).toLocaleDateString("en-CA")
+      );
+
+      const { current: c, longest: l } = calcStreak(dateDates);
+      setCurrent(c);
+      setLongest(l);
+      setCheckedDays(new Set(dateDates));
+      setReturning(isReturningAfterBreak(allTimestamps));
       setLoading(false);
     }
     load();
@@ -101,9 +119,7 @@ export default function StreakTracker() {
   });
 
   const today = new Date().toLocaleDateString("en-CA");
-
-  // Fire emoji milestone threshold
-  const nextMilestone = MILESTONES.find((m) => m.days > current) ?? null;
+  const nextMilestone = STREAK_MILESTONES.find((m) => m.days > current) ?? null;
 
   return (
     <div
@@ -129,7 +145,7 @@ export default function StreakTracker() {
             letterSpacing: "0.25em",
           }}
         >
-          Check-In Streak
+          Activity Streak
         </p>
         <Link
           href="/dashboard/mind/trends"
@@ -143,6 +159,30 @@ export default function StreakTracker() {
           View trends →
         </Link>
       </div>
+
+      {/* Welcome back banner */}
+      {!loading && returning && (
+        <div
+          style={{
+            backgroundColor: "#0D1A0D",
+            border: "1px solid #1A3A1A",
+            borderRadius: 8,
+            padding: "12px 14px",
+          }}
+        >
+          <p
+            style={{
+              fontFamily: "var(--font-inter)",
+              fontSize: 13,
+              color: "#6BBF6B",
+              lineHeight: 1.5,
+              margin: 0,
+            }}
+          >
+            Welcome back. No pressure. Just glad you are here.
+          </p>
+        </div>
+      )}
 
       {/* Streak count + next milestone */}
       <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
@@ -202,9 +242,9 @@ export default function StreakTracker() {
                   color: "#9A9A9A",
                 }}
               >
-                Next: {nextMilestone.emoji}{" "}
+                Next:{" "}
                 <span style={{ color: "#f97316", fontWeight: 600 }}>
-                  {nextMilestone.days - current}d away
+                  {nextMilestone.days - current}d to {nextMilestone.name}
                 </span>
               </p>
             )}
@@ -214,13 +254,13 @@ export default function StreakTracker() {
 
       {/* Milestone badges */}
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-        {MILESTONES.map((m) => {
+        {STREAK_MILESTONES.map((m) => {
           const earned = longest >= m.days;
           const active = current >= m.days;
           return (
             <div
               key={m.days}
-              title={m.label}
+              title={m.tagline}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -232,7 +272,6 @@ export default function StreakTracker() {
                 opacity: loading ? 0.4 : 1,
               }}
             >
-              <span style={{ fontSize: 11 }}>{m.emoji}</span>
               <span
                 style={{
                   fontFamily: "var(--font-inter)",
@@ -243,7 +282,7 @@ export default function StreakTracker() {
                   letterSpacing: "0.06em",
                 }}
               >
-                {m.days}d
+                {m.name}
               </span>
             </div>
           );
@@ -295,7 +334,7 @@ export default function StreakTracker() {
       </div>
 
       {/* Empty state nudge */}
-      {!loading && current === 0 && (
+      {!loading && current === 0 && !returning && (
         <p
           style={{
             fontFamily: "var(--font-inter)",
@@ -305,7 +344,7 @@ export default function StreakTracker() {
             padding: "0 8px",
           }}
         >
-          No streak yet. Check in today to start one.
+          No streak yet. Any activity today starts one.
         </p>
       )}
     </div>

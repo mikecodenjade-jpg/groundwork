@@ -11,6 +11,7 @@ import {
   getNextMilestone,
   get30DayGrid,
   calcMaxStreak,
+  isReturningAfterBreak,
 } from "@/lib/streaks";
 import DailyCheckinModal from "@/components/DailyCheckinModal";
 import StreakTracker from "@/components/StreakTracker";
@@ -374,6 +375,7 @@ export default function DashboardPage() {
   const [weeklyDaysDone, setWeeklyDaysDone] = useState<boolean[]>(Array(7).fill(false));
   const [longestStreak, setLongestStreak] = useState(0);
   const [streakGrid, setStreakGrid] = useState<boolean[]>([]);
+  const [streakReturning, setStreakReturning] = useState(false);
   const [workout, setWorkout] = useState<{ slug: string; name: string } | null>(null);
   const [selectedTime, setSelectedTime] = useState<15 | 30 | 45 | 60 | null>(null);
   const [totalWorkouts, setTotalWorkouts] = useState(0);
@@ -498,6 +500,7 @@ export default function DashboardPage() {
       setStreak(currentStr);
       setLongestStreak(calcMaxStreak(allActivityDates));
       setStreakGrid(get30DayGrid(allActivityDates));
+      setStreakReturning(isReturningAfterBreak(allActivityDates));
       setTotalWorkouts((workoutsRes.data ?? []).length);
       setWeekly(calcWeeklyDays(allActivityDates));
       setWeeklyDaysDone(calcWeeklyDaysDone(allActivityDates));
@@ -737,6 +740,7 @@ export default function DashboardPage() {
               streak={loading ? null : streak}
               longestStreak={loading ? null : longestStreak}
               grid={streakGrid}
+              isReturning={!loading && streakReturning}
             />
           </div>
         </section>
@@ -2558,10 +2562,12 @@ function StreakWidget({
   streak,
   longestStreak,
   grid,
+  isReturning,
 }: {
   streak: number | null;
   longestStreak: number | null;
   grid: boolean[];
+  isReturning?: boolean;
 }) {
   if (streak === null) {
     return (
@@ -2584,6 +2590,21 @@ function StreakWidget({
         borderRadius: "12px",
       }}
     >
+      {/* Welcome back banner */}
+      {isReturning && (
+        <div
+          className="rounded-lg px-4 py-3"
+          style={{ backgroundColor: "#0D1A0D", border: "1px solid #1A3A1A" }}
+        >
+          <p
+            className="text-sm leading-relaxed"
+            style={{ color: "#6BBF6B", fontFamily: "var(--font-inter)" }}
+          >
+            Welcome back. No pressure. Just glad you are here.
+          </p>
+        </div>
+      )}
+
       {/* Row 1: count + milestone + badges link */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-1">

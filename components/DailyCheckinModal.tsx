@@ -5,6 +5,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import CrisisScreen from "@/components/CrisisScreen";
 import { detectCrisisKeywords } from "@/lib/crisisDetection";
+import { updateActivityStreak } from "@/lib/streaks";
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -31,62 +32,6 @@ const ENERGY_OPTS = [
   { v: 4, label: "Charged Up",       color: "#84cc16" },
   { v: 5, label: "Full Battery",     color: "#22c55e" },
 ];
-
-// ─── Streak updater ────────────────────────────────────────────────────────────
-
-async function updateStreakRecord(userId: string) {
-  const today = new Date().toLocaleDateString("en-CA");
-
-  const { data: checkins } = await supabase
-    .from("daily_checkins")
-    .select("created_at")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(95);
-
-  if (!checkins) return;
-
-  const dates = Array.from(
-    new Set(checkins.map((c) => new Date(c.created_at).toLocaleDateString("en-CA")))
-  ).sort((a, b) => b.localeCompare(a));
-
-  const yesterday = new Date(Date.now() - 86400000).toLocaleDateString("en-CA");
-  let current = 0;
-
-  if (dates[0] === today || dates[0] === yesterday) {
-    current = 1;
-    for (let i = 1; i < dates.length; i++) {
-      const prevMs = new Date(dates[i - 1]).getTime();
-      const curMs = new Date(dates[i]).getTime();
-      if (Math.round((prevMs - curMs) / 86400000) === 1) current++;
-      else break;
-    }
-  }
-
-  let longest = current;
-  let run = 1;
-  for (let i = 1; i < dates.length; i++) {
-    const prevMs = new Date(dates[i - 1]).getTime();
-    const curMs = new Date(dates[i]).getTime();
-    if (Math.round((prevMs - curMs) / 86400000) === 1) {
-      run++;
-      if (run > longest) longest = run;
-    } else {
-      run = 1;
-    }
-  }
-
-  await supabase.from("checkin_streaks").upsert(
-    {
-      user_id: userId,
-      current_streak: current,
-      longest_streak: longest,
-      last_checkin_date: today,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id" }
-  );
-}
 
 // ─── Picker Row ────────────────────────────────────────────────────────────────
 
@@ -281,7 +226,9 @@ export default function DailyCheckinModal() {
       localStorage.setItem("gw_checkin_last_date", new Date().toISOString());
     } catch {}
 
-    updateStreakRecord(userId).catch(() => {});
+    updateActivityStreak(userId)
+      .then(({ isReturning: r }) => setIsReturning(r))
+      .catch(() => {});
     setSaving(false);
     setDone(true);
 
@@ -407,9 +354,11 @@ export default function DailyCheckinModal() {
           alignItems: "center",
           justifyContent: "center",
           gap: 16,
+          padding: "0 32px",
+          textAlign: "center",
         }}
       >
-        <div style={{ fontSize: 64 }}>🔥</div>
+        <div style={{ fontSize: 64 }}>{isReturning ? "👋" : "🔥"}</div>
         <p
           style={{
             fontFamily: "var(--font-oswald)",
@@ -420,16 +369,19 @@ export default function DailyCheckinModal() {
             letterSpacing: "0.05em",
           }}
         >
-          Logged.
+          {isReturning ? "Welcome Back." : "Logged."}
         </p>
         <p
           style={{
             fontFamily: "var(--font-inter)",
             fontSize: 14,
             color: "#9A9A9A",
+            lineHeight: 1.6,
           }}
         >
-          Now get after it.
+          {isReturning
+            ? "No pressure. Just glad you are here."
+            : "Now get after it."}
         </p>
       </div>
     );

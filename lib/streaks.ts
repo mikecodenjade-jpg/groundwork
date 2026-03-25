@@ -1,3 +1,5 @@
+import { supabase } from "@/lib/supabase";
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type StreakMilestone = {
@@ -102,4 +104,88 @@ export function calcMaxStreak(dates: string[]): number {
     }
   }
   return max;
+}
+
+// ─── Returning-after-break detection ─────────────────────────────────────────
+
+/**
+ * Returns true if the user has activity today but their most-recent prior
+ * activity was more than 1 day ago (i.e. they missed at least one day).
+ * Used to show "Welcome back" instead of punishing them for the gap.
+ */
+export function isReturningAfterBreak(dates: string[]): boolean {
+  if (dates.length === 0) return false;
+  const unique = Array.from(
+    new Set(dates.map((d) => new Date(d).toLocaleDateString("en-CA")))
+  ).sort((a, b) => (a > b ? -1 : 1));
+
+  const today = new Date().toLocaleDateString("en-CA");
+  if (unique[0] !== today) return false;  // no activity today
+  if (unique.length < 2) return false;    // first activity ever
+
+  const diff = Math.round(
+    (new Date(today).getTime() - new Date(unique[1]).getTime()) / 86400000
+  );
+  return diff > 1;
+}
+
+// ─── Any-activity streak updater ──────────────────────────────────────────────
+
+/**
+ * Queries all engagement tables, recalculates the streak, writes it to
+ * user_streaks, and returns whether the user is returning after a break.
+ * Call this after any activity is logged (check-in, workout, meal, journal).
+ */
+export async function updateActivityStreak(
+  userId: string
+): Promise<{ isReturning: boolean }> {
+  const cutoff = new Date(Date.now() - 95 * 86400000).toISOString();
+
+  const [checkins, workouts, journals, meals] = await Promise.all([
+    supabase
+      .from("daily_checkins")
+      .select("created_at")
+      .eq("user_id", userId)
+      .gte("created_at", cutoff),
+    supabase
+      .from("workout_logs")
+      .select("created_at")
+      .eq("user_id", userId)
+      .gte("created_at", cutoff),
+    supabase
+      .from("journal_entries")
+      .select("created_at")
+      .eq("user_id", userId)
+      .gte("created_at", cutoff),
+    supabase
+      .from("meal_logs")
+      .select("logged_at")
+      .eq("user_id", userId)
+      .gte("logged_at", cutoff),
+  ]);
+
+  const allDates = [
+    ...(checkins.data ?? []).map((r) => r.created_at),
+    ...(workouts.data ?? []).map((r) => r.created_at),
+    ...(journals.data ?? []).map((r) => r.created_at),
+    ...(meals.data ?? []).map((r) => r.logged_at),
+  ];
+
+  const current = calcCurrentStreak(allDates);
+  const longest = calcMaxStreak(allDates);
+  const returning = isReturningAfterBreak(allDates);
+  const today = new Date().toLocaleDateString("en-CA");
+
+  await supabase.from("user_streaks").upsert(
+    {
+      user_id: userId,
+      current_streak: current,
+      longest_streak: longest,
+      last_activity_date: today,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" }
+  );
+
+  return { isReturning: returning };
 }
