@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useEffect, useCallback, useRef } from "react";
 import BottomNav from "@/components/BottomNav";
 import { supabase } from "@/lib/supabase";
+import { MEAL_DB, MEAL_DB_CATEGORIES, type MealDBCategory } from "@/lib/meal-database";
 
 // ─── Supabase Edge Function constants ─────────────────────────────────────────
 
@@ -91,10 +92,9 @@ const FAST_FOOD = [
   { place: "Taco Bell",      item: "Power Menu Bowl — Chicken",           name: "Taco Bell Power Bowl",              cal: 470, protein: 26, carbs: 50, fat: 16 },
 ];
 
-// ─── UK Jobsite Venue Swap Guide ──────────────────────────────────────────────
+// ─── US Jobsite Venue Swap Guide ──────────────────────────────────────────────
 
-type JobsiteVenue = {
-  venue: string;
+type VenueSwap = {
   defaultPick: string;
   defaultCal: number;
   defaultProtein: number;
@@ -106,46 +106,125 @@ type JobsiteVenue = {
   swapDesc: string;
 };
 
+type JobsiteVenue = {
+  venue: string;
+  swaps: VenueSwap[];
+};
+
 const JOBSITE_VENUES: JobsiteVenue[] = [
   {
     venue: "Gas Station",
-    defaultPick: "Hot dog + chips + energy drink",
-    defaultCal: 580, defaultProtein: 14,
-    swapPick: "Beef jerky + hard-boiled eggs + water",
-    swapCal: 240, swapProtein: 26, swapCarbs: 7, swapFat: 13,
-    swapDesc: "340 fewer calories, 12g more protein. Same grab-and-go.",
+    swaps: [
+      {
+        defaultPick: "Hot dog + chips + energy drink",
+        defaultCal: 560, defaultProtein: 13,
+        swapPick: "Beef jerky + string cheese + water",
+        swapCal: 260, swapProtein: 28, swapCarbs: 8, swapFat: 12,
+        swapDesc: "300 fewer calories, 15g more protein. Same grab-and-go.",
+      },
+      {
+        defaultPick: "Energy drink + mini donuts",
+        defaultCal: 520, defaultProtein: 3,
+        swapPick: "Protein bar (Quest/RXBar) + black coffee",
+        swapCal: 205, swapProtein: 21, swapCarbs: 23, swapFat: 7,
+        swapDesc: "315 fewer calories, 18g more protein. Skip the sugar crash.",
+      },
+    ],
   },
   {
     venue: "McDonald's",
-    defaultPick: "Big Mac Meal (large fries + Coke)",
-    defaultCal: 1080, defaultProtein: 30,
-    swapPick: "McDouble + side salad + water",
-    swapCal: 440, swapProtein: 26, swapCarbs: 38, swapFat: 22,
-    swapDesc: "640 fewer calories. Skip the fries and soda.",
+    swaps: [
+      {
+        defaultPick: "Big Mac Meal (large fries + Coke)",
+        defaultCal: 1080, defaultProtein: 27,
+        swapPick: "2 McChickens no mayo + side salad + water",
+        swapCal: 640, swapProtein: 28, swapCarbs: 64, swapFat: 22,
+        swapDesc: "440 fewer calories, same protein. Drop the fries and soda.",
+      },
+      {
+        defaultPick: "Sausage McGriddle",
+        defaultCal: 550, defaultProtein: 15,
+        swapPick: "Egg McMuffin",
+        swapCal: 300, swapProtein: 17, swapCarbs: 30, swapFat: 12,
+        swapDesc: "250 fewer calories, 2g more protein. Better AM fuel.",
+      },
+    ],
   },
   {
     venue: "Subway",
-    defaultPick: "12\" Meatball Marinara + chips + soda",
-    defaultCal: 980, defaultProtein: 38,
-    swapPick: "6\" Rotisserie Chicken + water (no cheese)",
-    swapCal: 350, swapProtein: 32, swapCarbs: 40, swapFat: 7,
-    swapDesc: "630 fewer calories, nearly the same protein.",
+    swaps: [
+      {
+        defaultPick: "Meatball Marinara footlong + chips + soda",
+        defaultCal: 1100, defaultProtein: 40,
+        swapPick: "Turkey Breast 6-inch + water (no cheese)",
+        swapCal: 280, swapProtein: 22, swapCarbs: 40, swapFat: 4,
+        swapDesc: "820 fewer calories. Go 6-inch and skip the soda.",
+      },
+      {
+        defaultPick: "Italian BMT footlong with mayo",
+        defaultCal: 990, defaultProtein: 44,
+        swapPick: "Rotisserie Chicken 6-inch + water",
+        swapCal: 350, swapProtein: 32, swapCarbs: 40, swapFat: 7,
+        swapDesc: "640 fewer calories, nearly same protein.",
+      },
+    ],
+  },
+  {
+    venue: "Taco Bell",
+    swaps: [
+      {
+        defaultPick: "Crunchwrap Supreme + chips + large soda",
+        defaultCal: 830, defaultProtein: 16,
+        swapPick: "Power Menu Bowl (chicken)",
+        swapCal: 470, swapProtein: 26, swapCarbs: 50, swapFat: 16,
+        swapDesc: "360 fewer calories, 10g more protein. Best on the menu.",
+      },
+      {
+        defaultPick: "Quesarito",
+        defaultCal: 650, defaultProtein: 26,
+        swapPick: "2 Chicken Soft Tacos (Fresco style)",
+        swapCal: 340, swapProtein: 22, swapCarbs: 40, swapFat: 8,
+        swapDesc: "310 fewer calories. Fresco = no cheese or sour cream.",
+      },
+    ],
   },
   {
     venue: "Chick-fil-A",
-    defaultPick: "Chicken Sandwich Meal (large fries + lemonade)",
-    defaultCal: 1150, defaultProtein: 36,
-    swapPick: "Grilled Nuggets (12ct) + side salad + water",
-    swapCal: 430, swapProtein: 49, swapCarbs: 14, swapFat: 11,
-    swapDesc: "720 fewer calories, 13g more protein. Their best option.",
+    swaps: [
+      {
+        defaultPick: "Spicy Deluxe meal (large fries + lemonade)",
+        defaultCal: 1150, defaultProtein: 36,
+        swapPick: "Grilled Nuggets 12ct + side salad + water",
+        swapCal: 250, swapProtein: 40, swapCarbs: 12, swapFat: 6,
+        swapDesc: "900 fewer calories, 4g more protein. Their best option.",
+      },
+      {
+        defaultPick: "Spicy Chicken Sandwich + waffle fries",
+        defaultCal: 780, defaultProtein: 30,
+        swapPick: "Grilled Chicken Sandwich + fruit cup",
+        swapCal: 430, swapProtein: 30, swapCarbs: 52, swapFat: 9,
+        swapDesc: "350 fewer calories, same protein. Worth every time.",
+      },
+    ],
   },
   {
     venue: "Wawa / Sheetz",
-    defaultPick: "Classic hoagie + chips + fountain soda",
-    defaultCal: 890, defaultProtein: 28,
-    swapPick: "Grilled chicken hoagie + water",
-    swapCal: 380, swapProtein: 28, swapCarbs: 48, swapFat: 8,
-    swapDesc: "510 fewer calories. Same protein, skip the chips and soda.",
+    swaps: [
+      {
+        defaultPick: "Classic hoagie + chips + fountain soda",
+        defaultCal: 890, defaultProtein: 28,
+        swapPick: "Grilled chicken hoagie + water",
+        swapCal: 380, swapProtein: 28, swapCarbs: 48, swapFat: 8,
+        swapDesc: "510 fewer calories. Same protein, skip the chips and soda.",
+      },
+      {
+        defaultPick: "Breakfast burrito + energy drink",
+        defaultCal: 690, defaultProtein: 19,
+        swapPick: "Egg & cheese wrap + black coffee",
+        swapCal: 375, swapProtein: 20, swapCarbs: 34, swapFat: 14,
+        swapDesc: "315 fewer calories. Coffee beats the sugar rush.",
+      },
+    ],
   },
 ];
 
@@ -534,212 +613,6 @@ function GoalsModal({
   );
 }
 
-// ─── Barcode Scanner ──────────────────────────────────────────────────────────
-
-type ScanPhase = "camera" | "manual" | "loading" | "confirm" | "error";
-
-function BarcodeScanner({
-  onDetected,
-  onClose,
-}: {
-  onDetected: (food: FoodEntry) => void;
-  onClose: () => void;
-}) {
-  const [phase, setPhase]               = useState<ScanPhase>("camera");
-  const [product, setProduct]           = useState<FoodEntry | null>(null);
-  const [errMsg, setErrMsg]             = useState("");
-  const [manualCode, setManualCode]     = useState("");
-  const [barcodeLoading, setBarcodeLoading] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const scannerRef     = useRef<any>(null);
-  const scannerStarted = useRef(false);
-
-  const stopScanner = useCallback(async () => {
-    if (scannerRef.current && scannerStarted.current) {
-      try {
-        await scannerRef.current.stop();
-        scannerRef.current.clear();
-      } catch { /* ignore */ }
-      scannerStarted.current = false;
-      scannerRef.current = null;
-    }
-  }, []);
-
-  const lookupBarcode = useCallback(async (code: string) => {
-    await stopScanner();
-    setBarcodeLoading(true);
-    setPhase("loading");
-    try {
-      const edRes = await fetch(`${SUPABASE_URL}/functions/v1/nutrition-search`, {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${SUPABASE_ANON_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ barcode: code.trim() }),
-      });
-      if (edRes.ok) {
-        const edData = await edRes.json() as EdamamResponse;
-        const entries = edamamToEntries(edData);
-        if (entries.length > 0) { setProduct(entries[0]); setPhase("confirm"); setBarcodeLoading(false); return; }
-      }
-    } catch { /* fall through */ }
-    // Fallback: OpenFoodFacts
-    try {
-      const res  = await fetch(`https://world.openfoodfacts.org/api/v0/product/${encodeURIComponent(code.trim())}.json`);
-      const data = await res.json() as { status: number; product?: OFFProduct };
-      if (data.status === 1 && data.product) {
-        const entry = offToEntry(data.product);
-        if (entry) { setProduct(entry); setPhase("confirm"); }
-        else       { setErrMsg("Product found but missing name or nutrition data."); setPhase("error"); }
-      } else {
-        setErrMsg("Product not found in the database.");
-        setPhase("error");
-      }
-    } catch {
-      setErrMsg("Network error. Check your connection and try again.");
-      setPhase("error");
-    }
-    setBarcodeLoading(false);
-  }, [stopScanner]);
-
-  // Start scanner whenever phase becomes "camera"
-  useEffect(() => {
-    if (phase !== "camera") return;
-    let cancelled = false;
-
-    const startScanner = async () => {
-      try {
-        const { Html5Qrcode } = await import("html5-qrcode");
-        if (cancelled) return;
-        const scanner = new Html5Qrcode("html5qr-reader");
-        scannerRef.current = scanner;
-        await scanner.start(
-          { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 220, height: 120 } },
-          (decodedText: string) => {
-            if (!cancelled) lookupBarcode(decodedText);
-          },
-          () => { /* per-frame no-read — ignore */ }
-        );
-        if (!cancelled) scannerStarted.current = true;
-      } catch (err) {
-        if (cancelled) return;
-        const msg = String(err);
-        setErrMsg(
-          msg.includes("NotAllowed") || msg.includes("Permission") || msg.includes("denied")
-            ? "Camera access denied. Allow camera permissions and try again."
-            : "Could not start camera on this device."
-        );
-        setPhase("manual");
-      }
-    };
-
-    startScanner();
-    return () => {
-      cancelled = true;
-      stopScanner();
-    };
-  }, [phase, lookupBarcode, stopScanner]);
-
-  // Ensure scanner is stopped on unmount regardless of phase
-  useEffect(() => () => { stopScanner(); }, [stopScanner]);
-
-  const inputStyle = { backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "8px", color: "#E8E2D8", fontFamily: "var(--font-inter)" };
-  const primaryBtn = { backgroundColor: "#C45B28", color: "#0A0A0A", borderRadius: "8px", fontFamily: "var(--font-inter)", fontWeight: 600, minHeight: "48px" };
-
-  return (
-    <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: "#0A0A0A" }}>
-      <div className="flex items-center justify-between px-5 py-4 shrink-0" style={{ borderBottom: "1px solid #252525" }}>
-        <div>
-          <p className="text-xs font-semibold tracking-[0.25em] uppercase mb-0.5" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>Nutrition</p>
-          <p className="text-lg font-bold uppercase" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>Scan Barcode</p>
-        </div>
-        <button onClick={() => { stopScanner(); onClose(); }}
-          className="flex items-center justify-center w-9 h-9 transition-opacity hover:opacity-60"
-          style={{ border: "1px solid #252525", color: "#9A9A9A", borderRadius: "8px" }} aria-label="Close scanner">
-          <svg viewBox="0 0 20 20" fill="none" width={16} height={16}>
-            <path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-        </button>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-5 py-6 flex flex-col gap-6">
-        {/* Camera reader div — always present in DOM when phase=camera so html5-qrcode can attach */}
-        <div style={{ display: phase === "camera" ? "flex" : "none" }} className="flex-col gap-4">
-          <div
-            id="html5qr-reader"
-            style={{ borderRadius: "12px", overflow: "hidden", width: "100%", minHeight: "260px", backgroundColor: "#161616" }}
-          />
-          <p className="text-sm text-center" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-            Point the barcode at the camera
-          </p>
-          <button
-            onClick={async () => { await stopScanner(); setPhase("manual"); }}
-            className="text-xs font-semibold uppercase tracking-widest text-center transition-opacity hover:opacity-70"
-            style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-            Enter barcode manually →
-          </button>
-        </div>
-
-        {phase === "loading" && (
-          <div className="flex-1 flex items-center justify-center">
-            <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Looking up product...</p>
-          </div>
-        )}
-
-        {phase === "confirm" && product && (
-          <div className="flex flex-col gap-5">
-            <p className="text-xs font-semibold tracking-[0.25em] uppercase" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>Product Found</p>
-            <div className="flex flex-col gap-4 px-5 py-5" style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}>
-              <p className="text-base font-bold" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>{product.name}</p>
-              <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Per 100g serving</p>
-              <div className="grid grid-cols-4 gap-3">
-                {[{ label: "Cal", val: String(product.cal) }, { label: "Protein", val: `${product.protein}g` }, { label: "Carbs", val: `${product.carbs}g` }, { label: "Fat", val: `${product.fat}g` }]
-                  .map(({ label, val }) => (
-                    <div key={label} className="flex flex-col gap-1">
-                      <span className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>{label}</span>
-                      <span className="text-sm font-bold" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>{val}</span>
-                    </div>
-                  ))}
-              </div>
-            </div>
-            <button onClick={() => onDetected(product)} className="py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-[0.98]" style={primaryBtn}>
-              Add to Meal
-            </button>
-            <button onClick={() => { setProduct(null); setPhase("camera"); }} className="text-xs font-semibold uppercase tracking-widest text-center transition-opacity hover:opacity-70" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-              Scan Again
-            </button>
-          </div>
-        )}
-
-        {phase === "error" && (
-          <div className="flex flex-col gap-5">
-            <div className="px-5 py-4" style={{ backgroundColor: "#1A0A0A", border: "1px solid #5A1A1A", borderRadius: "8px" }}>
-              <p className="text-sm" style={{ color: "#E87070", fontFamily: "var(--font-inter)" }}>{errMsg}</p>
-            </div>
-            <button onClick={() => setPhase("manual")} className="py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90" style={primaryBtn}>Enter Manually</button>
-            <button onClick={() => { setErrMsg(""); setPhase("camera"); }} className="text-xs font-semibold uppercase tracking-widest text-center transition-opacity hover:opacity-70" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Try Again</button>
-          </div>
-        )}
-
-        {phase === "manual" && (
-          <div className="flex flex-col gap-4">
-            <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Enter the barcode number from the product packaging.</p>
-            <input type="text" inputMode="numeric" placeholder="e.g. 0012000161155" value={manualCode}
-              onChange={(e) => setManualCode(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && manualCode.trim()) lookupBarcode(manualCode); }}
-              autoFocus className="w-full px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#C45B28]" style={inputStyle} />
-            <button onClick={() => lookupBarcode(manualCode)} disabled={!manualCode.trim() || barcodeLoading}
-              className="py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90 disabled:opacity-40" style={primaryBtn}>
-              {barcodeLoading ? "Looking up..." : "Look Up Product"}
-            </button>
-            <button onClick={() => { setManualCode(""); setPhase("camera"); }} className="text-xs font-semibold uppercase tracking-widest text-center transition-opacity hover:opacity-70" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-              ← Back to Camera
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
 
 // ─── Weekly Trends Chart ──────────────────────────────────────────────────────
 
@@ -868,7 +741,7 @@ export default function NutritionPage() {
   const [addingTo,       setAddingTo]       = useState<MealType | null>(null);
   const [lastLoggedFood, setLastLoggedFood] = useState<{ food: FoodEntry; mealType: MealType } | null>(null);
   const [selectedVenue,  setSelectedVenue]  = useState<string | null>(null);
-  const [venuePicker,    setVenuePicker]    = useState<string | null>(null);
+  const [venuePicker,    setVenuePicker]    = useState<{ venue: string; swapIdx: number } | null>(null);
   const [search,         setSearch]         = useState("");
   const [apiResults,     setApiResults]     = useState<FoodEntry[]>([]);
   const [apiLoading,     setApiLoading]     = useState(false);
@@ -879,13 +752,14 @@ export default function NutritionPage() {
   const [customCarbs,    setCustomCarbs]    = useState("");
   const [customFat,      setCustomFat]      = useState("");
   const [saving,         setSaving]         = useState(false);
-  const [fastFoodPicker, setFastFoodPicker] = useState<number | string | null>(null);
-  const [showHistory,    setShowHistory]    = useState(false);
+const [showHistory,    setShowHistory]    = useState(false);
   const [historyLogs,    setHistoryLogs]    = useState<FoodLog[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
-  const [scannerOpen,    setScannerOpen]    = useState(false);
-  const [scannerMeal,    setScannerMeal]    = useState<MealType | null>(null);
   const [toast,          setToast]          = useState<{ msg: string; type: "ok" | "err" } | null>(null);
+
+  // Meal database
+  const [dbCategory, setDbCategory] = useState<MealDBCategory | "all">("all");
+  const [dbSearch,   setDbSearch]   = useState("");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Weekly trends state
@@ -1384,22 +1258,6 @@ export default function NutritionPage() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {/* Scan button */}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setScannerMeal(type); setScannerOpen(true); }}
-                      className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest px-3 py-1.5 transition-opacity hover:opacity-80"
-                      style={{ backgroundColor: "#161616", color: "#9A9A9A", border: "1px solid #252525", borderRadius: "6px", fontFamily: "var(--font-inter)" }}
-                      aria-label="Scan barcode">
-                      <svg viewBox="0 0 20 20" fill="none" width={12} height={12}>
-                        <rect x="2"  y="4" width="2" height="12" fill="currentColor" rx="0.5" />
-                        <rect x="6"  y="4" width="1" height="12" fill="currentColor" rx="0.5" />
-                        <rect x="9"  y="4" width="2" height="12" fill="currentColor" rx="0.5" />
-                        <rect x="13" y="4" width="1" height="12" fill="currentColor" rx="0.5" />
-                        <rect x="16" y="4" width="2" height="12" fill="currentColor" rx="0.5" />
-                      </svg>
-                      Scan
-                    </button>
-
                     {/* Add food button */}
                     <button
                       onClick={(e) => { e.stopPropagation(); isAdding ? setAddingTo(null) : openAddFood(type); }}
@@ -1540,12 +1398,100 @@ export default function NutritionPage() {
             );
           })}
 
+          {/* ── Meal Database ────────────────────────────────────────────── */}
+          <section className="flex flex-col gap-4">
+            <div>
+              <p className="text-xs font-semibold tracking-[0.25em] uppercase mb-1" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>MEAL DATABASE</p>
+              <h2 className="text-xl font-bold uppercase mb-1" style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}>200+ Construction Meals</h2>
+              <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Real food workers eat. Tap any meal to log it now.</p>
+            </div>
+
+            {/* Category tabs */}
+            <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+              {MEAL_DB_CATEGORIES.map(({ value, label }) => (
+                <button
+                  key={value}
+                  onClick={() => setDbCategory(value)}
+                  className="px-3 py-2 text-xs font-bold uppercase tracking-widest whitespace-nowrap transition-all active:scale-95 shrink-0"
+                  style={{
+                    backgroundColor: dbCategory === value ? "#C45B28" : "#161616",
+                    color:           dbCategory === value ? "#0A0A0A" : "#9A9A9A",
+                    border:          `1px solid ${dbCategory === value ? "#C45B28" : "#252525"}`,
+                    borderRadius:    "6px",
+                    fontFamily:      "var(--font-inter)",
+                    minHeight:       "36px",
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Search */}
+            <input
+              type="search"
+              placeholder="Search meals..."
+              value={dbSearch}
+              onChange={(e) => setDbSearch(e.target.value)}
+              className="w-full px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#C45B28]"
+              style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "8px", color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
+            />
+
+            {/* Meal list */}
+            {(() => {
+              const q = dbSearch.toLowerCase().trim();
+              const filtered = MEAL_DB.filter((m) => {
+                const catMatch = dbCategory === "all" || m.category === dbCategory;
+                const txtMatch = q === "" || m.name.toLowerCase().includes(q) || m.source.toLowerCase().includes(q);
+                return catMatch && txtMatch;
+              }).slice(0, 60);
+
+              if (filtered.length === 0) {
+                return (
+                  <p className="text-sm text-center py-6" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                    No meals found. Try a different search.
+                  </p>
+                );
+              }
+
+              return (
+                <div className="flex flex-col" style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px", overflow: "hidden" }}>
+                  {filtered.map((meal, i) => (
+                    <button
+                      key={`${meal.name}-${i}`}
+                      disabled={saving}
+                      onClick={() => addFood(detectMealType(), { name: meal.name, cal: meal.cal, protein: meal.protein, carbs: meal.carbs, fat: meal.fat })}
+                      className="flex items-center justify-between px-4 py-3 w-full text-left transition-colors disabled:opacity-40"
+                      style={{ borderBottom: i < filtered.length - 1 ? "1px solid #1a1a1a" : "none", fontFamily: "var(--font-inter)" }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#1E1E1E")}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold truncate" style={{ color: "#E8E2D8" }}>{meal.name}</p>
+                        <p className="text-xs mt-0.5" style={{ color: "#9A9A9A" }}>
+                          P:{meal.protein}g · C:{meal.carbs}g · F:{meal.fat}g
+                          <span style={{ color: "#5A5A5A" }}> · {meal.serving} · {meal.source}</span>
+                        </p>
+                      </div>
+                      <span className="text-sm font-bold ml-4 shrink-0" style={{ color: "#C45B28" }}>{meal.cal} cal</span>
+                    </button>
+                  ))}
+                  {filtered.length === 60 && (
+                    <p className="px-4 py-3 text-xs text-center" style={{ color: "#5A5A5A", fontFamily: "var(--font-inter)", borderTop: "1px solid #1a1a1a" }}>
+                      Showing top 60 — refine your search to see more
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
+          </section>
+
           {/* ── Jobsite Food Guide ──────────────────────────────────────── */}
           <section className="flex flex-col gap-4">
             <div>
               <p className="text-xs font-semibold tracking-[0.25em] uppercase mb-1" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>EATING OUT GUIDE</p>
               <h2 className="text-xl font-bold uppercase mb-1" style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}>Where Are You Eating?</h2>
-              <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Select a spot and we&apos;ll show you a smarter option.</p>
+              <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Pick a spot — we&apos;ll show you a smarter order.</p>
             </div>
 
             {/* Venue selector tabs */}
@@ -1553,7 +1499,7 @@ export default function NutritionPage() {
               {JOBSITE_VENUES.map((v) => (
                 <button
                   key={v.venue}
-                  onClick={() => setSelectedVenue(selectedVenue === v.venue ? null : v.venue)}
+                  onClick={() => { setSelectedVenue(selectedVenue === v.venue ? null : v.venue); setVenuePicker(null); }}
                   className="px-4 py-2.5 text-sm font-bold uppercase tracking-widest transition-all active:scale-95"
                   style={{
                     backgroundColor: selectedVenue === v.venue ? "#C45B28" : "#161616",
@@ -1561,7 +1507,7 @@ export default function NutritionPage() {
                     border:          `1px solid ${selectedVenue === v.venue ? "#C45B28" : "#252525"}`,
                     borderRadius:    "8px",
                     fontFamily:      "var(--font-inter)",
-                    minHeight:       "48px",
+                    minHeight:       "44px",
                   }}
                 >
                   {v.venue}
@@ -1569,87 +1515,89 @@ export default function NutritionPage() {
               ))}
             </div>
 
-            {/* Swap card for selected venue */}
+            {/* Swap cards for selected venue */}
             {selectedVenue && (() => {
               const v = JOBSITE_VENUES.find((x) => x.venue === selectedVenue)!;
-              const calDiff    = v.defaultCal - v.swapCal;
-              const protDiff   = v.swapProtein - v.defaultProtein;
-              const isPicking  = venuePicker === v.venue;
               return (
-                <div className="flex flex-col gap-4 px-5 py-5" style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}>
-                  {/* Default vs swap comparison */}
-                  <div className="grid grid-cols-2 gap-3">
-                    {/* Usual pick */}
-                    <div className="flex flex-col gap-2 px-3 py-3" style={{ backgroundColor: "#0A0A0A", borderRadius: "8px", border: "1px solid #2A1A1A" }}>
-                      <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#E87070", fontFamily: "var(--font-inter)" }}>Usual Pick</p>
-                      <p className="text-xs font-semibold leading-snug" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>{v.defaultPick}</p>
-                      <div className="flex gap-3 mt-1">
-                        <div><p className="text-sm font-bold" style={{ color: "#E87070", fontFamily: "var(--font-inter)" }}>{v.defaultCal}</p><p className="text-[10px]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>cal</p></div>
-                        <div><p className="text-sm font-bold" style={{ color: "#E87070", fontFamily: "var(--font-inter)" }}>{v.defaultProtein}g</p><p className="text-[10px]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>protein</p></div>
+                <div className="flex flex-col gap-4">
+                  {v.swaps.map((swap, swapIdx) => {
+                    const calDiff   = swap.defaultCal - swap.swapCal;
+                    const protDiff  = swap.swapProtein - swap.defaultProtein;
+                    const isPicking = venuePicker?.venue === v.venue && venuePicker?.swapIdx === swapIdx;
+                    return (
+                      <div key={swapIdx} className="flex flex-col gap-4 px-5 py-5" style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px" }}>
+                        {/* Default vs swap comparison */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="flex flex-col gap-2 px-3 py-3" style={{ backgroundColor: "#0A0A0A", borderRadius: "8px", border: "1px solid #2A1A1A" }}>
+                            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#E87070", fontFamily: "var(--font-inter)" }}>Usual Pick</p>
+                            <p className="text-xs font-semibold leading-snug" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>{swap.defaultPick}</p>
+                            <div className="flex gap-3 mt-1">
+                              <div><p className="text-sm font-bold" style={{ color: "#E87070", fontFamily: "var(--font-inter)" }}>{swap.defaultCal}</p><p className="text-[10px]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>cal</p></div>
+                              <div><p className="text-sm font-bold" style={{ color: "#E87070", fontFamily: "var(--font-inter)" }}>{swap.defaultProtein}g</p><p className="text-[10px]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>protein</p></div>
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-2 px-3 py-3" style={{ backgroundColor: "#0A0A0A", borderRadius: "8px", border: "1px solid #1A2A1A" }}>
+                            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#4CAF50", fontFamily: "var(--font-inter)" }}>Better Swap</p>
+                            <p className="text-xs font-semibold leading-snug" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>{swap.swapPick}</p>
+                            <div className="flex gap-3 mt-1">
+                              <div><p className="text-sm font-bold" style={{ color: "#4CAF50", fontFamily: "var(--font-inter)" }}>{swap.swapCal}</p><p className="text-[10px]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>cal</p></div>
+                              <div><p className="text-sm font-bold" style={{ color: "#4CAF50", fontFamily: "var(--font-inter)" }}>{swap.swapProtein}g</p><p className="text-[10px]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>protein</p></div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Savings summary */}
+                        <div className="flex items-center gap-3 px-3 py-2.5" style={{ backgroundColor: "#0D1B0D", border: "1px solid #1E3A1E", borderRadius: "8px" }}>
+                          <svg viewBox="0 0 20 20" fill="none" width={14} height={14} className="shrink-0">
+                            <path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm0 5v4l2.5 2.5" stroke="#4CAF50" strokeWidth="1.8" strokeLinecap="round" />
+                          </svg>
+                          <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>{swap.swapDesc}</p>
+                        </div>
+
+                        {/* Diff pills */}
+                        <div className="flex gap-2">
+                          {calDiff > 0 && (
+                            <span className="text-[11px] font-bold px-2 py-1 rounded" style={{ backgroundColor: "#1A2A1A", color: "#4CAF50", fontFamily: "var(--font-inter)" }}>
+                              -{calDiff} cal
+                            </span>
+                          )}
+                          {protDiff > 0 && (
+                            <span className="text-[11px] font-bold px-2 py-1 rounded" style={{ backgroundColor: "#1A2A1A", color: "#4CAF50", fontFamily: "var(--font-inter)" }}>
+                              +{protDiff}g protein
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Log swap button */}
+                        <button
+                          onClick={() => setVenuePicker(isPicking ? null : { venue: v.venue, swapIdx })}
+                          className="py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-[0.98]"
+                          style={{ backgroundColor: isPicking ? "#252525" : "#C45B28", color: isPicking ? "#9A9A9A" : "#0A0A0A", borderRadius: "8px", fontFamily: "var(--font-inter)", minHeight: "48px" }}
+                        >
+                          {isPicking ? "Cancel" : "Log the Better Swap"}
+                        </button>
+
+                        {isPicking && (
+                          <div className="flex flex-col gap-2">
+                            <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Add to which slot?</p>
+                            <div className="flex flex-wrap gap-2">
+                              {MEALS.map(({ type, label }) => (
+                                <button key={type} disabled={saving}
+                                  onClick={async () => {
+                                    setVenuePicker(null);
+                                    await addFood(type, { name: `${v.venue} — ${swap.swapPick}`, cal: swap.swapCal, protein: swap.swapProtein, carbs: swap.swapCarbs, fat: swap.swapFat });
+                                  }}
+                                  className="px-4 py-2.5 text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-80 disabled:opacity-40"
+                                  style={{ backgroundColor: "#252525", color: "#E8E2D8", borderRadius: "6px", fontFamily: "var(--font-inter)", minHeight: "44px" }}>
+                                  {label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    {/* Better swap */}
-                    <div className="flex flex-col gap-2 px-3 py-3" style={{ backgroundColor: "#0A0A0A", borderRadius: "8px", border: "1px solid #1A2A1A" }}>
-                      <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#4CAF50", fontFamily: "var(--font-inter)" }}>Better Swap</p>
-                      <p className="text-xs font-semibold leading-snug" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>{v.swapPick}</p>
-                      <div className="flex gap-3 mt-1">
-                        <div><p className="text-sm font-bold" style={{ color: "#4CAF50", fontFamily: "var(--font-inter)" }}>{v.swapCal}</p><p className="text-[10px]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>cal</p></div>
-                        <div><p className="text-sm font-bold" style={{ color: "#4CAF50", fontFamily: "var(--font-inter)" }}>{v.swapProtein}g</p><p className="text-[10px]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>protein</p></div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Savings summary */}
-                  <div className="flex items-center gap-3 px-3 py-2.5" style={{ backgroundColor: "#0D1B0D", border: "1px solid #1E3A1E", borderRadius: "8px" }}>
-                    <svg viewBox="0 0 20 20" fill="none" width={14} height={14} className="shrink-0">
-                      <path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm0 5v4l2.5 2.5" stroke="#4CAF50" strokeWidth="1.8" strokeLinecap="round" />
-                    </svg>
-                    <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-                      {v.swapDesc}
-                    </p>
-                  </div>
-
-                  {/* Diff pills */}
-                  <div className="flex gap-2">
-                    {calDiff > 0 && (
-                      <span className="text-[11px] font-bold px-2 py-1 rounded" style={{ backgroundColor: "#1A2A1A", color: "#4CAF50", fontFamily: "var(--font-inter)" }}>
-                        -{calDiff} cal
-                      </span>
-                    )}
-                    {protDiff > 0 && (
-                      <span className="text-[11px] font-bold px-2 py-1 rounded" style={{ backgroundColor: "#1A2A1A", color: "#4CAF50", fontFamily: "var(--font-inter)" }}>
-                        +{protDiff}g protein
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Log swap button */}
-                  <button
-                    onClick={() => setVenuePicker(isPicking ? null : v.venue)}
-                    className="py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-[0.98]"
-                    style={{ backgroundColor: isPicking ? "#252525" : "#C45B28", color: isPicking ? "#9A9A9A" : "#0A0A0A", borderRadius: "8px", fontFamily: "var(--font-inter)", minHeight: "48px" }}
-                  >
-                    {isPicking ? "Cancel" : "Log the Better Swap"}
-                  </button>
-
-                  {isPicking && (
-                    <div className="flex flex-col gap-2">
-                      <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>Add to which slot?</p>
-                      <div className="flex flex-wrap gap-2">
-                        {MEALS.map(({ type, label }) => (
-                          <button key={type} disabled={saving}
-                            onClick={async () => {
-                              setVenuePicker(null);
-                              await addFood(type, { name: `${v.venue} — ${v.swapPick}`, cal: v.swapCal, protein: v.swapProtein, carbs: v.swapCarbs, fat: v.swapFat });
-                            }}
-                            className="px-4 py-2.5 text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-80 disabled:opacity-40"
-                            style={{ backgroundColor: "#252525", color: "#E8E2D8", borderRadius: "6px", fontFamily: "var(--font-inter)", minHeight: "44px" }}>
-                            {label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                    );
+                  })}
                 </div>
               );
             })()}
@@ -1980,14 +1928,6 @@ export default function NutritionPage() {
           current={goals}
           onSave={saveGoals}
           onClose={() => setShowGoalsModal(false)}
-        />
-      )}
-
-      {/* ── Barcode Scanner ──────────────────────────────────────────────── */}
-      {scannerOpen && scannerMeal && (
-        <BarcodeScanner
-          onDetected={async (food) => { setScannerOpen(false); await addFood(scannerMeal, food); }}
-          onClose={() => setScannerOpen(false)}
         />
       )}
 
