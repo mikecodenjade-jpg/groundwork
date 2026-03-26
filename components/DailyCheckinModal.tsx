@@ -358,13 +358,17 @@ export default function DailyCheckinModal() {
           textAlign: "center",
         }}
       >
-        <div style={{ fontSize: 64 }}>{isReturning ? "👋" : "🔥"}</div>
+        <div style={{ width: 64, height: 64, borderRadius: "50%", backgroundColor: "rgba(196,91,40,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <svg viewBox="0 0 24 24" fill="none" width={32} height={32}>
+            <path d="M5 13l4 4L19 7" stroke="#C45B28" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
         <p
           style={{
             fontFamily: "var(--font-oswald)",
             fontSize: 32,
             fontWeight: 700,
-            color: "#f97316",
+            color: "#C45B28",
             textTransform: "uppercase",
             letterSpacing: "0.05em",
           }}
@@ -381,7 +385,7 @@ export default function DailyCheckinModal() {
         >
           {isReturning
             ? "No pressure. Just glad you are here."
-            : "Now get after it."}
+            : "You are all set. Go get after it."}
         </p>
       </div>
     );
@@ -447,7 +451,7 @@ export default function DailyCheckinModal() {
               marginTop: 2,
             }}
           >
-            30 seconds. Then get to work.
+            30 seconds. Private — only you see this.
           </p>
         </div>
 
@@ -456,14 +460,14 @@ export default function DailyCheckinModal() {
 
         {/* Mood */}
         <div>
-          <SectionLabel>How&apos;s Your Head</SectionLabel>
+          <SectionLabel>Mental State <span style={{ color: "#3A3A3A", fontWeight: 400, textTransform: "none", letterSpacing: 0, fontSize: 10 }}>1 = rough, 5 = sharp</span></SectionLabel>
           <PickerRow opts={MOOD_OPTS} selected={mood} onSelect={setMood} />
         </div>
 
         {/* Sleep — hidden in simplified (Tier 2) mode */}
         {!simplified && (
           <div>
-            <SectionLabel>Shut Eye Last Night</SectionLabel>
+            <SectionLabel>Sleep Quality <span style={{ color: "#3A3A3A", fontWeight: 400, textTransform: "none", letterSpacing: 0, fontSize: 10 }}>1 = poor, 5 = great</span></SectionLabel>
             <PickerRow opts={SLEEP_OPTS} selected={sleep} onSelect={setSleep} />
           </div>
         )}
@@ -471,7 +475,7 @@ export default function DailyCheckinModal() {
         {/* Energy — hidden in simplified (Tier 2) mode */}
         {!simplified && (
           <div>
-            <SectionLabel>Tank Level</SectionLabel>
+            <SectionLabel>Energy Level <span style={{ color: "#3A3A3A", fontWeight: 400, textTransform: "none", letterSpacing: 0, fontSize: 10 }}>1 = drained, 5 = full</span></SectionLabel>
             <PickerRow opts={ENERGY_OPTS} selected={energy} onSelect={setEnergy} />
           </div>
         )}

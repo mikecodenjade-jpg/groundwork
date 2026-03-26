@@ -585,7 +585,7 @@ export default function LeadPage() {
             Crew Scripts
           </p>
           <p className="text-sm mb-6" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-            Real language for hard moments. Use it, adapt it, make it yours.
+            Ready-to-use phrases for common crew situations. Tap any script to see it.
           </p>
 
           {/* Category: Daily Check-ins */}
