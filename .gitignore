@@ -44,3 +44,6 @@ next-env.d.ts
 
 # Claude Code worktree files
 .claude/
+
+# Claude Code worktree files
+.claude/
