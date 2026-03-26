@@ -124,7 +124,8 @@
       "Bash(node -e \"console.log\\(''hello''\\)\")",
       "Bash(find C:Usersmjonegroundworkappcomponents -type f \\\\\\(-name *.tsx -o -name *.ts \\\\\\))",
       "Bash(find C:Usersmjonegroundworkappcomponents -type f -name *.tsx)",
-      "Bash(find C:Usersmjonegroundwork -maxdepth 2 \\\\\\(-name package.json -o -name tailwind.config.* -o -name next.config.* \\\\\\))"
+      "Bash(find C:Usersmjonegroundwork -maxdepth 2 \\\\\\(-name package.json -o -name tailwind.config.* -o -name next.config.* \\\\\\))",
+      "Bash(cd:*)"
     ]
   }
 }
