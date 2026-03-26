@@ -161,6 +161,12 @@ function ScoreRing({
             >
               /100
             </span>
+            <span
+              className="text-[9px] mt-1 font-semibold uppercase tracking-widest"
+              style={{ color: "#555", fontFamily: "var(--font-inter)" }}
+            >
+              Daily Score
+            </span>
           </>
         )}
       </div>
@@ -551,7 +557,7 @@ export default function DashboardPage() {
                 <PlanItem
                   accent="#1E3A5F"
                   label="Mind"
-                  detail={pillars.mind ? "Done" : "Check in"}
+                  detail={pillars.mind ? "Done" : "Rate your mood (30 sec)"}
                   done={pillars.mind}
                   href="/dashboard/mind"
                   icon={
@@ -573,7 +579,7 @@ export default function DashboardPage() {
                 <PlanItem
                   accent="#E8E2D8"
                   label="Lead"
-                  detail={pillars.lead ? "Done" : "Daily challenge"}
+                  detail={pillars.lead ? "Done" : "Today: Delegate one task"}
                   done={pillars.lead}
                   href="/dashboard/lead"
                   icon={
@@ -669,7 +675,7 @@ export default function DashboardPage() {
               className="text-sm font-medium"
               style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
             >
-              {streak > 0 ? `${streak} day streak` : "Start your streak"}
+              {streak > 0 ? `${streak} -day streak` : "Complete any pillar to start your streak"}
             </p>
             <div className="flex items-center gap-1.5">
               {streakDays.map((active, i) => (
