@@ -12,10 +12,10 @@ import { assessMoodTier } from "@/lib/crisisDetection";
 
 const MOODS = [
   { label: "HIGH — Stressed", value: "high_stressed", color: "#5A1A1A" },
-  { label: "LOW",              value: "low",           color: "#7A5228" },
+  { label: "LOW — Flat",       value: "low",           color: "#7A5228" },
   { label: "MID — Holding",   value: "mid_holding",   color: "#5A5248" },
   { label: "GOOD — Solid",    value: "good_solid",    color: "#3A5A3A" },
-  { label: "OK — Locked",     value: "ok_locked",     color: "#2A6A4A" },
+  { label: "OK — Steady",     value: "ok_steady",     color: "#2A6A4A" },
 ];
 
 const SOURCES = ["Work", "Family", "Money", "Health", "Sleep"];
@@ -25,7 +25,7 @@ const MOOD_MESSAGES: Record<string, string> = {
   low:           "Acknowledged. Something's off. Don't push through blind — what's driving it?",
   mid_holding:   "Holding is fine. But holding forever isn't. What do you need today?",
   good_solid:    "Good base. You're in a position to lead. Push the edge.",
-  ok_locked:     "That's the standard. Lock it in and go — today counts.",
+  ok_steady:     "Steady. Lock it in and go — today counts.",
 };
 
 type Phase = "mood" | "source" | "done";
@@ -40,7 +40,7 @@ const TOOLS = [
   {
     title: "Box Breathing",
     duration: "4 min",
-    desc: "Combat-proven. Works anywhere. 4 seconds in — 4 hold — 4 out — 4 hold. Special forces use this. So can you.",
+    desc: "4 seconds in, 4 hold, 4 out, 4 hold. Works anywhere — no equipment, no app audio needed.",
     tag: "Breathwork",
   },
   {
@@ -52,7 +52,7 @@ const TOOLS = [
   {
     title: "Time Blocking",
     duration: "Daily",
-    desc: "Find the time you didn't know you had. Stop letting the day manage you — take back control with a simple block system built for busy leaders.",
+    desc: "A daily block system for managing your schedule. Takes 5 minutes to plan, saves hours of reactive decisions.",
     tag: "Planning",
   },
 ];
@@ -404,14 +404,14 @@ export default function MindPage() {
               style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
             >
               {phase === "mood"
-                ? "How are you doing today — really?"
+                ? "How are you doing today?"
                 : phase === "source"
                 ? "What's the source?"
                 : "Checked in."}
             </h2>
             {phase === "mood" && (
               <p className="text-sm mt-1" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-                No judgment. Just honesty with yourself.
+                Private. Only you see this.
               </p>
             )}
           </div>
@@ -523,8 +523,8 @@ export default function MindPage() {
                   </p>
                 </div>
 
-                {/* OK — Locked In */}
-                {selectedMood?.value === "ok_locked" && (
+                {/* OK — Steady */}
+                {selectedMood?.value === "ok_steady" && (
                   <div className="flex flex-col gap-3">
                     <p className="text-base font-bold" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
                       Good. Use that energy.
