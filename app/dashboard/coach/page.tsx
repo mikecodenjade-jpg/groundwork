@@ -517,7 +517,7 @@ export default function CoachPage() {
                 className="text-base leading-relaxed font-semibold"
                 style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
               >
-                Hey{profile?.full_name ? ` ${profile.full_name.split(" ")[0]}` : ""}. I am your Coach. I know construction. I know the pressure. Ask me anything, whether it is about training, eating right, handling a tough crew situation, or just getting through a rough day.
+                Hey{profile?.full_name ? ` ${profile.full_name.split(" ")[0]}` : ""}. AI Coach built for construction professionals. Ask about training, nutrition, crew management, sleep, stress, or career questions.
               </p>
             </div>
 
@@ -526,7 +526,7 @@ export default function CoachPage() {
                 className="text-[10px] font-semibold uppercase tracking-widest mb-1"
                 style={{ color: "#3A3A3A", fontFamily: "var(--font-inter)" }}
               >
-                Common questions
+                Try asking about:
               </p>
               {QUICK_PROMPTS.map((prompt) => (
                 <button
