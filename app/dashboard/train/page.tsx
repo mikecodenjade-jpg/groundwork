@@ -138,6 +138,8 @@ function TrainPage(){
     );
   }
   const focusOptions: FocusArea[] = ['full','upper','lower','push','pull'];
+  const fatigueArr = Array.isArray(workout?.fatigue_state) ? workout.fatigue_state : [];
+  const crossArr = Array.isArray(workout?.cross_pillar) ? workout.cross_pillar : [];
   return (
     <div className="min-h-screen bg-zinc-950 text-white pb-24">
       <div className="max-w-lg mx-auto px-4 pt-6">
@@ -146,24 +148,24 @@ function TrainPage(){
           <div className="flex gap-2">{(['day','swing','night'] as const).map(s=>(<button key={s} onClick={()=>logShift(s)} className={`px-3 py-1 rounded-full text-xs font-semibold ${shift===s?'bg-lime-500 text-black':'bg-zinc-800 text-zinc-400'}`}>{s.charAt(0).toUpperCase()+s.slice(1)}</button>))}</div>
         </div>
         <div className="flex gap-2 mb-4 overflow-x-auto pb-1">{focusOptions.map(f=>(<button key={f} onClick={()=>{setFocus(f);}} className={`px-3 py-1 rounded-full text-xs whitespace-nowrap ${focus===f?'bg-lime-500 text-black':'bg-zinc-800 text-zinc-400'}`}>{f==='full'?'Full Body':f.charAt(0).toUpperCase()+f.slice(1)}</button>))}</div>
-        {workout?.fatigue_state && (<div className="bg-zinc-900 rounded-xl p-4 mb-4">
+        {fatigueArr.length > 0 && (<div className="bg-zinc-900 rounded-xl p-4 mb-4">
           <h3 className="text-sm font-semibold text-zinc-400 mb-2">Fatigue</h3>
-          <div className="flex flex-wrap gap-2">{workout.fatigue_state.map((f:any,i:number)=>(<span key={i} className={`text-xs px-2 py-1 rounded-full ${fatColor(f.decayed_score)}`}>{f.muscle_slug} {Math.round(f.decayed_score)}%</span>))}</div>
+          <div className="flex flex-wrap gap-2">{fatigueArr.map((f:any,i:number)=>(<span key={i} className={`text-xs px-2 py-1 rounded-full ${fatColor(f.decayed_score)}`}>{f.muscle_slug} {Math.round(f.decayed_score)}%</span>))}</div>
         </div>)}
-        {workout?.cross_pillar && workout.cross_pillar.length > 0 && (<div className="bg-amber-900/30 border border-amber-700 rounded-xl p-4 mb-4">
+        {crossArr.length > 0 && (<div className="bg-amber-900/30 border border-amber-700 rounded-xl p-4 mb-4">
           <h3 className="text-sm font-semibold text-amber-400 mb-1">Alerts</h3>
-          {workout.cross_pillar.map((c:any,i:number)=>(<p key={i} className="text-xs text-amber-200">{c.message || c}</p>))}
+          {crossArr.map((c:any,i:number)=>(<p key={i} className="text-xs text-amber-200">{c.message || c}</p>))}
         </div>)}
         {workout?.session && (<div className="bg-zinc-900 rounded-xl p-4 mb-4">
           <h3 className="text-sm font-semibold text-zinc-400 mb-2">Session</h3>
           <p className="text-xs text-zinc-300">Focus: {workout.session.focus_area} &bull; Est. {workout.session.estimated_minutes} min</p>
           {workout.periodization_note && <p className="text-xs text-zinc-500 mt-1">{workout.periodization_note}</p>}
         </div>)}
-        {workout?.warmup && workout.warmup.length > 0 && (<div className="mb-4">
+        {workout?.warmup && Array.isArray(workout.warmup) && workout.warmup.length > 0 && (<div className="mb-4">
           <h3 className="text-sm font-semibold text-zinc-400 mb-2">Warm-up</h3>
           {workout.warmup.map((ex:any,i:number)=>(<div key={i} className="bg-zinc-900 rounded-lg p-3 mb-2"><p className="text-sm font-medium">{ex.name}</p><p className="text-xs text-zinc-400">{ex.duration_seconds ? ex.duration_seconds+'s' : ex.sets_reps}</p></div>))}
         </div>)}
-        {workout?.workout && workout.workout.length > 0 && (<div className="mb-4">
+        {workout?.workout && Array.isArray(workout.workout) && workout.workout.length > 0 && (<div className="mb-4">
           <h3 className="text-sm font-semibold text-lime-400 mb-2">Workout</h3>
           {workout.workout.map((ex:any,i:number)=>(<div key={i} className="bg-zinc-900 rounded-xl p-4 mb-3">
             <div className="flex justify-between items-start mb-1"><p className="font-semibold">{ex.name}</p>{ex.composite_score && <span className="text-xs text-zinc-500">Score {ex.composite_score.toFixed(1)}</span>}</div>
@@ -171,7 +173,7 @@ function TrainPage(){
             {ex.progression_note && <p className="text-xs text-zinc-500 mt-1">{ex.progression_note}</p>}
           </div>))}
         </div>)}
-        {workout?.cooldown && workout.cooldown.length > 0 && (<div className="mb-4">
+        {workout?.cooldown && Array.isArray(workout.cooldown) && workout.cooldown.length > 0 && (<div className="mb-4">
           <h3 className="text-sm font-semibold text-zinc-400 mb-2">Cool-down</h3>
           {workout.cooldown.map((ex:any,i:number)=>(<div key={i} className="bg-zinc-900 rounded-lg p-3 mb-2"><p className="text-sm font-medium">{ex.name}</p><p className="text-xs text-zinc-400">{ex.duration_seconds ? ex.duration_seconds+'s' : ex.sets_reps}</p></div>))}
         </div>)}
