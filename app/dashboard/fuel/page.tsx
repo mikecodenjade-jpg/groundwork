@@ -190,7 +190,7 @@ export default function FuelPage() {
     return (
       <main
         className="min-h-screen flex flex-col px-6 py-10"
-        style={{ backgroundColor: "#0A0A0A", color: "#E8E2D8" }}
+        style={{ backgroundColor: "#0a0f1a", color: "#E8E2D8" }}
       >
         <div className="max-w-3xl w-full mx-auto flex flex-col gap-6 pb-28">
           {[1, 2, 3].map((i) => (
@@ -222,7 +222,7 @@ export default function FuelPage() {
     return (
       <main
         className="min-h-screen flex flex-col px-6 py-10"
-        style={{ backgroundColor: "#0A0A0A", color: "#E8E2D8" }}
+        style={{ backgroundColor: "#0a0f1a", color: "#E8E2D8" }}
       >
         <div className="max-w-3xl w-full mx-auto flex flex-col gap-6 pb-28">
           {/* Header */}
@@ -296,7 +296,7 @@ export default function FuelPage() {
           >
             <p
               className="text-xs font-semibold tracking-[0.25em] uppercase mb-4"
-              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+              style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}
             >
               Servings
             </p>
@@ -305,7 +305,7 @@ export default function FuelPage() {
                 onClick={() => setServings(Math.max(0.5, servings - 0.5))}
                 className="flex items-center justify-center w-12 h-12 text-xl font-bold transition-all duration-150 active:scale-95"
                 style={{
-                  backgroundColor: "#0A0A0A",
+                  backgroundColor: "#0a0f1a",
                   border: "1px solid #252525",
                   borderRadius: "50%",
                   color: "#E8E2D8",
@@ -323,7 +323,7 @@ export default function FuelPage() {
                 onClick={() => setServings(servings + 0.5)}
                 className="flex items-center justify-center w-12 h-12 text-xl font-bold transition-all duration-150 active:scale-95"
                 style={{
-                  backgroundColor: "#0A0A0A",
+                  backgroundColor: "#0a0f1a",
                   border: "1px solid #252525",
                   borderRadius: "50%",
                   color: "#E8E2D8",
@@ -345,7 +345,7 @@ export default function FuelPage() {
           >
             <p
               className="text-xs font-semibold tracking-[0.25em] uppercase mb-4"
-              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+              style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}
             >
               Meal
             </p>
@@ -360,10 +360,10 @@ export default function FuelPage() {
                       fontFamily: "var(--font-inter)",
                       borderRadius: 20,
                       backgroundColor:
-                        selectedMealType === type ? "#C45B28" : "#0A0A0A",
+                        selectedMealType === type ? "#f97316" : "#0a0f1a",
                       color:
-                        selectedMealType === type ? "#0A0A0A" : "#9A9A9A",
-                      border: `1px solid ${selectedMealType === type ? "#C45B28" : "#252525"}`,
+                        selectedMealType === type ? "#0a0f1a" : "#9A9A9A",
+                      border: `1px solid ${selectedMealType === type ? "#f97316" : "#252525"}`,
                     }}
                   >
                     {type}
@@ -388,7 +388,7 @@ export default function FuelPage() {
                   className="text-2xl font-bold"
                   style={{
                     fontFamily: "var(--font-oswald)",
-                    color: "#C45B28",
+                    color: "#f97316",
                   }}
                 >
                   {cal}
@@ -452,9 +452,9 @@ export default function FuelPage() {
             className="w-full py-4 text-sm font-semibold uppercase tracking-[0.15em] transition-all duration-150 active:scale-[0.98] disabled:opacity-50"
             style={{
               fontFamily: "var(--font-inter)",
-              backgroundColor: "#C45B28",
-              color: "#0A0A0A",
-              border: "1px solid #C45B28",
+              backgroundColor: "#f97316",
+              color: "#0a0f1a",
+              border: "1px solid #f97316",
               borderRadius: 20,
             }}
           >
@@ -475,7 +475,7 @@ export default function FuelPage() {
   return (
     <main
       className="min-h-screen flex flex-col px-6 py-10"
-      style={{ backgroundColor: "#0A0A0A", color: "#E8E2D8" }}
+      style={{ backgroundColor: "#0a0f1a", color: "#E8E2D8" }}
     >
       <div className="max-w-3xl w-full mx-auto flex flex-col gap-6 pb-28">
         {/* Toast */}
@@ -483,8 +483,8 @@ export default function FuelPage() {
           <div
             className="fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 font-semibold text-sm shadow-lg z-50"
             style={{
-              backgroundColor: "#C45B28",
-              color: "#0A0A0A",
+              backgroundColor: "#f97316",
+              color: "#0a0f1a",
               borderRadius: 20,
               fontFamily: "var(--font-inter)",
               animation: "fadeInUp 0.3s ease-out",
@@ -518,7 +518,7 @@ export default function FuelPage() {
           <div>
             <p
               className="text-xs font-semibold tracking-[0.25em] uppercase mb-0.5"
-              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+              style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}
             >
               Pillar
             </p>
@@ -570,7 +570,7 @@ export default function FuelPage() {
                   cy="50"
                   r="42"
                   fill="none"
-                  stroke={calPct >= 100 ? "#D4637A" : "#C45B28"}
+                  stroke={calPct >= 100 ? "#D4637A" : "#f97316"}
                   strokeWidth="8"
                   strokeLinecap="round"
                   strokeDasharray={`${calPct * 2.64} 264`}
@@ -665,7 +665,7 @@ export default function FuelPage() {
           <div>
             <p
               className="text-xs font-semibold tracking-[0.25em] uppercase mb-4"
-              style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+              style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}
             >
               Today
             </p>
@@ -684,10 +684,10 @@ export default function FuelPage() {
                   <div
                     className="flex items-center justify-center w-9 h-9 text-[10px] font-bold uppercase tracking-wide flex-shrink-0"
                     style={{
-                      backgroundColor: "#0A0A0A",
+                      backgroundColor: "#0a0f1a",
                       border: "1px solid #252525",
                       borderRadius: 8,
-                      color: "#C45B28",
+                      color: "#f97316",
                       fontFamily: "var(--font-inter)",
                     }}
                   >
@@ -723,7 +723,7 @@ export default function FuelPage() {
                     <div
                       className="font-bold text-sm"
                       style={{
-                        color: "#C45B28",
+                        color: "#f97316",
                         fontFamily: "var(--font-oswald)",
                       }}
                     >
@@ -750,7 +750,7 @@ export default function FuelPage() {
         <div>
           <p
             className="text-xs font-semibold tracking-[0.25em] uppercase mb-4"
-            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+            style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}
           >
             Search Foods
           </p>
@@ -785,7 +785,7 @@ export default function FuelPage() {
                 color: "#E8E2D8",
               }}
               onFocus={(e) =>
-                (e.currentTarget.style.borderColor = "#C45B28")
+                (e.currentTarget.style.borderColor = "#f97316")
               }
               onBlur={(e) =>
                 (e.currentTarget.style.borderColor = "#252525")
@@ -869,7 +869,7 @@ export default function FuelPage() {
                     className="flex gap-4 text-xs"
                     style={{ fontFamily: "var(--font-inter)" }}
                   >
-                    <span style={{ color: "#C45B28", fontWeight: 600 }}>
+                    <span style={{ color: "#f97316", fontWeight: 600 }}>
                       {Math.round(food.calories || 0)} cal
                     </span>
                     <span style={{ color: "#5B9BD5" }}>
@@ -922,7 +922,7 @@ export default function FuelPage() {
               Plan meals for the job site
             </span>
           </div>
-          <span style={{ color: "#C45B28", fontSize: 18 }}>&rsaquo;</span>
+          <span style={{ color: "#f97316", fontSize: 18 }}>&rsaquo;</span>
         </Link>
       </div>
       <BottomNav />
