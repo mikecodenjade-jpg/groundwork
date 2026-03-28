@@ -776,7 +776,7 @@ export default function FuelPage() {
               value={searchQuery}
               onChange={(e) => onSearchInput(e.target.value)}
               placeholder="Search 300,000+ foods..."
-              className="w-full pl-11 pr-10 py-4 text-sm outline-none transition-colors"
+              className="w-full pl-11 pr-20 py-4 text-sm outline-none transition-colors"
               style={{
                 fontFamily: "var(--font-inter)",
                 backgroundColor: "#161616",
@@ -807,6 +807,18 @@ export default function FuelPage() {
                 </svg>
               </button>
             )}
+            {/* Barcode scanner button */}
+            <button
+              className="absolute top-1/2 -translate-y-1/2 flex items-center justify-center w-9 h-9 transition-opacity hover:opacity-60"
+              style={{ right: searchQuery ? 40 : 12, color: "#9A9A9A" }}
+              aria-label="Scan barcode"
+              onClick={() => {}}
+            >
+              <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2" />
+                <path d="M7 8v8M12 8v8M17 8v8" />
+              </svg>
+            </button>
           </div>
 
           {/* Searching indicator */}
@@ -893,7 +905,7 @@ export default function FuelPage() {
               className="text-xs mt-3"
               style={{ color: "#9A9A9A", opacity: 0.6 }}
             >
-              Type at least 2 characters â try &ldquo;chicken breast&rdquo; or &ldquo;protein bar&rdquo;
+              Type at least 2 characters -- try "chicken breast" or "protein bar"
             </p>
           )}
         </div>
