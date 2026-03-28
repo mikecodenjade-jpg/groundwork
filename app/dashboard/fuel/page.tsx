@@ -5,7 +5,7 @@ import Link from "next/link";
 import BottomNav from "@/components/BottomNav";
 import { supabase } from "@/lib/supabase";
 
-// âââ Types âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── Types ───────────────────────────────────────────────────────────────────
 type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 
 interface FoodResult {
@@ -40,7 +40,7 @@ interface DailyTotals {
   fat: number;
 }
 
-// âââ Goals (later pull from user profile) ââââââââââââââââââââââââââââââââââââ
+// ─── Goals (later pull from user profile) ────────────────────────────────────
 const GOALS = { calories: 2800, protein: 180, carbs: 300, fat: 90 };
 
 function pct(val: number, goal: number) {
@@ -54,11 +54,11 @@ function formatTime(iso: string) {
   });
 }
 
-// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ═══════════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
-// âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ═══════════════════════════════════════════════════════════════════════════════
 export default function FuelPage() {
-  const [mode, setMode] = useState<"home" | "confirm">("home");
+  const [mode, setMode] = useState<"home" | "search" | "confirm">("home");
   const [meals, setMeals] = useState<MealLog[]>([]);
   const [totals, setTotals] = useState<DailyTotals>({
     calories: 0,
@@ -76,11 +76,11 @@ export default function FuelPage() {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
 
-  // âââ Load today's meals ââââââââââââââââââââââââââââââââââââââââââââââââââ
+  // ─── Load today's meals ──────────────────────────────────────────────────
   const loadMeals = useCallback(async () => {
-    const today = new Date().toLocaleDateString("en-CA");
+    const today = new Date().toISOString().split("T")[0];
     const { data } = await supabase
       .from("meal_logs")
       .select("*")
@@ -108,7 +108,7 @@ export default function FuelPage() {
     loadMeals();
   }, [loadMeals]);
 
-  // âââ Auto-detect meal type by time of day ââââââââââââââââââââââââââââââââ
+  // ─── Auto-detect meal type by time of day ────────────────────────────────
   useEffect(() => {
     const h = new Date().getHours();
     if (h < 10) setSelectedMealType("breakfast");
@@ -117,23 +117,28 @@ export default function FuelPage() {
     else setSelectedMealType("dinner");
   }, []);
 
-  // âââ Search USDA foods via ilike on description ââââââââââââââââââââââââââââ
+  // ─── Search USDA foods via full-text search ──────────────────────────────
   const searchFoods = useCallback(async (query: string) => {
     if (query.length < 2) {
       setSearchResults([]);
       return;
     }
     setSearching(true);
+    const tsQuery = query
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .join(" & ");
     const { data } = await supabase
       .from("usda_foods")
       .select(
         "id, description, brand_owner, calories, protein_g, carbs_g, fat_g, serving_size, serving_size_unit, household_serving_text"
       )
-      .ilike("description", `%${query}%`)
+      .textSearch("search_vector", tsQuery, { type: "plain" })
       .not("calories", "is", null)
       .gt("calories", 0)
       .order("description")
-      .limit(20);
+      .limit(25);
 
     setSearchResults(data || []);
     setSearching(false);
@@ -145,7 +150,7 @@ export default function FuelPage() {
     debounceRef.current = setTimeout(() => searchFoods(val), 300);
   };
 
-  // âââ Log meal ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  // ─── Log meal ────────────────────────────────────────────────────────────
   const logMeal = async () => {
     if (!selectedFood) return;
     setSaving(true);
@@ -163,7 +168,7 @@ export default function FuelPage() {
       fat_g: fat,
       meal_type: selectedMealType,
       logged_at: new Date().toISOString(),
-      date: new Date().toLocaleDateString("en-CA"),
+      date: new Date().toISOString().split("T")[0],
     });
 
     setSaving(false);
@@ -179,13 +184,13 @@ export default function FuelPage() {
     }
   };
 
-  // âââ Delete meal âââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  // ─── Delete meal ─────────────────────────────────────────────────────────
   const deleteMeal = async (id: string) => {
     await supabase.from("meal_logs").delete().eq("id", id);
     loadMeals();
   };
 
-  // âââ Loading skeleton ââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  // ─── Loading skeleton ────────────────────────────────────────────────────
   if (loading) {
     return (
       <main
@@ -210,9 +215,9 @@ export default function FuelPage() {
     );
   }
 
-  // âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  // ═══════════════════════════════════════════════════════════════════════════
   // CONFIRM SCREEN
-  // âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  // ═══════════════════════════════════════════════════════════════════════════
   if (mode === "confirm" && selectedFood) {
     const cal = Math.round((selectedFood.calories || 0) * servings);
     const pro = Math.round((Number(selectedFood.protein_g) || 0) * servings);
@@ -229,7 +234,7 @@ export default function FuelPage() {
           <header className="flex items-center gap-4">
             <button
               onClick={() => {
-                setMode("home");
+                setMode("search");
                 setSelectedFood(null);
               }}
               className="flex items-center justify-center w-9 h-9 transition-opacity hover:opacity-60"
@@ -317,7 +322,7 @@ export default function FuelPage() {
                 className="text-3xl font-bold min-w-[3rem] text-center"
                 style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
               >
-               {servings}
+                {servings}
               </span>
               <button
                 onClick={() => setServings(servings + 0.5)}
@@ -466,9 +471,204 @@ export default function FuelPage() {
     );
   }
 
-  // âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-  // HOME SCREEN â daily tracking + inline search (no static list)
-  // âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SEARCH SCREEN
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (mode === "search") {
+    return (
+      <main
+        className="min-h-screen flex flex-col px-6 py-10"
+        style={{ backgroundColor: "#0A0A0A", color: "#E8E2D8" }}
+      >
+        <div className="max-w-3xl w-full mx-auto flex flex-col gap-4 pb-28">
+          {/* Header */}
+          <header className="flex items-center gap-4 mb-2">
+            <button
+              onClick={() => {
+                setMode("home");
+                setSearchQuery("");
+                setSearchResults([]);
+              }}
+              className="flex items-center justify-center w-9 h-9 transition-opacity hover:opacity-60"
+              style={{ border: "1px solid #252525", borderRadius: 8 }}
+              aria-label="Back to fuel"
+            >
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                width={16}
+                height={16}
+                stroke="#9A9A9A"
+                strokeWidth={1.8}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M13 4L7 10L13 16" />
+              </svg>
+            </button>
+            <h1
+              className="text-2xl font-bold uppercase leading-none"
+              style={{ fontFamily: "var(--font-oswald)" }}
+            >
+              Search Food
+            </h1>
+          </header>
+
+          {/* Search input */}
+          <div className="relative">
+            <input
+              ref={searchRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => onSearchInput(e.target.value)}
+              placeholder="Search 300,000+ foods..."
+              autoFocus
+              className="w-full px-5 py-4 text-sm outline-none transition-colors"
+              style={{
+                fontFamily: "var(--font-inter)",
+                backgroundColor: "#161616",
+                border: "1px solid #252525",
+                borderRadius: 12,
+                color: "#E8E2D8",
+              }}
+              onFocus={(e) =>
+                (e.currentTarget.style.borderColor = "#C45B28")
+              }
+              onBlur={(e) =>
+                (e.currentTarget.style.borderColor = "#252525")
+              }
+            />
+            {searchQuery && (
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setSearchResults([]);
+                  searchRef.current?.focus();
+                }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-sm transition-opacity hover:opacity-60"
+                style={{ color: "#9A9A9A" }}
+                aria-label="Clear search"
+              >
+                <svg viewBox="0 0 16 16" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
+                  <path d="M4 4L12 12M12 4L4 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          {/* Searching indicator */}
+          {searching && (
+            <div
+              className="text-center py-8 text-sm animate-pulse"
+              style={{ color: "#9A9A9A" }}
+            >
+              Searching...
+            </div>
+          )}
+
+          {/* No results */}
+          {!searching &&
+            searchQuery.length >= 2 &&
+            searchResults.length === 0 && (
+              <div
+                className="text-center py-8 text-sm"
+                style={{ color: "#9A9A9A" }}
+              >
+                No foods found for &ldquo;{searchQuery}&rdquo;
+              </div>
+            )}
+
+          {/* Results list */}
+          <div className="flex flex-col gap-2">
+            {searchResults.map((food) => (
+              <button
+                key={food.id}
+                onClick={() => {
+                  setSelectedFood(food);
+                  setMode("confirm");
+                }}
+                className="w-full text-left px-5 py-4 transition-all duration-150 active:scale-[0.98] hover:opacity-80"
+                style={{
+                  backgroundColor: "#161616",
+                  border: "1px solid #252525",
+                  borderRadius: 12,
+                }}
+              >
+                <div
+                  className="text-sm font-medium leading-tight mb-1"
+                  style={{
+                    fontFamily: "var(--font-inter)",
+                    color: "#E8E2D8",
+                  }}
+                >
+                  {food.description}
+                </div>
+                {food.brand_owner && (
+                  <div
+                    className="text-xs mb-2"
+                    style={{ color: "#9A9A9A" }}
+                  >
+                    {food.brand_owner}
+                  </div>
+                )}
+                <div
+                  className="flex gap-4 text-xs"
+                  style={{ fontFamily: "var(--font-inter)" }}
+                >
+                  <span style={{ color: "#C45B28", fontWeight: 600 }}>
+                    {Math.round(food.calories || 0)} cal
+                  </span>
+                  <span style={{ color: "#5B9BD5" }}>
+                    P {Math.round(Number(food.protein_g) || 0)}g
+                  </span>
+                  <span style={{ color: "#D4A843" }}>
+                    C {Math.round(Number(food.carbs_g) || 0)}g
+                  </span>
+                  <span style={{ color: "#D4637A" }}>
+                    F {Math.round(Number(food.fat_g) || 0)}g
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Empty prompt */}
+          {!searching && searchQuery.length < 2 && (
+            <div className="text-center py-16">
+              <svg
+                viewBox="0 0 24 24"
+                width={32}
+                height={32}
+                fill="none"
+                stroke="#9A9A9A"
+                strokeWidth={1.5}
+                strokeLinecap="round"
+                className="mx-auto mb-4 opacity-40"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <path d="M21 21L16.65 16.65" />
+              </svg>
+              <p className="text-sm" style={{ color: "#9A9A9A" }}>
+                Type at least 2 characters to search
+              </p>
+              <p
+                className="text-xs mt-2"
+                style={{ color: "#9A9A9A", opacity: 0.6 }}
+              >
+                Try &ldquo;chicken breast&rdquo;, &ldquo;protein bar&rdquo;,
+                or a brand name
+              </p>
+            </div>
+          )}
+        </div>
+        <BottomNav />
+      </main>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // HOME SCREEN
+  // ═══════════════════════════════════════════════════════════════════════════
   const calPct = pct(totals.calories, GOALS.calories);
   const remaining = Math.max(0, GOALS.calories - totals.calories);
 
@@ -660,6 +860,32 @@ export default function FuelPage() {
           </div>
         </div>
 
+        {/* Log Food CTA */}
+        <button
+          onClick={() => setMode("search")}
+          className="w-full py-4 flex items-center justify-center gap-2 text-sm font-semibold uppercase tracking-[0.15em] transition-all duration-150 active:scale-[0.98]"
+          style={{
+            fontFamily: "var(--font-inter)",
+            backgroundColor: "#C45B28",
+            color: "#0A0A0A",
+            border: "1px solid #C45B28",
+            borderRadius: 20,
+          }}
+        >
+          <svg
+            viewBox="0 0 16 16"
+            width={14}
+            height={14}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+          >
+            <path d="M8 3V13M3 8H13" />
+          </svg>
+          Log Food
+        </button>
+
         {/* Today's Meals */}
         {meals.length > 0 && (
           <div>
@@ -746,157 +972,33 @@ export default function FuelPage() {
           </div>
         )}
 
-        {/* âââ SEARCH SECTION âââ */}
-        <div>
-          <p
-            className="text-xs font-semibold tracking-[0.25em] uppercase mb-4"
-            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
-          >
-            Search Foods
-          </p>
-
-          {/* Search input */}
-          <div className="relative">
+        {/* Empty state */}
+        {meals.length === 0 && (
+          <div className="text-center py-12">
             <svg
               viewBox="0 0 24 24"
-              width={16}
-              height={16}
+              width={40}
+              height={40}
               fill="none"
               stroke="#9A9A9A"
-              strokeWidth={1.8}
+              strokeWidth={1}
               strokeLinecap="round"
-              className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
+              className="mx-auto mb-4 opacity-30"
             >
-              <circle cx="11" cy="11" r="8" />
-              <path d="M21 21L16.65 16.65" />
+              <path d="M3 6h18M3 12h18M3 18h18" />
+              <circle cx="12" cy="12" r="3" />
             </svg>
-            <input
-              ref={searchRef}
-              type="text"
-              value={searchQuery}
-              onChange={(e) => onSearchInput(e.target.value)}
-              placeholder="Search 300,000+ foods..."
-              className="w-full pl-11 pr-10 py-4 text-sm outline-none transition-colors"
-              style={{
-                fontFamily: "var(--font-inter)",
-                backgroundColor: "#161616",
-                border: "1px solid #252525",
-                borderRadius: 12,
-                color: "#E8E2D8",
-              }}
-              onFocus={(e) =>
-                (e.currentTarget.style.borderColor = "#C45B28")
-              }
-              onBlur={(e) =>
-                (e.currentTarget.style.borderColor = "#252525")
-              }
-            />
-            {searchQuery && (
-              <button
-                onClick={() => {
-                  setSearchQuery("");
-                  setSearchResults([]);
-                  searchRef.current?.focus();
-                }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-sm transition-opacity hover:opacity-60"
-                style={{ color: "#9A9A9A" }}
-                aria-label="Clear search"
-              >
-                <svg viewBox="0 0 16 16" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
-                  <path d="M4 4L12 12M12 4L4 12" />
-                </svg>
-              </button>
-            )}
-          </div>
-
-          {/* Searching indicator */}
-          {searching && (
-            <div
-              className="text-center py-6 text-sm animate-pulse"
-              style={{ color: "#9A9A9A" }}
-            >
-              Searching...
-            </div>
-          )}
-
-          {/* No results */}
-          {!searching &&
-            searchQuery.length >= 2 &&
-            searchResults.length === 0 && (
-              <div
-                className="text-center py-6 text-sm"
-                style={{ color: "#9A9A9A" }}
-              >
-                No foods found for &ldquo;{searchQuery}&rdquo;
-              </div>
-            )}
-
-          {/* Results list */}
-          {searchResults.length > 0 && (
-            <div className="flex flex-col gap-2 mt-3">
-              {searchResults.map((food) => (
-                <button
-                  key={food.id}
-                  onClick={() => {
-                    setSelectedFood(food);
-                    setMode("confirm");
-                  }}
-                  className="w-full text-left px-5 py-4 transition-all duration-150 active:scale-[0.98] hover:opacity-80"
-                  style={{
-                    backgroundColor: "#161616",
-                    border: "1px solid #252525",
-                    borderRadius: 12,
-                  }}
-                >
-                  <div
-                    className="text-sm font-medium leading-tight mb-1"
-                    style={{
-                      fontFamily: "var(--font-inter)",
-                      color: "#E8E2D8",
-                    }}
-                  >
-                    {food.description}
-                  </div>
-                  {food.brand_owner && (
-                    <div
-                      className="text-xs mb-2"
-                      style={{ color: "#9A9A9A" }}
-                    >
-                      {food.brand_owner}
-                    </div>
-                  )}
-                  <div
-                    className="flex gap-4 text-xs"
-                    style={{ fontFamily: "var(--font-inter)" }}
-                  >
-                    <span style={{ color: "#C45B28", fontWeight: 600 }}>
-                      {Math.round(food.calories || 0)} cal
-                    </span>
-                    <span style={{ color: "#5B9BD5" }}>
-                      P {Math.round(Number(food.protein_g) || 0)}g
-                    </span>
-                    <span style={{ color: "#D4A843" }}>
-                      C {Math.round(Number(food.carbs_g) || 0)}g
-                    </span>
-                    <span style={{ color: "#D4637A" }}>
-                      F {Math.round(Number(food.fat_g) || 0)}g
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Empty hint (no query yet) */}
-          {!searching && searchQuery.length < 2 && searchResults.length === 0 && (
             <p
-              className="text-xs mt-3"
-              style={{ color: "#9A9A9A", opacity: 0.6 }}
+              className="text-sm font-medium mb-1"
+              style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
             >
-              Type at least 2 characters â try &ldquo;chicken breast&rdquo; or &ldquo;protein bar&rdquo;
+              No meals logged yet
             </p>
-          )}
-        </div>
+            <p className="text-xs" style={{ color: "#9A9A9A" }}>
+              Tap &ldquo;Log Food&rdquo; to get started
+            </p>
+          </div>
+        )}
 
         {/* Cooler Prep link */}
         <Link
@@ -929,4 +1031,3 @@ export default function FuelPage() {
     </main>
   );
 }
-
