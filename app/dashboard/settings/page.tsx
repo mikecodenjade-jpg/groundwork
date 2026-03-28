@@ -7,6 +7,18 @@ import BottomNav from "@/components/BottomNav";
 import { supabase } from "@/lib/supabase";
 import CrisisScreen from "@/components/CrisisScreen";
 
+type EmailPrefs = {
+  weekly_digest: boolean;
+  tips_content: boolean;
+  challenge_updates: boolean;
+};
+
+const DEFAULT_EMAIL_PREFS: EmailPrefs = {
+  weekly_digest: true,
+  tips_content: true,
+  challenge_updates: true,
+};
+
 const ROLES = [
   "Superintendent",
   "Foreman",
@@ -29,6 +41,12 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [jobsiteMode, setJobsiteMode] = useState(false);
   const [showCrisis, setShowCrisis] = useState(false);
+  const [emailPrefs, setEmailPrefs] = useState<EmailPrefs>(DEFAULT_EMAIL_PREFS);
+  const [savingEmail, setSavingEmail] = useState(false);
+  const [savedEmail, setSavedEmail] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     setJobsiteMode(localStorage.getItem("jobsite_mode") === "true");
@@ -57,6 +75,21 @@ export default function SettingsPage() {
         setRole(data.role ?? "");
         setCompany(data.company ?? "");
       }
+
+      const { data: ep } = await supabase
+        .from("email_preferences")
+        .select("weekly_digest, tips_content, challenge_updates")
+        .eq("user_id", user.id)
+        .single();
+
+      if (ep) {
+        setEmailPrefs({
+          weekly_digest: ep.weekly_digest ?? true,
+          tips_content: ep.tips_content ?? true,
+          challenge_updates: ep.challenge_updates ?? true,
+        });
+      }
+
       setLoading(false);
     }
     load();
@@ -80,6 +113,28 @@ export default function SettingsPage() {
     setSaved(true);
     setEditing(false);
     setTimeout(() => setSaved(false), 2500);
+  }
+
+  async function handleSaveEmailPrefs() {
+    setSavingEmail(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from("email_preferences").upsert({ user_id: user.id, ...emailPrefs });
+    setSavingEmail(false);
+    setSavedEmail(true);
+    setTimeout(() => setSavedEmail(false), 2500);
+  }
+
+  async function handleDeleteAccount() {
+    setDeleting(true);
+    const { error } = await supabase.rpc("delete_user_account");
+    if (error) {
+      setDeleting(false);
+      setShowDeleteModal(false);
+      return;
+    }
+    await supabase.auth.signOut();
+    router.push("/");
   }
 
   async function handleSignOut() {
@@ -315,6 +370,73 @@ export default function SettingsPage() {
           </Link>
         </section>
 
+        {/* Email Preferences */}
+        <section className="flex flex-col gap-4">
+          <p
+            className="text-xs font-semibold tracking-[0.25em] uppercase"
+            style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}
+          >
+            Email Preferences
+          </p>
+          <div
+            className="flex flex-col"
+            style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "12px", overflow: "hidden" }}
+          >
+            {(
+              [
+                { key: "weekly_digest" as const, label: "Weekly Digest", desc: "Progress summaries and weekly highlights" },
+                { key: "tips_content" as const, label: "Tips & Training Content", desc: "New articles, drills, and resources" },
+                { key: "challenge_updates" as const, label: "Challenge & Crew Updates", desc: "Milestones, completions, and crew activity" },
+              ] as const
+            ).map(({ key, label, desc }, i) => (
+              <div key={key}>
+                {i > 0 && <div style={{ borderTop: "1px solid #252525" }} />}
+                <div className="flex items-center justify-between px-6 py-4">
+                  <div className="flex flex-col gap-0.5 pr-4">
+                    <span
+                      className="text-sm font-semibold"
+                      style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}
+                    >
+                      {label}
+                    </span>
+                    <span className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+                      {desc}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEmailPrefs((p) => ({ ...p, [key]: !p[key] }))}
+                    className="relative shrink-0 transition-colors duration-200"
+                    style={{
+                      width: 44,
+                      height: 24,
+                      borderRadius: 12,
+                      backgroundColor: emailPrefs[key] ? "#C45B28" : "#252525",
+                    }}
+                    aria-label={`Toggle ${label}`}
+                  >
+                    <div
+                      className="absolute top-1 w-4 h-4 rounded-full transition-all duration-200"
+                      style={{
+                        backgroundColor: emailPrefs[key] ? "#0A0A0A" : "#9A9A9A",
+                        left: emailPrefs[key] ? 24 : 4,
+                      }}
+                    />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={handleSaveEmailPrefs}
+            disabled={savingEmail}
+            className="w-full py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90 disabled:opacity-50"
+            style={{ backgroundColor: "#C45B28", color: "#0A0A0A", borderRadius: "8px", fontFamily: "var(--font-inter)", fontWeight: 700, minHeight: "48px" }}
+          >
+            {savingEmail ? "Saving..." : savedEmail ? "✓ Saved" : "Save Email Preferences"}
+          </button>
+        </section>
+
         {/* Jobsite Mode */}
         <section className="flex flex-col gap-4">
           <p
@@ -412,6 +534,31 @@ export default function SettingsPage() {
           </div>
         </section>
 
+        {/* Delete Account */}
+        <section className="flex flex-col gap-3">
+          <p
+            className="text-xs font-semibold tracking-[0.25em] uppercase"
+            style={{ color: "#9A3A3A", fontFamily: "var(--font-inter)" }}
+          >
+            Danger Zone
+          </p>
+          <div
+            className="flex flex-col gap-3 px-6 py-5"
+            style={{ backgroundColor: "#1A0808", border: "1px solid #5A1A1A", borderRadius: "12px" }}
+          >
+            <p className="text-xs" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)", lineHeight: 1.6 }}>
+              Permanently delete your account and all associated data. This cannot be undone.
+            </p>
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="w-full py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90"
+              style={{ backgroundColor: "#DC2626", color: "#fff", borderRadius: "8px", fontFamily: "var(--font-inter)", fontWeight: 700, minHeight: "48px" }}
+            >
+              Delete Account
+            </button>
+          </div>
+        </section>
+
         {/* Sign Out */}
         <section>
           <button
@@ -426,6 +573,58 @@ export default function SettingsPage() {
       </div>
       <BottomNav />
       {showCrisis && <CrisisScreen onDismiss={() => setShowCrisis(false)} />}
+
+      {/* Delete Account Modal */}
+      {showDeleteModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-6"
+          style={{ backgroundColor: "rgba(0,0,0,0.85)" }}
+        >
+          <div
+            className="w-full max-w-sm flex flex-col gap-5 px-7 py-8"
+            style={{ backgroundColor: "#161616", border: "1px solid #5A1A1A", borderRadius: "16px" }}
+          >
+            <div className="flex flex-col gap-2">
+              <h2
+                className="text-xl font-bold uppercase"
+                style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
+              >
+                Delete Account
+              </h2>
+              <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)", lineHeight: 1.6 }}>
+                This will permanently delete your account, all training data, and cannot be recovered. Type{" "}
+                <span style={{ color: "#DC2626", fontWeight: 700 }}>DELETE</span> to confirm.
+              </p>
+            </div>
+            <input
+              type="text"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder="Type DELETE to confirm"
+              className="px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-red-600"
+              style={{ backgroundColor: "#0A0A0A", border: "1px solid #5A1A1A", color: "#E8E2D8", borderRadius: "8px", fontFamily: "var(--font-inter)" }}
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteConfirmText !== "DELETE" || deleting}
+                className="flex-1 py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90 disabled:opacity-30"
+                style={{ backgroundColor: "#DC2626", color: "#fff", borderRadius: "8px", fontFamily: "var(--font-inter)", fontWeight: 700 }}
+              >
+                {deleting ? "Deleting..." : "Delete Forever"}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(""); }}
+                className="px-5 py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-70"
+                style={{ border: "1px solid #252525", color: "#9A9A9A", borderRadius: "8px", fontFamily: "var(--font-inter)" }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
