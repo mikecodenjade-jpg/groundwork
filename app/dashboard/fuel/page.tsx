@@ -573,7 +573,7 @@ export default function FuelPage() {
                   stroke={calPct >= 100 ? "#D4637A" : "#C45B28"}
                   strokeWidth="8"
                   strokeLinecap="round"
-                  strokeDasharray={`${calPct * 2.64} 264`]}
+                  strokeDasharray={`${calPct * 2.64} 264`}
                   style={{ transition: "stroke-dasharray 0.7s ease" }}
                 />
               </svg>
