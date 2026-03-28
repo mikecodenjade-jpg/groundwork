@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 // âââ Types âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 
-interface FoodResult {
+interface FoodResult {h
   id: string;
   description: string;
   brand_owner: string | null;
@@ -76,7 +76,7 @@ export default function FuelPage() {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // âââ Load today's meals ââââââââââââââââââââââââââââââââââââââââââââââââââ
   const loadMeals = useCallback(async () => {
