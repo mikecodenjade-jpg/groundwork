@@ -369,14 +369,18 @@ export default function LeadPage() {
     async function loadChallengeStatus() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const today = new Date().toISOString().split("T")[0];
-      const { data } = await supabase
+      const today = new Date().toLocaleDateString("en-CA");
+      const { data, error } = await supabase
         .from("leadership_challenges_completed")
         .select("id")
         .eq("user_id", user.id)
         .eq("challenge_index", challengeIndex)
         .eq("completed_date", today)
         .maybeSingle();
+      if (error) {
+        console.error("Failed to load challenge status:", error);
+        return;
+      }
       if (data) setChallengeCompleted(true);
     }
     loadChallengeStatus();
@@ -384,11 +388,15 @@ export default function LeadPage() {
     async function loadPlan() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("transition_plans")
         .select("*")
         .eq("user_id", user.id)
         .maybeSingle();
+      if (error) {
+        console.error("Failed to load transition plan:", error);
+        return;
+      }
       if (data) {
         setPlan({
           twoYearGoal: data.two_year_goal ?? "",
@@ -416,11 +424,16 @@ export default function LeadPage() {
     if (next) {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const today = new Date().toISOString().split("T")[0];
-        await supabase.from("leadership_challenges_completed").upsert(
+        const today = new Date().toLocaleDateString("en-CA");
+        const { error } = await supabase.from("leadership_challenges_completed").upsert(
           { user_id: user.id, challenge_index: challengeIndex, completed_date: today },
           { onConflict: "user_id,challenge_index,completed_date" }
         );
+        if (error) {
+          console.error("Failed to save challenge completion:", error);
+          setChallengeCompleted(false);
+          showToast("Error saving. Please try again.");
+        }
       }
     }
   }
@@ -429,7 +442,7 @@ export default function LeadPage() {
     setPlanSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      await supabase.from("transition_plans").upsert(
+      const { error } = await supabase.from("transition_plans").upsert(
         {
           user_id: user.id,
           two_year_goal: plan.twoYearGoal || null,
@@ -444,6 +457,12 @@ export default function LeadPage() {
         },
         { onConflict: "user_id" }
       );
+      if (error) {
+        console.error("Failed to save transition plan:", error);
+        setPlanSaving(false);
+        showToast("Error saving. Please try again.");
+        return;
+      }
     }
     setPlanSaving(false);
     setPlanSaved(true);

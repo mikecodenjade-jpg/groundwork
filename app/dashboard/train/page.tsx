@@ -143,15 +143,17 @@ function TrainPage(){
 
   async function logShift(s:'day'|'swing'|'night'){
     setShift(s);
-    await supabase.from('user_training_preferences').update({shift_pattern:s}).eq('user_id',uid);
+    const {error}=await supabase.from('user_training_preferences').update({shift_pattern:s}).eq('user_id',uid);
+    if(error){console.error('Failed to update shift pattern:',error);}
   }
 
   /* ── Start Workout ── */
   async function startWorkout(){
     if(!workout?.workout) return;
+    const now = new Date();
     const {data,error}=await supabase.from('workout_sessions').insert({
       user_id: uid,
-      started_at: new Date().toISOString(),
+      started_at: now.toISOString(),
       pre_fatigue_snapshot: workout.fatigue_state || {},
     }).select('id').single();
 
@@ -241,6 +243,10 @@ function TrainPage(){
   /* ── Complete Workout ── */
   async function completeWorkout(){
     if(!sessionId || saving) return;
+    if(exerciseLogs.length===0){
+      console.warn('No exercises logged');
+      return;
+    }
     setSaving(true);
 
     const durationMin = Math.round(elapsed/60);
@@ -266,7 +272,13 @@ function TrainPage(){
     });
 
     if(error){
-      console.error('complete error',error);
+      console.error('Failed to complete workout:',error);
+      setSaving(false);
+      return;
+    }
+
+    if(!data){
+      console.error('No data returned from complete_workout RPC');
       setSaving(false);
       return;
     }

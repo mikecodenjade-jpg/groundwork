@@ -87,6 +87,16 @@ export default function MindPage() {
   const [showCrisis, setShowCrisis] = useState(false);
   const [moodTier, setMoodTier] = useState<0 | 1 | 2>(0);
 
+  // Loading and error states for async operations
+  const [moodLoading, setMoodLoading] = useState(false);
+  const [sourceLoading, setSourceLoading] = useState(false);
+  const [tierLoading, setTierLoading] = useState(true);
+  const [moodSaveError, setMoodSaveError] = useState<string | null>(null);
+  const [sourceSaveError, setSourceSaveError] = useState<string | null>(null);
+
+  // Guard against double submissions
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // Load recent check-ins on mount
   useEffect(() => {
     async function loadRecent() {
@@ -103,14 +113,19 @@ export default function MindPage() {
         return;
       }
 
-      const { data: checkins } = await supabase
+      const { data: checkins, error } = await supabase
         .from("mood_checkins")
         .select("id, mood, source, created_at")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(5);
 
-      if (checkins && checkins.length > 0) {
+      if (error) {
+        console.error("Failed to load recent checkins:", error);
+        // Fall back to cached data
+        const cached = getCachedData<CheckinRow[]>("recent-mood-checkins");
+        if (cached) setRecentCheckins(cached);
+      } else if (checkins && checkins.length > 0) {
         setRecentCheckins(checkins);
         cacheData("recent-mood-checkins", checkins);
 
@@ -133,30 +148,65 @@ export default function MindPage() {
     loadRecent();
   }, []);
 
-  // Check daily_checkins for passive mood tier
+  // Check daily_checkins for passive mood tier with fallback
   useEffect(() => {
     async function checkTier() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setMoodTier(0);
+          setTierLoading(false);
+          return;
+        }
 
-      const { data } = await supabase
-        .from("daily_checkins")
-        .select("mood")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(3);
+        const { data, error } = await supabase
+          .from("daily_checkins")
+          .select("mood")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(3);
 
-      if (data && data.length > 0) {
-        const moods = data.map((d) => d.mood as number);
-        const tier = assessMoodTier(moods);
-        setMoodTier(tier);
-        try { localStorage.setItem("gw_support_tier", String(tier)); } catch {}
+        if (error) {
+          console.error("Failed to check mood tier:", error);
+          // Try to load from localStorage as fallback
+          try {
+            const cached = localStorage.getItem("gw_support_tier");
+            if (cached) {
+              const tier = parseInt(cached, 10) as 0 | 1 | 2;
+              setMoodTier(tier);
+            } else {
+              // Default to 0 if no data available
+              setMoodTier(0);
+            }
+          } catch {
+            setMoodTier(0);
+          }
+        } else if (data && data.length > 0) {
+          const moods = data.map((d) => d.mood as number);
+          const tier = assessMoodTier(moods);
+          setMoodTier(tier);
+          try { localStorage.setItem("gw_support_tier", String(tier)); } catch {}
+        } else {
+          // No mood data yet, default to 0
+          setMoodTier(0);
+        }
+      } catch (err) {
+        console.error("Error in checkTier:", err);
+        setMoodTier(0);
+      } finally {
+        setTierLoading(false);
       }
     }
     checkTier();
   }, []);
 
   async function handleMoodSelect(mood: (typeof MOODS)[number]) {
+    // Prevent double submission
+    if (isSubmitting || moodLoading) return;
+    setIsSubmitting(true);
+    setMoodLoading(true);
+    setMoodSaveError(null);
+
     // Haptic feedback — short tap on mobile devices
     if (typeof navigator !== "undefined" && navigator.vibrate) {
       navigator.vibrate(10);
@@ -169,6 +219,8 @@ export default function MindPage() {
     } = await supabase.auth.getUser();
     if (!user) {
       setPhase("source");
+      setMoodLoading(false);
+      setIsSubmitting(false);
       return;
     }
 
@@ -188,19 +240,30 @@ export default function MindPage() {
       });
       await registerSync("sync-logs");
       setPhase("source");
+      setMoodLoading(false);
+      setIsSubmitting(false);
       return;
     }
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("mood_checkins")
       .insert({ user_id: user.id, mood: mood.label })
       .select("id")
       .single();
 
+    if (error) {
+      console.error("Failed to save mood:", error);
+      setMoodSaveError("Failed to save mood. Please try again.");
+      setMoodLoading(false);
+      setIsSubmitting(false);
+      return;
+    }
+
     if (data?.id) {
       setSavedId(data.id);
 
-      // Fire-and-forget sentiment analysis
+      // Fire sentiment analysis only once, after mood is saved
+      // Use mood + source when available, but don't block on it
       supabase.functions
         .invoke("analyze-sentiment", {
           body: {
@@ -210,38 +273,74 @@ export default function MindPage() {
             entry_id: data.id,
           },
         })
-        .catch(() => {});
+        .catch((err) => {
+          console.error("Sentiment analysis failed:", err);
+          // Don't block UX on sentiment analysis failure
+        });
     }
+
     setPhase("source");
+    setMoodLoading(false);
+    setIsSubmitting(false);
   }
 
   async function handleSourceSelect(source: string) {
+    // Prevent double submission
+    if (isSubmitting || sourceLoading) return;
+    setIsSubmitting(true);
+    setSourceLoading(true);
+    setSourceSaveError(null);
+
+    let updateError: string | null = null;
+
     if (savedId) {
-      await supabase.from("mood_checkins").update({ source }).eq("id", savedId);
+      const { error } = await supabase
+        .from("mood_checkins")
+        .update({ source })
+        .eq("id", savedId);
+
+      if (error) {
+        console.error("Failed to save source:", error);
+        updateError = "Failed to save source. Your mood was recorded but the source wasn't saved.";
+        setSourceSaveError(updateError);
+      }
     }
+
     setPhase("done");
 
-    // Fire-and-forget sentiment analysis
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user && selectedMood) {
-        supabase.functions
-          .invoke("analyze-sentiment", {
-            body: {
-              text: `Mood: ${selectedMood.label}. Source of stress: ${source}`,
-              user_id: user.id,
-              entry_type: "mood_checkin",
-              entry_id: savedId,
-            },
-          })
-          .catch(() => {});
-      }
-    });
+    // Fire sentiment analysis only once, with complete context
+    // Include both mood and source in the analysis
+    if (!updateError) {
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user && selectedMood) {
+          supabase.functions
+            .invoke("analyze-sentiment", {
+              body: {
+                text: `Mood: ${selectedMood.label}. Source of stress: ${source}`,
+                user_id: user.id,
+                entry_type: "mood_checkin",
+                entry_id: savedId,
+              },
+            })
+            .catch((err) => {
+              console.error("Sentiment analysis failed:", err);
+              // Don't block UX on sentiment analysis failure
+            });
+        }
+      });
+    }
+
+    setSourceLoading(false);
+    setIsSubmitting(false);
   }
 
   function reset() {
     setPhase("mood");
     setSelectedMood(null);
     setSavedId(null);
+    setMoodSaveError(null);
+    setSourceSaveError(null);
+    setIsSubmitting(false);
   }
 
   return (
@@ -307,8 +406,8 @@ export default function MindPage() {
           </button>
         </header>
 
-        {/* Tier 2 Banner — persistent low mood */}
-        {moodTier === 2 && (
+        {/* Tier 2 Banner — persistent critical low mood */}
+        {!tierLoading && moodTier === 2 && (
           <section
             style={{
               backgroundColor: "#081A2A",
@@ -384,6 +483,79 @@ export default function MindPage() {
           </section>
         )}
 
+        {/* Tier 1 Banner — elevated mood risk */}
+        {!tierLoading && moodTier === 1 && (
+          <section
+            style={{
+              backgroundColor: "#1A1410",
+              border: "2px solid #8B5A2B",
+              borderRadius: "12px",
+              padding: "20px 24px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+            }}
+          >
+            <p
+              style={{
+                fontFamily: "var(--font-inter)",
+                fontSize: 11,
+                fontWeight: 600,
+                color: "#C45B28",
+                textTransform: "uppercase",
+                letterSpacing: "0.2em",
+              }}
+            >
+              Heads Up
+            </p>
+            <p
+              style={{
+                fontFamily: "var(--font-oswald)",
+                fontSize: 22,
+                fontWeight: 700,
+                color: "#E8E2D8",
+                textTransform: "uppercase",
+                lineHeight: 1.2,
+              }}
+            >
+              You&apos;re Running on Empty
+            </p>
+            <p
+              style={{
+                fontFamily: "var(--font-inter)",
+                fontSize: 13,
+                color: "#9A9A9A",
+                lineHeight: 1.6,
+              }}
+            >
+              We&apos;ve noticed your mood hasn&apos;t been consistent. It&apos;s time to reach out for support before things get harder.
+            </p>
+            <a
+              href="https://www.ciasp.com/find-help"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                minHeight: 52,
+                backgroundColor: "#C45B28",
+                color: "#0A0A0A",
+                borderRadius: "8px",
+                fontFamily: "var(--font-inter)",
+                fontSize: 14,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                textDecoration: "none",
+              }}
+            >
+              Find Professional Support
+            </a>
+          </section>
+        )}
+
         {/* Daily Check-In */}
         <section
           style={{
@@ -425,7 +597,8 @@ export default function MindPage() {
                   <button
                     key={mood.value}
                     onClick={() => handleMoodSelect(mood)}
-                    className="w-full flex items-center justify-between px-6 text-sm font-bold uppercase tracking-widest transition-all duration-150 active:scale-[0.99] hover:opacity-90"
+                    disabled={moodLoading || isSubmitting}
+                    className="w-full flex items-center justify-between px-6 text-sm font-bold uppercase tracking-widest transition-all duration-150 active:scale-[0.99] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{
                       fontFamily: "var(--font-inter)",
                       backgroundColor: "#0A0A0A",
@@ -435,13 +608,41 @@ export default function MindPage() {
                       height: "56px",
                     }}
                   >
-                    {mood.label}
-                    <div
-                      className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: mood.color }}
-                    />
+                    <span>{mood.label}</span>
+                    <div className="flex items-center gap-2">
+                      {moodLoading && selectedMood?.value === mood.value && (
+                        <span className="text-xs" style={{ color: "#9A9A9A" }}>
+                          Saving...
+                        </span>
+                      )}
+                      <div
+                        className="w-2 h-2 rounded-full"
+                        style={{ backgroundColor: mood.color }}
+                      />
+                    </div>
                   </button>
                 ))}
+                {moodSaveError && (
+                  <div
+                    style={{
+                      backgroundColor: "#5A1A1A",
+                      border: "1px solid #DC2626",
+                      borderRadius: "8px",
+                      padding: "12px 16px",
+                      marginTop: "8px",
+                    }}
+                  >
+                    <p
+                      style={{
+                        fontFamily: "var(--font-inter)",
+                        fontSize: 13,
+                        color: "#DC2626",
+                      }}
+                    >
+                      {moodSaveError}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -471,7 +672,8 @@ export default function MindPage() {
                     <button
                       key={source}
                       onClick={() => handleSourceSelect(source)}
-                      className="flex-1 min-w-[80px] flex items-center justify-center px-4 text-sm font-bold uppercase tracking-widest transition-all active:scale-95 hover:opacity-90"
+                      disabled={sourceLoading || isSubmitting}
+                      className="flex-1 min-w-[80px] flex items-center justify-center px-4 text-sm font-bold uppercase tracking-widest transition-all active:scale-95 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                       style={{
                         fontFamily: "var(--font-inter)",
                         backgroundColor: "#0A0A0A",
@@ -481,18 +683,41 @@ export default function MindPage() {
                         height: "56px",
                       }}
                     >
-                      {source}
+                      {sourceLoading && isSubmitting ? "Saving..." : source}
                     </button>
                   ))}
                 </div>
 
                 <button
                   onClick={() => setPhase("done")}
-                  className="text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-60 text-left"
+                  disabled={sourceLoading || isSubmitting}
+                  className="text-xs font-semibold uppercase tracking-widest transition-opacity hover:opacity-60 text-left disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
                 >
                   Skip →
                 </button>
+
+                {sourceSaveError && (
+                  <div
+                    style={{
+                      backgroundColor: "#5A1A1A",
+                      border: "1px solid #DC2626",
+                      borderRadius: "8px",
+                      padding: "12px 16px",
+                      marginTop: "8px",
+                    }}
+                  >
+                    <p
+                      style={{
+                        fontFamily: "var(--font-inter)",
+                        fontSize: 13,
+                        color: "#DC2626",
+                      }}
+                    >
+                      {sourceSaveError}
+                    </p>
+                  </div>
+                )}
               </>
             )}
 
@@ -1187,12 +1412,10 @@ function BoxBreathingOverlay({ onClose }: { onClose: () => void }) {
         </div>
       ) : (
         <div className="flex flex-col items-center gap-10">
-          {/* Round indicator */}
           <p className="text-xs font-semibold uppercase tracking-[0.25em]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
             Round {round} of {TOTAL_ROUNDS}
           </p>
 
-          {/* Breathing circle */}
           <div
             className="rounded-full flex items-center justify-center"
             style={{
@@ -1208,7 +1431,6 @@ function BoxBreathingOverlay({ onClose }: { onClose: () => void }) {
             </span>
           </div>
 
-          {/* Phase label */}
           <p className="text-2xl font-bold uppercase" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
             {BREATH_PHASES[phaseIdx].label}
           </p>
@@ -1239,16 +1461,85 @@ function GuidedStepsOverlay({
 
   async function finish() {
     setSaving(true);
-    if (onComplete) await onComplete();
-    setSaving(false);
-    setDone(true);
+    try {
+      if (onComplete) await onComplete();
+    } catch (err) {
+      console.error("Error completing tool session:", err);
+    } finally {
+      setSaving(false);
+      setDone(true);
+    }
   }
 
-  const isLast = step === steps.length - 1;
+  const canGoBack = step > 0;
+  const canGoForward = step < steps.length - 1;
 
   return (
     <OverlayShell title={title} onClose={onClose}>
-      {done ? (
+      {!done ? (
+        <div className="flex flex-col items-center gap-10 max-w-2xl w-full text-center">
+          <p className="text-xs font-semibold uppercase tracking-[0.25em]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+            Step {step + 1} of {steps.length}
+          </p>
+
+          <div className="flex flex-col gap-6">
+            <h3 className="text-2xl font-bold" style={{ color: "#E8E2D8", fontFamily: "var(--font-oswald)" }}>
+              {steps[step].heading}
+            </h3>
+            <p className="text-base leading-relaxed" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
+              {steps[step].body}
+            </p>
+          </div>
+
+          <div className="flex gap-3 w-full">
+            {canGoBack && (
+              <button
+                onClick={() => setStep(step - 1)}
+                disabled={saving}
+                className="flex-1 px-6 py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  fontFamily: "var(--font-inter)",
+                  backgroundColor: "#161616",
+                  color: "#E8E2D8",
+                  border: "1px solid #252525",
+                  borderRadius: "8px",
+                }}
+              >
+                Back
+              </button>
+            )}
+            {canGoForward ? (
+              <button
+                onClick={() => setStep(step + 1)}
+                disabled={saving}
+                className="flex-1 px-6 py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  fontFamily: "var(--font-inter)",
+                  backgroundColor: "#C45B28",
+                  color: "#0A0A0A",
+                  borderRadius: "8px",
+                }}
+              >
+                Next
+              </button>
+            ) : (
+              <button
+                onClick={finish}
+                disabled={saving}
+                className="flex-1 px-6 py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  fontFamily: "var(--font-inter)",
+                  backgroundColor: "#C45B28",
+                  color: "#0A0A0A",
+                  borderRadius: "8px",
+                }}
+              >
+                {saving ? "Saving..." : "Complete"}
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
         <div className="flex flex-col items-center gap-8 text-center">
           <div className="w-24 h-24 rounded-full flex items-center justify-center" style={{ backgroundColor: "#1A2A1A", border: "2px solid #2A5A2A" }}>
             <svg viewBox="0 0 24 24" fill="none" width={36} height={36}>
@@ -1264,47 +1555,6 @@ function GuidedStepsOverlay({
             Close
           </button>
         </div>
-      ) : (
-        <div className="flex flex-col items-center gap-8 max-w-md text-center w-full">
-          {/* Progress dots */}
-          <div className="flex gap-2">
-            {steps.map((_, i) => (
-              <div key={i} className="w-2.5 h-2.5 rounded-full transition-all duration-300"
-                style={{ backgroundColor: i <= step ? "#C45B28" : "#252525" }} />
-            ))}
-          </div>
-
-          {/* Step number */}
-          <p className="text-xs font-semibold uppercase tracking-[0.25em]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-            Step {step + 1} of {steps.length}
-          </p>
-
-          {/* Step content */}
-          <h3 className="text-2xl font-bold uppercase leading-snug" style={{ color: "#E8E2D8", fontFamily: "var(--font-inter)" }}>
-            {steps[step].heading}
-          </h3>
-          <p className="text-base leading-relaxed" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-            {steps[step].body}
-          </p>
-
-          {/* Navigation */}
-          <div className="flex gap-4 w-full max-w-xs">
-            {step > 0 && (
-              <button onClick={() => setStep((s) => s - 1)}
-                className="flex-1 py-4 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-70 active:scale-95"
-                style={{ color: "#9A9A9A", border: "1px solid #252525", borderRadius: "10px", fontFamily: "var(--font-inter)" }}>
-                Back
-              </button>
-            )}
-            <button
-              onClick={isLast ? finish : () => setStep((s) => s + 1)}
-              disabled={saving}
-              className="flex-1 py-4 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-95 disabled:opacity-40"
-              style={{ backgroundColor: "#C45B28", color: "#0A0A0A", borderRadius: "10px", fontFamily: "var(--font-inter)", fontWeight: 600 }}>
-              {saving ? "Saving..." : isLast ? "Done" : "Next"}
-            </button>
-          </div>
-        </div>
       )}
     </OverlayShell>
   );
@@ -1312,142 +1562,108 @@ function GuidedStepsOverlay({
 
 // ─── Stress Reset Overlay ──────────────────────────────────────────────────────
 
-const STRESS_STEPS = [
-  { heading: "5 Things You Can See", body: "Look around. Name five things you can see right now. The crane. The safety vest. The sky. Say them out loud or in your head." },
-  { heading: "4 Things You Can Touch", body: "Feel four things. The hardhat. The steering wheel. Your jeans. The phone in your hand. Ground yourself in what's real." },
-  { heading: "3 Things You Can Hear", body: "Listen. The engine idling. A radio. Wind. Three sounds that remind you: you're here, right now." },
-  { heading: "2 Things You Can Smell", body: "Diesel. Fresh coffee. Sawdust. Whatever's around you — two things that pull you into the present." },
-  { heading: "1 Thing You Can Taste", body: "Water. Gum. The last thing you ate. One taste to close the loop and bring you all the way back." },
+const STRESS_RESET_STEPS = [
+  {
+    heading: "Find a Quiet Spot",
+    body: "Even 2 minutes alone — your truck, the break room, outside. Somewhere you can focus for the next 5 minutes.",
+  },
+  {
+    heading: "Stand With Your Feet Shoulder-Width Apart",
+    body: "Ground yourself. Feel your feet on the ground. This anchors your nervous system.",
+  },
+  {
+    heading: "Breathe: 4 In, 4 Hold, 4 Out",
+    body: "Slow your breathing. Your body will follow. Do this 5 times.",
+  },
+  {
+    heading: "Shake It Out",
+    body: "Stand up and shake your arms, legs, and torso for 30 seconds. It sounds weird. It works. Your nervous system resets.",
+  },
+  {
+    heading: "You're Reset",
+    body: "You just dropped your cortisol. You're ready.",
+  },
 ];
 
 function StressResetOverlay({ onClose }: { onClose: () => void }) {
-  async function saveCompletion() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from("mood_checkins").insert({ user_id: user.id, mood: "reset", source: "Stress Reset" });
-    }
-  }
-
   return (
     <GuidedStepsOverlay
       title="Stress Reset"
-      steps={STRESS_STEPS}
-      doneLabel="Done — I'm Reset"
+      steps={STRESS_RESET_STEPS}
+      doneLabel="Reset Complete"
       onClose={onClose}
-      onComplete={saveCompletion}
     />
   );
 }
 
 // ─── Sleep Protocol Overlay ────────────────────────────────────────────────────
 
-const SLEEP_STEPS = [
-  { heading: "Set Your Alarm — Both Ways", body: "Pick a lights-out time and stick to it. Your body needs a pattern. If you're up at 4:30, you need to be out by 9:00." },
-  { heading: "Blue Light Off", body: "Phone face-down. TV off. 30 minutes before bed, no screens. The light wrecks your melatonin and keeps your brain wired." },
-  { heading: "Cool the Room", body: "65-68°F is the sweet spot. Your body drops its core temp to fall asleep — help it out. Fan, AC, window, whatever works." },
-  { heading: "Brain Dump", body: "Grab your phone or a notepad. Write down tomorrow's top 3 tasks, anything on your mind, worries about the job. Get it out of your head and onto paper." },
-  { heading: "3 Rounds of Box Breathing", body: "Breathe in for 4 counts. Hold for 4. Out for 4. Hold for 4. Three rounds. By the third, your nervous system will start shutting down for the night." },
+const SLEEP_PROTOCOL_STEPS = [
+  {
+    heading: "90 Minutes Before Bed: Cut the Light",
+    body: "Stop looking at screens. Seriously. Your brain needs 90 minutes to start producing melatonin.",
+  },
+  {
+    heading: "60 Minutes Before: Cold Shower or Wash Your Face",
+    body: "A drop in body temperature triggers sleep. Even just cold water on your face works.",
+  },
+  {
+    heading: "30 Minutes Before: Your Sleep Space",
+    body: "Make it cold. Make it dark. Make it quiet. 65-68 degrees is ideal.",
+  },
+  {
+    heading: "In Bed: Box Breathing",
+    body: "4 in, 4 hold, 4 out, 4 hold. Do this until you lose focus. That's when you're asleep.",
+  },
+  {
+    heading: "Morning: Sunlight",
+    body: "Get outside in the first hour of waking. Natural light resets your circadian rhythm. Do this every day.",
+  },
 ];
 
 function SleepProtocolOverlay({ onClose }: { onClose: () => void }) {
   return (
     <GuidedStepsOverlay
       title="Sleep Protocol"
-      steps={SLEEP_STEPS}
-      doneLabel="Protocol Saved — Good Night"
+      steps={SLEEP_PROTOCOL_STEPS}
+      doneLabel="Sleep Plan Set"
       onClose={onClose}
     />
   );
 }
 
-// ─── Time Blocking Overlay ─────────────────────────────────────────────────────
+// ─── Time Blocking Overlay ────────────────────────────────────────────────────
 
-const TIME_BLOCKS = [
-  { time: "4:30 AM",  label: "Wake Window",         mins: 30 },
-  { time: "5:00 AM",  label: "Morning Routine",     mins: 30 },
-  { time: "5:30 AM",  label: "Pre-Work Planning",   mins: 30 },
-  { time: "6:00 AM",  label: "Site Walk / Safety",   mins: 60 },
-  { time: "7:00 AM",  label: "Crew Coordination",   mins: 60 },
-  { time: "8:00 AM",  label: "Deep Work Block",     mins: 120 },
-  { time: "10:00 AM", label: "Check-ins / Calls",   mins: 60 },
-  { time: "11:00 AM", label: "Lunch",               mins: 60 },
-  { time: "12:00 PM", label: "Afternoon Block",     mins: 120 },
-  { time: "2:00 PM",  label: "Meetings / Admin",    mins: 90 },
-  { time: "3:30 PM",  label: "End of Day Review",   mins: 30 },
-  { time: "4:00 PM",  label: "Family / Recovery",   mins: 240 },
-  { time: "8:00 PM",  label: "Wind Down",           mins: 60 },
-  { time: "9:00 PM",  label: "Lights Out",          mins: 0 },
+const TIME_BLOCKING_STEPS = [
+  {
+    heading: "List Your Non-Negotiables",
+    body: "What MUST happen tomorrow? Safety standups. Client calls. Family time. Write them down.",
+  },
+  {
+    heading: "Block Your Time",
+    body: "Give each non-negotiable a specific time slot. Put it in your calendar. Treat it like a job.",
+  },
+  {
+    heading: "Fill the Gaps",
+    body: "Everything else — email, admin, catch-up — goes in the leftover time. Not the other way around.",
+  },
+  {
+    heading: "Protect Your Blocks",
+    body: "When someone asks for a meeting, you don't say yes — you look at your blocks and find the slot that works. You control your time.",
+  },
+  {
+    heading: "Review Every Morning",
+    body: "5 minutes. That's it. One glance and you know the entire day. You're already ahead.",
+  },
 ];
 
 function TimeBlockingOverlay({ onClose }: { onClose: () => void }) {
-  const [claimed, setClaimed] = useState<Set<number>>(new Set());
-
-  function toggle(idx: number) {
-    setClaimed((prev) => {
-      const next = new Set(prev);
-      if (next.has(idx)) next.delete(idx); else next.add(idx);
-      return next;
-    });
-  }
-
-  const totalMins = Array.from(claimed).reduce((sum, idx) => sum + TIME_BLOCKS[idx].mins, 0);
-  const hours = Math.floor(totalMins / 60);
-  const mins = totalMins % 60;
-
   return (
-    <OverlayShell title="Time Blocking" onClose={onClose}>
-      <div className="flex flex-col gap-4 w-full max-w-md">
-        <p className="text-sm text-center mb-2" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-          Tap each block to claim it. Build your day before the day builds itself.
-        </p>
-
-        <div className="flex flex-col gap-1.5">
-          {TIME_BLOCKS.map((block, idx) => {
-            const active = claimed.has(idx);
-            return (
-              <button
-                key={idx}
-                onClick={() => toggle(idx)}
-                className="flex items-center gap-4 px-5 py-3.5 w-full text-left transition-all duration-150 active:scale-[0.98]"
-                style={{
-                  backgroundColor: active ? "#1A0E05" : "#161616",
-                  border: `1px solid ${active ? "#C45B28" : "#252525"}`,
-                  borderRadius: "10px",
-                }}
-              >
-                <span className="text-xs font-bold w-20 shrink-0" style={{ color: active ? "#C45B28" : "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-                  {block.time}
-                </span>
-                <span className="text-sm font-semibold flex-1" style={{ color: active ? "#E8E2D8" : "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-                  {block.label}
-                </span>
-                {active && (
-                  <svg viewBox="0 0 20 20" fill="none" width={16} height={16}>
-                    <path d="M4 10l4 4 8-8" stroke="#C45B28" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Total claimed */}
-        <div className="flex items-center justify-between px-5 py-4 mt-2"
-          style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: "10px" }}>
-          <span className="text-xs font-semibold uppercase tracking-[0.25em]" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}>
-            Time Claimed
-          </span>
-          <span className="text-lg font-bold" style={{ color: "#C45B28", fontFamily: "var(--font-inter)" }}>
-            {hours > 0 ? `${hours}h ` : ""}{mins > 0 ? `${mins}m` : hours > 0 ? "" : "0m"}
-          </span>
-        </div>
-
-        <button onClick={onClose}
-          className="py-4 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90 active:scale-95 mt-2"
-          style={{ backgroundColor: "#C45B28", color: "#0A0A0A", borderRadius: "10px", fontFamily: "var(--font-inter)", fontWeight: 600 }}>
-          Done
-        </button>
-      </div>
-    </OverlayShell>
+    <GuidedStepsOverlay
+      title="Time Blocking"
+      steps={TIME_BLOCKING_STEPS}
+      doneLabel="Time Block Plan Created"
+      onClose={onClose}
+    />
   );
 }

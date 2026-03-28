@@ -336,7 +336,7 @@ export default function HeartPage() {
 
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      const { data: newEntry } = await supabase.from("journal_entries").insert({
+      const { data: newEntry, error: journalError } = await supabase.from("journal_entries").insert({
         user_id: user.id,
         entry: [answer1.trim(), answer2.trim()].filter(Boolean).join(" | ") || "\u2013",
         pissed_off: answer1.trim() || null,
@@ -346,12 +346,23 @@ export default function HeartPage() {
         gratitude_3: null,
       }).select("id, created_at, pissed_off, handled_well, gratitude_1").single();
 
+      if (journalError) {
+        console.error("Failed to save journal entry:", journalError);
+        setJournalSaving(false);
+        showToast("Error saving entry. Please try again.");
+        return;
+      }
+
       if (gratitudeAnswer.trim()) {
-        await supabase.from("gratitude_entries").insert({
+        const { error: gratitudeError } = await supabase.from("gratitude_entries").insert({
           user_id: user.id,
           prompt: todayGratitudePrompt,
           entry: gratitudeAnswer.trim(),
         });
+
+        if (gratitudeError) {
+          console.error("Failed to save gratitude entry:", gratitudeError);
+        }
       }
 
       if (newEntry) {
@@ -371,8 +382,15 @@ export default function HeartPage() {
     setConnectionSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      await supabase.from("connection_checkins").insert({ user_id: user.id, score });
-      setConnectionHistory((prev) => [{ score, created_at: new Date().toISOString() }, ...prev].slice(0, 7));
+      const now = new Date();
+      const { error } = await supabase.from("connection_checkins").insert({ user_id: user.id, score });
+      if (error) {
+        console.error("Failed to log connection score:", error);
+        setConnectionSaving(false);
+        showToast("Error logging connection. Please try again.");
+        return;
+      }
+      setConnectionHistory((prev) => [{ score, created_at: now.toISOString() }, ...prev].slice(0, 7));
     }
     setConnectionSaving(false);
     showToast("Connection logged");
@@ -383,10 +401,16 @@ export default function HeartPage() {
     setChallengeSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      await supabase.from("relationship_challenge_completions").upsert(
+      const { error } = await supabase.from("relationship_challenge_completions").upsert(
         { user_id: user.id, week_number: weekChallengeIndex },
         { onConflict: "user_id,week_number" }
       );
+      if (error) {
+        console.error("Failed to mark challenge complete:", error);
+        setChallengeSaving(false);
+        showToast("Error saving. Please try again.");
+        return;
+      }
     }
     setChallengeSaving(false);
     setChallengeCompleted(true);

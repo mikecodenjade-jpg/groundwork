@@ -123,10 +123,13 @@ export default function BodyPage() {
       return base.filter((c) => categoryAvailable(c.slug, value));
     });
     if (userId) {
-      await supabase
+      const { error } = await supabase
         .from("user_profiles")
         .update({ equipment_setting: value })
         .eq("id", userId);
+      if (error) {
+        console.error("Failed to update equipment setting:", error);
+      }
     }
   }
 

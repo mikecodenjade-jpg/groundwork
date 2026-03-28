@@ -1,0 +1,13 @@
+{
+  "name": "parallel-agents",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Run multiple Claude API tasks in parallel, chained, or as a DAG workflow",
+  "main": "parallel-agent.mjs",
+  "scripts": {
+    "start": "node parallel-agent.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.52.0"
+  }
+}

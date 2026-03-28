@@ -1,0 +1,22 @@
+{
+  "name": "analyze-and-report",
+  "description": "Analyze source files then produce a summary report",
+  "steps": {
+    "list_files": {
+      "prompt": "Use the list_files tool to list all .mjs files in the current directory. Return just the filenames.",
+      "depends_on": []
+    },
+    "count_lines": {
+      "prompt": "Use the run_command tool to count total lines across all .mjs files in the current directory (use: wc -l *.mjs || find . -name '*.mjs' -exec cat {} + | wc -l). Return just the number.",
+      "depends_on": []
+    },
+    "search_todos": {
+      "prompt": "Use the search_files tool to find any TODO or FIXME comments in all files in the current directory. List each match with its filename and line.",
+      "depends_on": []
+    },
+    "summarize": {
+      "prompt": "Given the outputs from previous steps, write a short project health report covering: files found, total lines of code, and any TODO/FIXME items that need attention. Format it as markdown.",
+      "depends_on": ["list_files", "count_lines", "search_todos"]
+    }
+  }
+}
