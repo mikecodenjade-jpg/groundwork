@@ -568,14 +568,11 @@ export default function FuelPage() {
               onClick={openScanner}
               aria-label="Scan barcode"
               style={{
-                minWidth: 56, height: 56, flexShrink: 0,
+                minWidth: 56, alignSelf: "stretch", flexShrink: 0,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                backgroundColor: "#161616", border: "1px solid #252525",
-                borderRadius: 12, cursor: "pointer", color: "#9A9A9A",
-                transition: "border-color 0.15s ease, color 0.15s ease",
+                backgroundColor: "#161616", border: "1px solid #C45B28",
+                borderRadius: 12, cursor: "pointer", color: "#C45B28",
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#C45B28"; e.currentTarget.style.color = "#C45B28"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#252525"; e.currentTarget.style.color = "#9A9A9A"; }}
             >
               {/* Barcode / camera icon */}
               <svg viewBox="0 0 24 24" fill="none" width={22} height={22} stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
@@ -601,8 +598,8 @@ export default function FuelPage() {
           )}
 
           {!searching && query.trim().length < 2 && (
-            <p style={{ fontFamily: "var(--font-inter)", fontSize: 12, color: "#9A9A9A", opacity: 0.6, marginTop: 10 }}>
-              317,000+ foods — type to search or tap the barcode button to scan a product
+            <p style={{ fontFamily: "var(--font-inter)", fontSize: 12, color: "#9A9A9A", marginTop: 10 }}>
+              Type at least 2 characters - try chicken breast or protein bar
             </p>
           )}
 
