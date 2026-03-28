@@ -1,30 +1,29 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import Link from "next/link";
 import BottomNav from "@/components/BottomNav";
 import { supabase } from "@/lib/supabase";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 
-interface FoodResult {
-  id: string;
+interface UsdaFood {
+  fdc_id: number;
   description: string;
   brand_owner: string | null;
+  brand_name: string | null;
   calories: number | null;
   protein_g: number | null;
   carbs_g: number | null;
   fat_g: number | null;
   serving_size: number | null;
   serving_size_unit: string | null;
-  household_serving_text: string | null;
 }
 
 interface MealLog {
   id: string;
   food_name: string;
-  name: string;
   calories: number;
   protein_g: number;
   carb_g: number;
@@ -33,176 +32,157 @@ interface MealLog {
   logged_at: string;
 }
 
-interface DailyTotals {
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-}
+// ─── Goals ────────────────────────────────────────────────────────────────────
 
-// ─── Goals (later pull from user profile) ────────────────────────────────────
 const GOALS = { calories: 2800, protein: 180, carbs: 300, fat: 90 };
 
 function pct(val: number, goal: number) {
   return Math.min(Math.round((val / goal) * 100), 100);
 }
 
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString([], {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
+// ─── Color tokens ─────────────────────────────────────────────────────────────
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// MAIN COMPONENT
-// ═══════════════════════════════════════════════════════════════════════════════
+const C = {
+  bg: "#0A0A0A",
+  card: "#161616",
+  border: "#252525",
+  accent: "#C45B28",
+  text: "#E8E2D8",
+  muted: "#9A9A9A",
+  protein: "#5B9BD5",
+  carbs: "#D4A843",
+  fat: "#D4637A",
+} as const;
+
+// ═════════════════════════════════════════════════════════════════════════════
 export default function FuelPage() {
-  const [mode, setMode] = useState<"home" | "confirm">("home");
-  const [meals, setMeals] = useState<MealLog[]>([]);
-  const [totals, setTotals] = useState<DailyTotals>({
-    calories: 0,
-    protein: 0,
-    carbs: 0,
-    fat: 0,
-  });
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<FoodResult[]>([]);
+  // ─── State ──────────────────────────────────────────────────────────────
+  const [totals, setTotals] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 });
+  const [recentMeals, setRecentMeals] = useState<MealLog[]>([]);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<UsdaFood[]>([]);
   const [searching, setSearching] = useState(false);
-  const [selectedFood, setSelectedFood] = useState<FoodResult | null>(null);
-  const [selectedMealType, setSelectedMealType] = useState<MealType>("lunch");
-  const [servings, setServings] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [logging, setLogging] = useState<number | null>(null); // fdc_id being logged
+  const [mealType, setMealType] = useState<MealType>("lunch");
   const [toast, setToast] = useState("");
-  const searchRef = useRef<HTMLInputElement>(null);
+  const [dataLoading, setDataLoading] = useState(true);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // ─── Load today's meals ──────────────────────────────────────────────────
-  const loadMeals = useCallback(async () => {
+  // ─── Auto meal type by time ──────────────────────────────────────────────
+  useEffect(() => {
+    const h = new Date().getHours();
+    if (h < 10) setMealType("breakfast");
+    else if (h < 14) setMealType("lunch");
+    else if (h < 17) setMealType("snack");
+    else setMealType("dinner");
+  }, []);
+
+  // ─── Load today's totals + recent meals ─────────────────────────────────
+  const loadData = useCallback(async () => {
     const today = new Date().toLocaleDateString("en-CA");
     const { data } = await supabase
       .from("meal_logs")
-      .select("*")
-      .gte("logged_at", `${today}T00:00:00`)
-      .lte("logged_at", `${today}T23:59:59`)
-      .order("logged_at", { ascending: false });
+      .select("id, food_name, calories, protein_g, carb_g, fat_g, meal_type, logged_at")
+      .order("logged_at", { ascending: false })
+      .limit(50);
 
     if (data) {
-      setMeals(data);
-      const t = data.reduce(
-        (acc, m) => ({
-          calories: acc.calories + (m.calories || 0),
-          protein: acc.protein + Number(m.protein_g || 0),
-          carbs: acc.carbs + Number(m.carb_g || 0),
-          fat: acc.fat + Number(m.fat_g || 0),
-        }),
-        { calories: 0, protein: 0, carbs: 0, fat: 0 }
+      const todayRows = data.filter((m) => m.logged_at?.startsWith(today));
+      setTotals(
+        todayRows.reduce(
+          (acc, m) => ({
+            calories: acc.calories + (m.calories || 0),
+            protein: acc.protein + Number(m.protein_g || 0),
+            carbs: acc.carbs + Number(m.carb_g || 0),
+            fat: acc.fat + Number(m.fat_g || 0),
+          }),
+          { calories: 0, protein: 0, carbs: 0, fat: 0 }
+        )
       );
-      setTotals(t);
+      setRecentMeals(data.slice(0, 10));
     }
-    setLoading(false);
+    setDataLoading(false);
   }, []);
 
   useEffect(() => {
-    loadMeals();
-  }, [loadMeals]);
+    loadData();
+  }, [loadData]);
 
-  // ─── Auto-detect meal type by time of day ────────────────────────────────
-  useEffect(() => {
-    const h = new Date().getHours();
-    if (h < 10) setSelectedMealType("breakfast");
-    else if (h < 14) setSelectedMealType("lunch");
-    else if (h < 17) setSelectedMealType("snack");
-    else setSelectedMealType("dinner");
-  }, []);
-
-  // ─── Search USDA foods via ilike on description ────────────────────────────
-  const searchFoods = useCallback(async (query: string) => {
-    if (query.length < 2) {
-      setSearchResults([]);
+  // ─── Debounced USDA search ───────────────────────────────────────────────
+  const searchFoods = useCallback(async (q: string) => {
+    if (q.trim().length < 2) {
+      setResults([]);
       return;
     }
     setSearching(true);
     const { data } = await supabase
       .from("usda_foods")
-      .select(
-        "id, description, brand_owner, calories, protein_g, carbs_g, fat_g, serving_size, serving_size_unit, household_serving_text"
-      )
-      .ilike("description", `%${query}%`)
+      .select("fdc_id, description, brand_owner, brand_name, calories, protein_g, carbs_g, fat_g, serving_size, serving_size_unit")
+      .ilike("description", `%${q.trim()}%`)
       .not("calories", "is", null)
       .gt("calories", 0)
       .order("description")
       .limit(20);
 
-    setSearchResults(data || []);
+    setResults(data || []);
     setSearching(false);
   }, []);
 
-  const onSearchInput = (val: string) => {
-    setSearchQuery(val);
+  const handleQueryChange = (val: string) => {
+    setQuery(val);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => searchFoods(val), 300);
   };
 
-  // ─── Log meal ────────────────────────────────────────────────────────────
-  const logMeal = async () => {
-    if (!selectedFood) return;
-    setSaving(true);
-    const cal = Math.round((selectedFood.calories || 0) * servings);
-    const pro = Math.round((Number(selectedFood.protein_g) || 0) * servings);
-    const carb = Math.round((Number(selectedFood.carbs_g) || 0) * servings);
-    const fat = Math.round((Number(selectedFood.fat_g) || 0) * servings);
+  const clearSearch = () => {
+    setQuery("");
+    setResults([]);
+    inputRef.current?.focus();
+  };
 
+  // ─── Log a food ──────────────────────────────────────────────────────────
+  const logFood = async (food: UsdaFood) => {
+    setLogging(food.fdc_id);
     const { error } = await supabase.from("meal_logs").insert({
-      food_name: selectedFood.description,
-      name: selectedFood.description,
-      calories: cal,
-      protein_g: pro,
-      carb_g: carb,
-      fat_g: fat,
-      meal_type: selectedMealType,
+      food_name: food.description,
+      name: food.description,
+      calories: Math.round(food.calories || 0),
+      protein_g: Math.round(Number(food.protein_g) || 0),
+      carb_g: Math.round(Number(food.carbs_g) || 0),
+      fat_g: Math.round(Number(food.fat_g) || 0),
+      meal_type: mealType,
       logged_at: new Date().toISOString(),
       date: new Date().toLocaleDateString("en-CA"),
     });
-
-    setSaving(false);
+    setLogging(null);
     if (!error) {
-      setToast(`Logged ${cal} cal`);
-      setTimeout(() => setToast(""), 2000);
-      setMode("home");
-      setSelectedFood(null);
-      setSearchQuery("");
-      setSearchResults([]);
-      setServings(1);
-      loadMeals();
+      setToast(`Logged — ${Math.round(food.calories || 0)} cal`);
+      setTimeout(() => setToast(""), 2500);
+      loadData();
     }
   };
 
-  // ─── Delete meal ─────────────────────────────────────────────────────────
+  // ─── Delete a logged meal ────────────────────────────────────────────────
   const deleteMeal = async (id: string) => {
     await supabase.from("meal_logs").delete().eq("id", id);
-    loadMeals();
+    loadData();
+  };
+
+  // ─── Shared card style ───────────────────────────────────────────────────
+  const cardStyle: React.CSSProperties = {
+    backgroundColor: C.card,
+    border: `1px solid ${C.border}`,
+    borderRadius: 12,
   };
 
   // ─── Loading skeleton ────────────────────────────────────────────────────
-  if (loading) {
+  if (dataLoading) {
     return (
-      <main
-        className="min-h-screen flex flex-col px-6 py-10"
-        style={{ backgroundColor: "#0a0f1a", color: "#E8E2D8" }}
-      >
-        <div className="max-w-3xl w-full mx-auto flex flex-col gap-6 pb-28">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="animate-pulse"
-              style={{
-                backgroundColor: "#161616",
-                borderRadius: 12,
-                height: i === 1 ? 160 : 72,
-              }}
-            />
+      <main style={{ minHeight: "100vh", backgroundColor: C.bg, color: C.text, padding: "40px 24px 112px" }}>
+        <div style={{ maxWidth: 640, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16 }}>
+          {[180, 64, 64, 64].map((h, i) => (
+            <div key={i} className="animate-pulse" style={{ ...cardStyle, height: h }} />
           ))}
         </div>
         <BottomNav />
@@ -210,532 +190,300 @@ export default function FuelPage() {
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // CONFIRM SCREEN
-  // ═══════════════════════════════════════════════════════════════════════════
-  if (mode === "confirm" && selectedFood) {
-    const cal = Math.round((selectedFood.calories || 0) * servings);
-    const pro = Math.round((Number(selectedFood.protein_g) || 0) * servings);
-    const carb = Math.round((Number(selectedFood.carbs_g) || 0) * servings);
-    const fat = Math.round((Number(selectedFood.fat_g) || 0) * servings);
-
-    return (
-      <main
-        className="min-h-screen flex flex-col px-6 py-10"
-        style={{ backgroundColor: "#0a0f1a", color: "#E8E2D8" }}
-      >
-        <div className="max-w-3xl w-full mx-auto flex flex-col gap-6 pb-28">
-          {/* Header */}
-          <header className="flex items-center gap-4">
-            <button
-              onClick={() => {
-                setMode("home");
-                setSelectedFood(null);
-              }}
-              className="flex items-center justify-center w-9 h-9 transition-opacity hover:opacity-60"
-              style={{ border: "1px solid #252525", borderRadius: 8 }}
-              aria-label="Back to search"
-            >
-              <svg
-                viewBox="0 0 20 20"
-                fill="none"
-                width={16}
-                height={16}
-                stroke="#9A9A9A"
-                strokeWidth={1.8}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M13 4L7 10L13 16" />
-              </svg>
-            </button>
-            <h1
-              className="text-2xl font-bold uppercase leading-none"
-              style={{ fontFamily: "var(--font-oswald)" }}
-            >
-              Log Food
-            </h1>
-          </header>
-
-          {/* Food info card */}
-          <div
-            className="px-6 py-5"
-            style={{
-              backgroundColor: "#161616",
-              border: "1px solid #252525",
-              borderRadius: 12,
-            }}
-          >
-            <h2
-              className="text-lg font-bold mb-1"
-              style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
-            >
-              {selectedFood.description}
-            </h2>
-            {selectedFood.brand_owner && (
-              <p className="text-sm mb-2" style={{ color: "#9A9A9A" }}>
-                {selectedFood.brand_owner}
-              </p>
-            )}
-            <p className="text-sm" style={{ color: "#9A9A9A" }}>
-              Serving: {selectedFood.serving_size}
-              {selectedFood.serving_size_unit}
-              {selectedFood.household_serving_text &&
-                ` (${selectedFood.household_serving_text})`}
-            </p>
-          </div>
-
-          {/* Servings adjuster */}
-          <div
-            className="px-6 py-5"
-            style={{
-              backgroundColor: "#161616",
-              border: "1px solid #252525",
-              borderRadius: 12,
-            }}
-          >
-            <p
-              className="text-xs font-semibold tracking-[0.25em] uppercase mb-4"
-              style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}
-            >
-              Servings
-            </p>
-            <div className="flex items-center gap-5 justify-center">
-              <button
-                onClick={() => setServings(Math.max(0.5, servings - 0.5))}
-                className="flex items-center justify-center w-12 h-12 text-xl font-bold transition-all duration-150 active:scale-95"
-                style={{
-                  backgroundColor: "#0a0f1a",
-                  border: "1px solid #252525",
-                  borderRadius: "50%",
-                  color: "#E8E2D8",
-                }}
-              >
-                -
-              </button>
-              <span
-                className="text-3xl font-bold min-w-[3rem] text-center"
-                style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
-              >
-                {servings}
-              </span>
-              <button
-                onClick={() => setServings(servings + 0.5)}
-                className="flex items-center justify-center w-12 h-12 text-xl font-bold transition-all duration-150 active:scale-95"
-                style={{
-                  backgroundColor: "#0a0f1a",
-                  border: "1px solid #252525",
-                  borderRadius: "50%",
-                  color: "#E8E2D8",
-                }}
-              >
-                +
-              </button>
-            </div>
-          </div>
-
-          {/* Meal type selector */}
-          <div
-            className="px-6 py-5"
-            style={{
-              backgroundColor: "#161616",
-              border: "1px solid #252525",
-              borderRadius: 12,
-            }}
-          >
-            <p
-              className="text-xs font-semibold tracking-[0.25em] uppercase mb-4"
-              style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}
-            >
-              Meal
-            </p>
-            <div className="grid grid-cols-4 gap-2">
-              {(["breakfast", "lunch", "dinner", "snack"] as MealType[]).map(
-                (type) => (
-                  <button
-                    key={type}
-                    onClick={() => setSelectedMealType(type)}
-                    className="py-3 text-center text-xs font-semibold uppercase tracking-wider transition-all duration-150 active:scale-95"
-                    style={{
-                      fontFamily: "var(--font-inter)",
-                      borderRadius: 20,
-                      backgroundColor:
-                        selectedMealType === type ? "#f97316" : "#0a0f1a",
-                      color:
-                        selectedMealType === type ? "#0a0f1a" : "#9A9A9A",
-                      border: `1px solid ${selectedMealType === type ? "#f97316" : "#252525"}`,
-                    }}
-                  >
-                    {type}
-                  </button>
-                )
-              )}
-            </div>
-          </div>
-
-          {/* Macro preview */}
-          <div
-            className="px-6 py-5"
-            style={{
-              backgroundColor: "#161616",
-              border: "1px solid #252525",
-              borderRadius: 12,
-            }}
-          >
-            <div className="grid grid-cols-4 gap-3 text-center">
-              <div>
-                <div
-                  className="text-2xl font-bold"
-                  style={{
-                    fontFamily: "var(--font-oswald)",
-                    color: "#f97316",
-                  }}
-                >
-                  {cal}
-                </div>
-                <div
-                  className="text-xs uppercase tracking-wider mt-1"
-                  style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
-                >
-                  cal
-                </div>
-              </div>
-              <div>
-                <div
-                  className="text-2xl font-bold"
-                  style={{ fontFamily: "var(--font-oswald)", color: "#5B9BD5" }}
-                >
-                  {pro}g
-                </div>
-                <div
-                  className="text-xs uppercase tracking-wider mt-1"
-                  style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
-                >
-                  protein
-                </div>
-              </div>
-              <div>
-                <div
-                  className="text-2xl font-bold"
-                  style={{ fontFamily: "var(--font-oswald)", color: "#D4A843" }}
-                >
-                  {carb}g
-                </div>
-                <div
-                  className="text-xs uppercase tracking-wider mt-1"
-                  style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
-                >
-                  carbs
-                </div>
-              </div>
-              <div>
-                <div
-                  className="text-2xl font-bold"
-                  style={{ fontFamily: "var(--font-oswald)", color: "#D4637A" }}
-                >
-                  {fat}g
-                </div>
-                <div
-                  className="text-xs uppercase tracking-wider mt-1"
-                  style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)" }}
-                >
-                  fat
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Log button */}
-          <button
-            onClick={logMeal}
-            disabled={saving}
-            className="w-full py-4 text-sm font-semibold uppercase tracking-[0.15em] transition-all duration-150 active:scale-[0.98] disabled:opacity-50"
-            style={{
-              fontFamily: "var(--font-inter)",
-              backgroundColor: "#f97316",
-              color: "#0a0f1a",
-              border: "1px solid #f97316",
-              borderRadius: 20,
-            }}
-          >
-            {saving ? "Logging..." : `Log ${cal} Calories`}
-          </button>
-        </div>
-        <BottomNav />
-      </main>
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // HOME SCREEN — daily tracking + inline search (no static list)
-  // ═══════════════════════════════════════════════════════════════════════════
   const calPct = pct(totals.calories, GOALS.calories);
   const remaining = Math.max(0, GOALS.calories - totals.calories);
 
   return (
-    <main
-      className="min-h-screen flex flex-col px-6 py-10"
-      style={{ backgroundColor: "#0a0f1a", color: "#E8E2D8" }}
-    >
-      <div className="max-w-3xl w-full mx-auto flex flex-col gap-6 pb-28">
-        {/* Toast */}
-        {toast && (
-          <div
-            className="fixed top-4 left-1/2 -translate-x-1/2 px-6 py-3 font-semibold text-sm shadow-lg z-50"
-            style={{
-              backgroundColor: "#f97316",
-              color: "#0a0f1a",
-              borderRadius: 20,
-              fontFamily: "var(--font-inter)",
-              animation: "fadeInUp 0.3s ease-out",
-            }}
-          >
-            {toast}
-          </div>
-        )}
-
-        {/* Header */}
-        <header className="flex items-center gap-5">
-          <Link
-            href="/dashboard"
-            className="flex items-center justify-center w-9 h-9 transition-opacity hover:opacity-60"
-            style={{ border: "1px solid #252525", borderRadius: 8 }}
-            aria-label="Back to dashboard"
-          >
-            <svg
-              viewBox="0 0 20 20"
-              fill="none"
-              width={16}
-              height={16}
-              stroke="#9A9A9A"
-              strokeWidth={1.8}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M13 4L7 10L13 16" />
-            </svg>
-          </Link>
-          <div>
-            <p
-              className="text-xs font-semibold tracking-[0.25em] uppercase mb-0.5"
-              style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}
-            >
-              Pillar
-            </p>
-            <h1
-              className="text-4xl font-bold uppercase leading-none"
-              style={{ fontFamily: "var(--font-oswald)", color: "#E8E2D8" }}
-            >
-              Fuel
-            </h1>
-          </div>
-        </header>
-
-        {/* Date subtitle */}
-        <p className="text-xs" style={{ color: "#9A9A9A", marginTop: -8 }}>
-          {new Date().toLocaleDateString("en-US", {
-            weekday: "long",
-            month: "short",
-            day: "numeric",
-          })}
-        </p>
-
-        {/* Calorie Ring + Macros card */}
+    <main style={{ minHeight: "100vh", backgroundColor: C.bg, color: C.text, padding: "40px 24px 112px" }}>
+      {/* Toast */}
+      {toast && (
         <div
-          className="px-6 py-6"
           style={{
-            backgroundColor: "#161616",
-            border: "1px solid #252525",
-            borderRadius: 12,
+            position: "fixed",
+            top: 20,
+            left: "50%",
+            transform: "translateX(-50%)",
+            backgroundColor: C.accent,
+            color: C.bg,
+            padding: "10px 24px",
+            borderRadius: 24,
+            fontFamily: "var(--font-inter)",
+            fontWeight: 600,
+            fontSize: 14,
+            zIndex: 100,
+            whiteSpace: "nowrap",
           }}
         >
-          <div className="flex items-center gap-6">
-            {/* SVG ring */}
-            <div className="relative w-28 h-28 flex-shrink-0">
-              <svg
-                viewBox="0 0 100 100"
-                className="w-full h-full"
-                style={{ transform: "rotate(-90deg)" }}
-              >
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="42"
-                  fill="none"
-                  stroke="#252525"
-                  strokeWidth="8"
-                />
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="42"
-                  fill="none"
-                  stroke={calPct >= 100 ? "#D4637A" : "#f97316"}
-                  strokeWidth="8"
-                  strokeLinecap="round"
-                  strokeDasharray={`${calPct * 2.64} 264`}
-                  style={{ transition: "stroke-dasharray 0.7s ease" }}
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span
-                  className="text-2xl font-bold"
-                  style={{
-                    fontFamily: "var(--font-oswald)",
-                    color: "#E8E2D8",
-                  }}
-                >
-                  {Math.round(totals.calories)}
-                </span>
-                <span
-                  className="text-xs"
-                  style={{ color: "#9A9A9A" }}
-                >
-                  cal
-                </span>
-              </div>
+          {toast}
+        </div>
+      )}
+
+      <div style={{ maxWidth: 640, margin: "0 auto", display: "flex", flexDirection: "column", gap: 24 }}>
+
+        {/* ── Header ── */}
+        <header>
+          <p style={{ fontFamily: "var(--font-inter)", fontSize: 11, fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", color: C.accent, marginBottom: 4 }}>
+            Pillar
+          </p>
+          <h1 style={{ fontFamily: "var(--font-oswald)", fontSize: 36, fontWeight: 700, textTransform: "uppercase", color: C.text, lineHeight: 1 }}>
+            Fuel
+          </h1>
+          <p style={{ fontFamily: "var(--font-inter)", fontSize: 12, color: C.muted, marginTop: 6 }}>
+            {new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
+          </p>
+        </header>
+
+        {/* ── Daily Tracker ── */}
+        <section style={cardStyle}>
+          <div style={{ padding: "20px 24px 16px" }}>
+            {/* Calorie summary row */}
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
+              <span style={{ fontFamily: "var(--font-oswald)", fontSize: 40, fontWeight: 700, color: C.text, lineHeight: 1 }}>
+                {Math.round(totals.calories)}
+              </span>
+              <span style={{ fontFamily: "var(--font-inter)", fontSize: 13, color: C.muted }}>
+                / {GOALS.calories} cal
+              </span>
+              <span style={{ fontFamily: "var(--font-inter)", fontSize: 12, color: C.muted, marginLeft: "auto" }}>
+                {remaining > 0 ? `${remaining} remaining` : "Goal reached"}
+              </span>
+            </div>
+
+            {/* Calorie bar */}
+            <div style={{ height: 6, backgroundColor: C.border, borderRadius: 3, marginBottom: 20, overflow: "hidden" }}>
+              <div
+                style={{
+                  height: "100%",
+                  width: `${calPct}%`,
+                  backgroundColor: calPct >= 100 ? C.fat : C.accent,
+                  borderRadius: 3,
+                  transition: "width 0.6s ease",
+                }}
+              />
             </div>
 
             {/* Macro bars */}
-            <div className="flex-1">
-              <div className="text-sm mb-1" style={{ color: "#E8E2D8" }}>
-                {remaining > 0
-                  ? `${remaining} cal remaining`
-                  : "Goal reached"}
-              </div>
-              <div
-                className="text-xs mb-4"
-                style={{ color: "#9A9A9A", opacity: 0.6 }}
-              >
-                of {GOALS.calories} daily goal
-              </div>
-
-              {[
-                {
-                  label: "Protein",
-                  val: totals.protein,
-                  goal: GOALS.protein,
-                  color: "#5B9BD5",
-                },
-                {
-                  label: "Carbs",
-                  val: totals.carbs,
-                  goal: GOALS.carbs,
-                  color: "#D4A843",
-                },
-                {
-                  label: "Fat",
-                  val: totals.fat,
-                  goal: GOALS.fat,
-                  color: "#D4637A",
-                },
-              ].map((m) => (
-                <div key={m.label} className="mb-2">
-                  <div
-                    className="flex justify-between text-xs mb-0.5"
-                    style={{ fontFamily: "var(--font-inter)" }}
-                  >
-                    <span style={{ color: "#9A9A9A" }}>{m.label}</span>
-                    <span style={{ color: "#E8E2D8" }}>
-                      {Math.round(m.val)}/{m.goal}g
-                    </span>
-                  </div>
-                  <div
-                    className="h-1.5 overflow-hidden"
-                    style={{ backgroundColor: "#252525", borderRadius: 4 }}
-                  >
-                    <div
-                      style={{
-                        height: "100%",
-                        width: `${pct(m.val, m.goal)}%`,
-                        backgroundColor: m.color,
-                        borderRadius: 4,
-                        transition: "width 0.7s ease",
-                      }}
-                    />
-                  </div>
+            {[
+              { label: "Protein", val: totals.protein, goal: GOALS.protein, color: C.protein },
+              { label: "Carbs",   val: totals.carbs,   goal: GOALS.carbs,   color: C.carbs   },
+              { label: "Fat",     val: totals.fat,     goal: GOALS.fat,     color: C.fat     },
+            ].map((m) => (
+              <div key={m.label} style={{ marginBottom: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "var(--font-inter)", fontSize: 11, marginBottom: 4 }}>
+                  <span style={{ color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em" }}>{m.label}</span>
+                  <span style={{ color: C.text }}>{Math.round(m.val)}g / {m.goal}g</span>
                 </div>
-              ))}
-            </div>
+                <div style={{ height: 5, backgroundColor: C.border, borderRadius: 3, overflow: "hidden" }}>
+                  <div
+                    style={{
+                      height: "100%",
+                      width: `${pct(m.val, m.goal)}%`,
+                      backgroundColor: m.color,
+                      borderRadius: 3,
+                      transition: "width 0.6s ease",
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
+        </section>
 
-        {/* Today's Meals */}
-        {meals.length > 0 && (
-          <div>
-            <p
-              className="text-xs font-semibold tracking-[0.25em] uppercase mb-4"
-              style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}
+        {/* ── Meal Type Selector ── */}
+        <section>
+          <p style={{ fontFamily: "var(--font-inter)", fontSize: 11, fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", color: C.accent, marginBottom: 12 }}>
+            Log As
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+            {(["breakfast", "lunch", "dinner", "snack"] as MealType[]).map((t) => (
+              <button
+                key={t}
+                onClick={() => setMealType(t)}
+                style={{
+                  fontFamily: "var(--font-inter)",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                  padding: "12px 0",
+                  borderRadius: 24,
+                  border: `1px solid ${mealType === t ? C.accent : C.border}`,
+                  backgroundColor: mealType === t ? C.accent : C.card,
+                  color: mealType === t ? C.bg : C.muted,
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* ── Search Bar ── */}
+        <section>
+          <p style={{ fontFamily: "var(--font-inter)", fontSize: 11, fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", color: C.accent, marginBottom: 12 }}>
+            Search Foods
+          </p>
+          <div style={{ position: "relative" }}>
+            <svg
+              viewBox="0 0 24 24" fill="none" width={16} height={16}
+              stroke={C.muted} strokeWidth={1.8} strokeLinecap="round"
+              style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}
             >
-              Today
+              <circle cx="11" cy="11" r="8" />
+              <path d="M21 21L16.65 16.65" />
+            </svg>
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(e) => handleQueryChange(e.target.value)}
+              placeholder="Search foods..."
+              style={{
+                width: "100%",
+                padding: "16px 44px",
+                fontFamily: "var(--font-inter)",
+                fontSize: 15,
+                backgroundColor: C.card,
+                border: `1px solid ${C.border}`,
+                borderRadius: 12,
+                color: C.text,
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+              onFocus={(e) => (e.currentTarget.style.borderColor = C.accent)}
+              onBlur={(e) => (e.currentTarget.style.borderColor = C.border)}
+            />
+            {query && (
+              <button
+                onClick={clearSearch}
+                aria-label="Clear"
+                style={{
+                  position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)",
+                  background: "none", border: "none", cursor: "pointer", color: C.muted,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  minWidth: 32, minHeight: 32,
+                }}
+              >
+                <svg viewBox="0 0 16 16" fill="none" width={14} height={14} stroke="currentColor" strokeWidth={1.6} strokeLinecap="round">
+                  <path d="M4 4L12 12M12 4L4 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          {/* Searching spinner */}
+          {searching && (
+            <p style={{ fontFamily: "var(--font-inter)", fontSize: 13, color: C.muted, textAlign: "center", padding: "20px 0" }} className="animate-pulse">
+              Searching...
             </p>
-            <div className="flex flex-col gap-2">
-              {meals.map((meal) => (
-                <div
-                  key={meal.id}
-                  className="flex items-center gap-4 px-5 py-4"
+          )}
+
+          {/* No results */}
+          {!searching && query.trim().length >= 2 && results.length === 0 && (
+            <p style={{ fontFamily: "var(--font-inter)", fontSize: 13, color: C.muted, textAlign: "center", padding: "20px 0" }}>
+              No results for &ldquo;{query}&rdquo;
+            </p>
+          )}
+
+          {/* Hint */}
+          {!searching && query.trim().length < 2 && (
+            <p style={{ fontFamily: "var(--font-inter)", fontSize: 12, color: C.muted, opacity: 0.6, marginTop: 10 }}>
+              317,000+ foods from the USDA database — try &ldquo;chicken breast&rdquo; or &ldquo;oats&rdquo;
+            </p>
+          )}
+
+          {/* Results */}
+          {results.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
+              {results.map((food) => (
+                <button
+                  key={food.fdc_id}
+                  onClick={() => logFood(food)}
+                  disabled={logging === food.fdc_id}
                   style={{
-                    backgroundColor: "#161616",
-                    border: "1px solid #252525",
-                    borderRadius: 12,
+                    ...cardStyle,
+                    width: "100%",
+                    textAlign: "left",
+                    padding: "16px 20px",
+                    cursor: logging === food.fdc_id ? "default" : "pointer",
+                    opacity: logging === food.fdc_id ? 0.5 : 1,
+                    transition: "opacity 0.15s ease",
                   }}
                 >
-                  {/* Meal type badge */}
-                  <div
-                    className="flex items-center justify-center w-9 h-9 text-[10px] font-bold uppercase tracking-wide flex-shrink-0"
-                    style={{
-                      backgroundColor: "#0a0f1a",
-                      border: "1px solid #252525",
-                      borderRadius: 8,
-                      color: "#f97316",
-                      fontFamily: "var(--font-inter)",
-                    }}
-                  >
-                    {meal.meal_type?.slice(0, 1).toUpperCase()}
+                  <div style={{ fontFamily: "var(--font-inter)", fontSize: 14, fontWeight: 500, color: C.text, marginBottom: 4, lineHeight: 1.3 }}>
+                    {food.description}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div
-                      className="text-sm font-medium truncate"
-                      style={{
-                        fontFamily: "var(--font-inter)",
-                        color: "#E8E2D8",
-                      }}
-                    >
-                      {meal.food_name || meal.name}
+                  {(food.brand_owner || food.brand_name) && (
+                    <div style={{ fontFamily: "var(--font-inter)", fontSize: 12, color: C.muted, marginBottom: 8 }}>
+                      {food.brand_owner || food.brand_name}
                     </div>
-                    <div
-                      className="flex gap-3 text-xs mt-0.5"
-                      style={{ color: "#9A9A9A" }}
-                    >
-                      <span>{formatTime(meal.logged_at)}</span>
-                      <span style={{ color: "#5B9BD5" }}>
-                        P{Math.round(Number(meal.protein_g))}g
+                  )}
+                  <div style={{ display: "flex", gap: 16, fontFamily: "var(--font-inter)", fontSize: 12 }}>
+                    <span style={{ color: C.accent, fontWeight: 600 }}>{Math.round(food.calories || 0)} cal</span>
+                    <span style={{ color: C.protein }}>P {Math.round(Number(food.protein_g) || 0)}g</span>
+                    <span style={{ color: C.carbs }}>C {Math.round(Number(food.carbs_g) || 0)}g</span>
+                    <span style={{ color: C.fat }}>F {Math.round(Number(food.fat_g) || 0)}g</span>
+                    {food.serving_size && (
+                      <span style={{ color: C.muted, marginLeft: "auto" }}>
+                        per {food.serving_size}{food.serving_size_unit}
                       </span>
-                      <span style={{ color: "#D4A843" }}>
-                        C{Math.round(Number(meal.carb_g))}g
-                      </span>
-                      <span style={{ color: "#D4637A" }}>
-                        F{Math.round(Number(meal.fat_g))}g
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ── Recent Meals ── */}
+        {recentMeals.length > 0 && (
+          <section>
+            <p style={{ fontFamily: "var(--font-inter)", fontSize: 11, fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", color: C.accent, marginBottom: 12 }}>
+              Recent
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {recentMeals.map((meal) => (
+                <div
+                  key={meal.id}
+                  style={{ ...cardStyle, display: "flex", alignItems: "center", gap: 12, padding: "14px 20px" }}
+                >
+                  {/* Type badge */}
+                  <div style={{
+                    width: 36, height: 36, flexShrink: 0,
+                    backgroundColor: C.bg,
+                    border: `1px solid ${C.border}`,
+                    borderRadius: 8,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontFamily: "var(--font-inter)",
+                    fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em",
+                    color: C.accent,
+                  }}>
+                    {meal.meal_type?.slice(0, 1).toUpperCase() ?? "?"}
+                  </div>
+
+                  {/* Name + macros */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: "var(--font-inter)", fontSize: 13, fontWeight: 500, color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {meal.food_name}
+                    </div>
+                    <div style={{ display: "flex", gap: 10, fontFamily: "var(--font-inter)", fontSize: 11, marginTop: 3 }}>
+                      <span style={{ color: C.protein }}>P{Math.round(Number(meal.protein_g))}g</span>
+                      <span style={{ color: C.carbs }}>C{Math.round(Number(meal.carb_g))}g</span>
+                      <span style={{ color: C.fat }}>F{Math.round(Number(meal.fat_g))}g</span>
+                      <span style={{ color: C.muted }}>
+                        {new Date(meal.logged_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
                       </span>
                     </div>
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    <div
-                      className="font-bold text-sm"
-                      style={{
-                        color: "#f97316",
-                        fontFamily: "var(--font-oswald)",
-                      }}
-                    >
-                      {meal.calories}
-                    </div>
+
+                  {/* Calories + remove */}
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
+                    <div style={{ fontFamily: "var(--font-oswald)", fontSize: 16, fontWeight: 700, color: C.accent }}>{meal.calories}</div>
                     <button
                       onClick={() => deleteMeal(meal.id)}
-                      className="text-[10px] uppercase tracking-wider mt-1 transition-opacity hover:opacity-60"
-                      style={{
-                        color: "#9A9A9A",
-                        fontFamily: "var(--font-inter)",
-                      }}
+                      style={{ fontFamily: "var(--font-inter)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em", color: C.muted, background: "none", border: "none", cursor: "pointer", marginTop: 2, padding: 0 }}
                     >
                       remove
                     </button>
@@ -743,187 +491,9 @@ export default function FuelPage() {
                 </div>
               ))}
             </div>
-          </div>
+          </section>
         )}
 
-        {/* ─── SEARCH SECTION ─── */}
-        <div>
-          <p
-            className="text-xs font-semibold tracking-[0.25em] uppercase mb-4"
-            style={{ color: "#f97316", fontFamily: "var(--font-inter)" }}
-          >
-            Search Foods
-          </p>
-
-          {/* Search input */}
-          <div className="relative">
-            <svg
-              viewBox="0 0 24 24"
-              width={16}
-              height={16}
-              fill="none"
-              stroke="#9A9A9A"
-              strokeWidth={1.8}
-              strokeLinecap="round"
-              className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <path d="M21 21L16.65 16.65" />
-            </svg>
-            <input
-              ref={searchRef}
-              type="text"
-              value={searchQuery}
-              onChange={(e) => onSearchInput(e.target.value)}
-              placeholder="Search 300,000+ foods..."
-              className="w-full pl-11 pr-10 py-4 text-sm outline-none transition-colors"
-              style={{
-                fontFamily: "var(--font-inter)",
-                backgroundColor: "#161616",
-                border: "1px solid #252525",
-                borderRadius: 12,
-                color: "#E8E2D8",
-              }}
-              onFocus={(e) =>
-                (e.currentTarget.style.borderColor = "#f97316")
-              }
-              onBlur={(e) =>
-                (e.currentTarget.style.borderColor = "#252525")
-              }
-            />
-            {searchQuery && (
-              <button
-                onClick={() => {
-                  setSearchQuery("");
-                  setSearchResults([]);
-                  searchRef.current?.focus();
-                }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-sm transition-opacity hover:opacity-60"
-                style={{ color: "#9A9A9A" }}
-                aria-label="Clear search"
-              >
-                <svg viewBox="0 0 16 16" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round">
-                  <path d="M4 4L12 12M12 4L4 12" />
-                </svg>
-              </button>
-            )}
-          </div>
-
-          {/* Searching indicator */}
-          {searching && (
-            <div
-              className="text-center py-6 text-sm animate-pulse"
-              style={{ color: "#9A9A9A" }}
-            >
-              Searching...
-            </div>
-          )}
-
-          {/* No results */}
-          {!searching &&
-            searchQuery.length >= 2 &&
-            searchResults.length === 0 && (
-              <div
-                className="text-center py-6 text-sm"
-                style={{ color: "#9A9A9A" }}
-              >
-                No foods found for &ldquo;{searchQuery}&rdquo;
-              </div>
-            )}
-
-          {/* Results list */}
-          {searchResults.length > 0 && (
-            <div className="flex flex-col gap-2 mt-3">
-              {searchResults.map((food) => (
-                <button
-                  key={food.id}
-                  onClick={() => {
-                    setSelectedFood(food);
-                    setMode("confirm");
-                  }}
-                  className="w-full text-left px-5 py-4 transition-all duration-150 active:scale-[0.98] hover:opacity-80"
-                  style={{
-                    backgroundColor: "#161616",
-                    border: "1px solid #252525",
-                    borderRadius: 12,
-                  }}
-                >
-                  <div
-                    className="text-sm font-medium leading-tight mb-1"
-                    style={{
-                      fontFamily: "var(--font-inter)",
-                      color: "#E8E2D8",
-                    }}
-                  >
-                    {food.description}
-                  </div>
-                  {food.brand_owner && (
-                    <div
-                      className="text-xs mb-2"
-                      style={{ color: "#9A9A9A" }}
-                    >
-                      {food.brand_owner}
-                    </div>
-                  )}
-                  <div
-                    className="flex gap-4 text-xs"
-                    style={{ fontFamily: "var(--font-inter)" }}
-                  >
-                    <span style={{ color: "#f97316", fontWeight: 600 }}>
-                      {Math.round(food.calories || 0)} cal
-                    </span>
-                    <span style={{ color: "#5B9BD5" }}>
-                      P {Math.round(Number(food.protein_g) || 0)}g
-                    </span>
-                    <span style={{ color: "#D4A843" }}>
-                      C {Math.round(Number(food.carbs_g) || 0)}g
-                    </span>
-                    <span style={{ color: "#D4637A" }}>
-                      F {Math.round(Number(food.fat_g) || 0)}g
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Empty hint (no query yet) */}
-          {!searching && searchQuery.length < 2 && searchResults.length === 0 && (
-            <p
-              className="text-xs mt-3"
-              style={{ color: "#9A9A9A", opacity: 0.6 }}
-            >
-              Type at least 2 characters — try &ldquo;chicken breast&rdquo; or &ldquo;protein bar&rdquo;
-            </p>
-          )}
-        </div>
-
-        {/* Cooler Prep link */}
-        <Link
-          href="/dashboard/fuel/cooler-prep"
-          className="flex items-center justify-between px-6 py-4 transition-opacity hover:opacity-80"
-          style={{
-            backgroundColor: "#161616",
-            border: "1px solid #252525",
-            borderRadius: 12,
-          }}
-        >
-          <div className="flex flex-col gap-0.5">
-            <span
-              className="text-sm font-bold uppercase tracking-wide"
-              style={{ fontFamily: "var(--font-inter)", color: "#E8E2D8" }}
-            >
-              Cooler Prep
-            </span>
-            <span
-              className="text-xs"
-              style={{ fontFamily: "var(--font-inter)", color: "#9A9A9A" }}
-            >
-              Plan meals for the job site
-            </span>
-          </div>
-          <span style={{ color: "#f97316", fontSize: 18 }}>&rsaquo;</span>
-        </Link>
       </div>
       <BottomNav />
     </main>
