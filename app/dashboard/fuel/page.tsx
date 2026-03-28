@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 // âââ Types âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 
-interface FoodResult {h
+interface FoodResult {
   id: string;
   description: string;
   brand_owner: string | null;
