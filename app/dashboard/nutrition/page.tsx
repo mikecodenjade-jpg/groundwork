@@ -118,7 +118,7 @@ export default function NutritionPage() {
       .limit(20);
     setResults((data as FoodResult[]) || []);
     setSearching(false);
-  }, []);
+  }, [searchQuery]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
