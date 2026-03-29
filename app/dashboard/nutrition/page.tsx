@@ -114,7 +114,7 @@ export default function NutritionPage() {
     const { data } = await supabase
       .from("usda_foods")
       .select("id, fdc_id, description, brand_owner, brand_name, calories, protein_g, carbs_g, fat_g, serving_size, serving_size_unit, household_serving_text, gtin_upc")
-      .textSearch("description", query.trim().split(/\s+/).filter(w => w.length > 0).map(w => w + ":*").join(" & "))
+      .textSearch("search_vector", q.trim().split(/\s+/).filter(w => w.length > 0).map(w => w + ":*").join(" & "))
       .limit(20);
     setResults((data as FoodResult[]) || []);
     setSearching(false);
@@ -122,7 +122,7 @@ export default function NutritionPage() {
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (searchQuery.length < 2) {
+    if (searchQuery.length < 3) {
       setResults([]);
       return;
     }
