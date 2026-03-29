@@ -1,4 +1,4 @@
-h"use client";
+"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import BottomNav from "@/components/BottomNav";
