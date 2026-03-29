@@ -1,4 +1,4 @@
-"use client";
+h"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import BottomNav from "@/components/BottomNav";
@@ -105,7 +105,7 @@ export default function NutritionPage() {
   // ââ Search with debounce ââââââââââââââââââââââââââââââââââââââââââââââââ
 
   const searchFoods = useCallback(async (query: string) => {
-    if (query.length < 2) {
+    if (query.length < 3) {
       setResults([]);
       setSearching(false);
       return;
@@ -114,7 +114,7 @@ export default function NutritionPage() {
     const { data } = await supabase
       .from("usda_foods")
       .select("id, fdc_id, description, brand_owner, brand_name, calories, protein_g, carbs_g, fat_g, serving_size, serving_size_unit, household_serving_text, gtin_upc")
-      .ilike("description", `%${query}%`)
+      .textSearch("description", query.trim().split(/\s+/).filter(w => w.length > 0).map(w => w + ":*").join(" & "))
       .limit(20);
     setResults((data as FoodResult[]) || []);
     setSearching(false);
@@ -572,7 +572,7 @@ export default function NutritionPage() {
         )}
 
         {/* No results */}
-        {searchQuery.length >= 2 && !searching && results.length === 0 && (
+        {searchQuery.length >= 3 && !searching && results.length === 0 && (
           <div style={{ textAlign: "center", padding: 20, color: "#9A9A9A", fontSize: 14 }}>
             No foods found for "{searchQuery}"
           </div>
