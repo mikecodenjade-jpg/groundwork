@@ -4,10 +4,11 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import BottomNav from "@/components/BottomNav";
 import { supabase } from "@/lib/supabase";
 
-type MealType = "breakfast" | "lunch" | "dinner" | "snack";
+// ââ Types ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
-interface UsdaFood {
-  fdc_id: number | string;
+interface FoodResult {
+  id: string;
+  fdc_id: number;
   description: string;
   brand_owner: string | null;
   brand_name: string | null;
@@ -17,581 +18,600 @@ interface UsdaFood {
   fat_g: number | null;
   serving_size: number | null;
   serving_size_unit: string | null;
-  source?: "usda" | "openfoodfacts";
+  household_serving_text: string | null;
+  gtin_upc: string | null;
 }
 
 interface MealLog {
   id: string;
-  food_name: string;
+  name: string;
+  food_name: string | null;
   calories: number;
   protein_g: number;
   carb_g: number;
   fat_g: number;
-  meal_type: MealType;
+  meal_type: string | null;
   logged_at: string;
+  date: string;
 }
+
+interface DailyTotals {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
+// ââ Constants ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 const GOALS = { calories: 2400, protein: 180, carbs: 250, fat: 80 };
 
-function clamp(val: number, goal: number) {
-  return Math.min(Math.round((val / goal) * 100), 100);
-}
-
-async function lookupOpenFoodFacts(barcode: string): Promise<UsdaFood | null> {
-  try {
-    const res = await fetch(
-      `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`
-    );
-    if (!res.ok) return null;
-    const json = await res.json();
-    if (json.status !== 1 || !json.product) return null;
-    const p = json.product;
-    const n = p.nutriments ?? {};
-    const cal =
-      n["energy-kcal_serving"] ??
-      n["energy-kcal_100g"] ??
-      null;
-    const protein = n["proteins_serving"] ?? n["proteins_100g"] ?? null;
-    const carbs = n["carbohydrates_serving"] ?? n["carbohydrates_100g"] ?? null;
-    const fat = n["fat_serving"] ?? n["fat_100g"] ?? null;
-    return {
-      fdc_id: `off-${barcode}`,
-      description: p.product_name || p.abbreviated_product_name || `Barcode ${barcode}`,
-      brand_owner: p.brands || null,
-      brand_name: null,
-      calories: cal !== null ? Math.round(cal) : null,
-      protein_g: protein !== null ? Math.round(protein) : null,
-      carbs_g: carbs !== null ? Math.round(carbs) : null,
-      fat_g: fat !== null ? Math.round(fat) : null,
-      serving_size: p.serving_quantity ? Number(p.serving_quantity) : null,
-      serving_size_unit: p.serving_quantity_unit || null,
-      source: "openfoodfacts",
-    };
-  } catch {
-    return null;
-  }
-}
+// ââ Component ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 export default function NutritionPage() {
-  const [totals, setTotals] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 });
-  const [recentMeals, setRecentMeals] = useState<MealLog[]>([]);
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<UsdaFood[]>([]);
+  // State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [results, setResults] = useState<FoodResult[]>([]);
   const [searching, setSearching] = useState(false);
-  const [loggingId, setLoggingId] = useState<number | string | null>(null);
-  const [mealType, setMealType] = useState<MealType>("lunch");
-  const [toast, setToast] = useState("");
-  const [loading, setLoading] = useState(true);
-
-  const [scannerOpen, setScannerOpen] = useState(false);
-  const [scanStatus, setScanStatus] = useState<"idle" | "scanning" | "found" | "not_found" | "error">("idle");
-  const [scannedFood, setScannedFood] = useState<UsdaFood | null>(null);
-  const scannerRef = useRef<import("html5-qrcode").Html5Qrcode | null>(null);
-
+  const [recentMeals, setRecentMeals] = useState<MealLog[]>([]);
+  const [dailyTotals, setDailyTotals] = useState<DailyTotals>({ calories: 0, protein: 0, carbs: 0, fat: 0 });
+  const [mode, setMode] = useState<"home" | "confirm" | "scanner">("home");
+  const [selectedFood, setSelectedFood] = useState<FoodResult | null>(null);
+  const [logging, setLogging] = useState(false);
+  const [scanError, setScanError] = useState("");
+  const [scanLoading, setScanLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const scannerRef = useRef<HTMLDivElement>(null);
+  const html5QrRef = useRef<any>(null);
 
-  useEffect(() => {
-    const h = new Date().getHours();
-    if (h < 10) setMealType("breakfast");
-    else if (h < 14) setMealType("lunch");
-    else if (h < 17) setMealType("snack");
-    else setMealType("dinner");
-  }, []);
+  // ââ Helpers ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
-  const loadData = useCallback(async () => {
-    const today = new Date().toLocaleDateString("en-CA");
+  const todayISO = () => new Date().toISOString().slice(0, 10);
+
+  const n = (v: number | null | undefined) => Number(v) || 0;
+
+  // ââ Data fetching âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+
+  const fetchTodayMeals = useCallback(async () => {
     const { data } = await supabase
       .from("meal_logs")
-      .select("id, food_name, calories, protein_g, carb_g, fat_g, meal_type, logged_at")
+      .select("*")
+      .eq("date", todayISO())
       .order("logged_at", { ascending: false })
-      .limit(50);
-    if (data) {
-      const todayRows = data.filter((m) => m.logged_at?.startsWith(today));
-      setTotals(
-        todayRows.reduce(
-          (acc, m) => ({
-            calories: acc.calories + (m.calories || 0),
-            protein: acc.protein + Number(m.protein_g || 0),
-            carbs: acc.carbs + Number(m.carb_g || 0),
-            fat: acc.fat + Number(m.fat_g || 0),
-          }),
-          { calories: 0, protein: 0, carbs: 0, fat: 0 }
-        )
+      .limit(10);
+
+    if (data && data.length > 0) {
+      setRecentMeals(data as MealLog[]);
+      const totals = (data as MealLog[]).reduce(
+        (acc, m) => ({
+          calories: acc.calories + n(m.calories),
+          protein: acc.protein + n(m.protein_g),
+          carbs: acc.carbs + n(m.carb_g),
+          fat: acc.fat + n(m.fat_g),
+        }),
+        { calories: 0, protein: 0, carbs: 0, fat: 0 }
       );
-      setRecentMeals(data.slice(0, 10));
+      setDailyTotals(totals);
+    } else {
+      setRecentMeals([]);
+      setDailyTotals({ calories: 0, protein: 0, carbs: 0, fat: 0 });
     }
-    setLoading(false);
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    fetchTodayMeals();
+  }, [fetchTodayMeals]);
 
-  const searchFoods = useCallback(async (q: string) => {
-    if (q.trim().length < 2) { setResults([]); return; }
+  // ââ Search with debounce ââââââââââââââââââââââââââââââââââââââââââââââââ
+
+  const searchFoods = useCallback(async (query: string) => {
+    if (query.length < 3) {
+      setResults([]);
+      setSearching(false);
+      return;
+    }
     setSearching(true);
     const { data } = await supabase
       .from("usda_foods")
-      .select("fdc_id, description, brand_owner, brand_name, calories, protein_g, carbs_g, fat_g, serving_size, serving_size_unit")
-      .ilike("description", `%${q.trim()}%`)
-      .not("calories", "is", null)
-      .gt("calories", 0)
-      .order("description")
+      .select("id, fdc_id, description, brand_owner, brand_name, calories, protein_g, carbs_g, fat_g, serving_size, serving_size_unit, household_serving_text, gtin_upc")
+      .textSearch("search_vector", searchQuery.trim())
       .limit(20);
-    setResults(data || []);
+    setResults((data as FoodResult[]) || []);
     setSearching(false);
-  }, []);
+  }, [searchQuery]);
 
-  const handleInput = (val: string) => {
-    setQuery(val);
+  useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => searchFoods(val), 300);
-  };
-
-  const logFood = async (food: UsdaFood) => {
-    setLoggingId(food.fdc_id);
-    await supabase.from("meal_logs").insert({
-      food_name: food.description,
-      name: food.description,
-      calories: Math.round(food.calories || 0),
-      protein_g: Math.round(Number(food.protein_g) || 0),
-      carb_g: Math.round(Number(food.carbs_g) || 0),
-      fat_g: Math.round(Number(food.fat_g) || 0),
-      meal_type: mealType,
-      logged_at: new Date().toISOString(),
-      date: new Date().toLocaleDateString("en-CA"),
-    });
-    setLoggingId(null);
-    setToast(`Logged - ${Math.round(food.calories || 0)} cal`);
-    setTimeout(() => setToast(""), 2500);
-    if (scannedFood && scannedFood.fdc_id === food.fdc_id) {
-      setScannedFood(null);
-      setScanStatus("idle");
-    }
-    loadData();
-  };
-
-  const deleteMeal = async (id: string) => {
-    await supabase.from("meal_logs").delete().eq("id", id);
-    loadData();
-  };
-
-  const stopScanner = useCallback(async () => {
-    if (scannerRef.current) {
-      try { await scannerRef.current.stop(); scannerRef.current.clear(); } catch { /* already stopped */ }
-      scannerRef.current = null;
-    }
-  }, []);
-
-  const handleBarcode = useCallback(async (barcode: string) => {
-    await stopScanner();
-    setScanStatus("scanning");
-    const { data } = await supabase
-      .from("usda_foods")
-      .select("fdc_id, description, brand_owner, brand_name, calories, protein_g, carbs_g, fat_g, serving_size, serving_size_unit")
-      .eq("gtin_upc", barcode)
-      .not("calories", "is", null)
-      .limit(1);
-    if (data && data.length > 0) {
-      setScannedFood({ ...data[0], source: "usda" });
-      setScanStatus("found");
+    if (searchQuery.length < 3) {
+      setResults([]);
       return;
     }
-    const offFood = await lookupOpenFoodFacts(barcode);
-    if (offFood) { setScannedFood(offFood); setScanStatus("found"); return; }
-    setScanStatus("not_found");
-  }, [stopScanner]);
+    debounceRef.current = setTimeout(() => searchFoods(searchQuery), 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [searchQuery, searchFoods]);
 
-  const openScanner = useCallback(async () => {
-    setScannerOpen(true);
-    setScanStatus("idle");
-    setScannedFood(null);
-    await new Promise((r) => setTimeout(r, 150));
+  // ââ Log a meal ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+
+  const logMeal = async (food: FoodResult) => {
+    setLogging(true);
+    await supabase.from("meal_logs").insert({
+      name: food.description,
+      food_name: food.description,
+      calories: n(food.calories),
+      protein_g: n(food.protein_g),
+      carb_g: n(food.carbs_g),
+      fat_g: n(food.fat_g),
+      meal_type: "logged",
+      date: todayISO(),
+      logged_at: new Date().toISOString(),
+    });
+    setLogging(false);
+    setMode("home");
+    setSelectedFood(null);
+    setSearchQuery("");
+    setResults([]);
+    fetchTodayMeals();
+  };
+
+  // ââ Barcode scanner âââââââââââââââââââââââââââââââââââââââââââââââââââââ
+
+  const startScanner = async () => {
+    setMode("scanner");
+    setScanError("");
+    setScanLoading(false);
+
+    // Dynamically import html5-qrcode
     try {
       const { Html5Qrcode } = await import("html5-qrcode");
-      const scanner = new Html5Qrcode("qr-reader-nutrition");
-      scannerRef.current = scanner;
+      // Wait for DOM element
+      await new Promise((r) => setTimeout(r, 200));
+      if (!scannerRef.current) return;
+
+      const scanner = new Html5Qrcode("barcode-reader");
+      html5QrRef.current = scanner;
+
       await scanner.start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 260, height: 180 } },
-        (decoded) => handleBarcode(decoded),
-        () => {}
+        { fps: 10, qrbox: { width: 250, height: 150 } },
+        async (decodedText: string) => {
+          // Stop scanner immediately
+          try { await scanner.stop(); } catch {}
+          html5QrRef.current = null;
+          setScanLoading(true);
+
+          // 1) Check usda_foods gtin_upc column
+          const { data: usdaMatch } = await supabase
+            .from("usda_foods")
+            .select("id, fdc_id, description, brand_owner, brand_name, calories, protein_g, carbs_g, fat_g, serving_size, serving_size_unit, household_serving_text, gtin_upc")
+            .eq("gtin_upc", decodedText)
+            .limit(1);
+
+          if (usdaMatch && usdaMatch.length > 0) {
+            setSelectedFood(usdaMatch[0] as FoodResult);
+            setMode("confirm");
+            setScanLoading(false);
+            return;
+          }
+
+          // 2) Fallback: OpenFoodFacts API
+          try {
+            const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${decodedText}.json`);
+            const json = await res.json();
+            if (json.status === 1 && json.product) {
+              const p = json.product;
+              const nm = p.nutriments || {};
+              const offFood: FoodResult = {
+                id: decodedText,
+                fdc_id: 0,
+                description: p.product_name || "Unknown product",
+                brand_owner: p.brands || null,
+                brand_name: p.brands || null,
+                calories: nm["energy-kcal_100g"] || nm["energy-kcal"] || null,
+                protein_g: nm.proteins_100g || nm.proteins || null,
+                carbs_g: nm.carbohydrates_100g || nm.carbohydrates || null,
+                fat_g: nm.fat_100g || nm.fat || null,
+                serving_size: null,
+                serving_size_unit: null,
+                household_serving_text: p.serving_size || null,
+                gtin_upc: decodedText,
+              };
+              setSelectedFood(offFood);
+              setMode("confirm");
+              setScanLoading(false);
+              return;
+            }
+          } catch {}
+
+          setScanError(`No food found for barcode ${decodedText}`);
+          setScanLoading(false);
+          setMode("home");
+        },
+        () => {} // ignore scan errors silently
       );
-    } catch (err) {
-      console.error("Scanner error:", err);
-      setScanStatus("error");
+    } catch (err: any) {
+      setScanError(err?.message || "Camera not available");
+      setMode("home");
     }
-  }, [handleBarcode]);
+  };
 
-  const closeScanner = useCallback(async () => {
-    await stopScanner();
-    setScannerOpen(false);
-    setScanStatus("idle");
-  }, [stopScanner]);
+  const stopScanner = async () => {
+    if (html5QrRef.current) {
+      try { await html5QrRef.current.stop(); } catch {}
+      html5QrRef.current = null;
+    }
+    setMode("home");
+  };
 
-  useEffect(() => () => { stopScanner(); }, [stopScanner]);
+  // ââ Calorie ring SVG âââââââââââââââââââââââââââââââââââââââââââââââââââ
 
-  // ── Calorie ring math ──────────────────────────────────────────────────────
-  const calPct = clamp(totals.calories, GOALS.calories);
-  const circumference = 2 * Math.PI * 42; // r=42
-  const strokeDash = (calPct / 100) * circumference;
-  const remaining = Math.max(0, GOALS.calories - totals.calories);
-
-  if (loading) {
+  const CalorieRing = () => {
+    const pct = Math.min(dailyTotals.calories / GOALS.calories, 1);
+    const r = 54;
+    const circ = 2 * Math.PI * r;
+    const offset = circ * (1 - pct);
     return (
-      <main style={{ minHeight: "100vh", backgroundColor: "#0A0A0A", padding: "40px 24px 112px" }}>
-        <div style={{ maxWidth: 640, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16 }}>
-          {[200, 56, 64, 56, 56].map((h, i) => (
-            <div key={i} className="animate-pulse" style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: 12, height: h }} />
-          ))}
+      <svg width={132} height={132} viewBox="0 0 132 132">
+        <circle cx={66} cy={66} r={r} fill="none" stroke="#252525" strokeWidth={10} />
+        <circle
+          cx={66} cy={66} r={r} fill="none"
+          stroke="#C45B28" strokeWidth={10}
+          strokeDasharray={circ} strokeDashoffset={offset}
+          strokeLinecap="round"
+          transform="rotate(-90 66 66)"
+          style={{ transition: "stroke-dashoffset 0.5s ease" }}
+        />
+        <text x={66} y={58} textAnchor="middle" fill="#E8E2D8" fontSize={22} fontWeight={700} style={{ fontFamily: "var(--font-oswald)" }}>
+          {dailyTotals.calories}
+        </text>
+        <text x={66} y={78} textAnchor="middle" fill="#9A9A9A" fontSize={11}>
+          / {GOALS.calories} cal
+        </text>
+      </svg>
+    );
+  };
+
+  // ââ Macro bar ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+
+  const MacroBar = ({ label, current, goal, color }: { label: string; current: number; goal: number; color: string }) => {
+    const pct = Math.min(current / goal, 1) * 100;
+    return (
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+          <span style={{ color: "#E8E2D8", fontSize: 13, fontFamily: "var(--font-inter)" }}>{label}</span>
+          <span style={{ color: "#9A9A9A", fontSize: 13, fontFamily: "var(--font-inter)" }}>
+            {current}g / {goal}g
+          </span>
+        </div>
+        <div style={{ height: 8, borderRadius: 4, backgroundColor: "#252525" }}>
+          <div
+            style={{
+              height: 8,
+              borderRadius: 4,
+              backgroundColor: color,
+              width: `${pct}%`,
+              transition: "width 0.5s ease",
+            }}
+          />
+        </div>
+      </div>
+    );
+  };
+
+  // ââ Scanner mode âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+
+  if (mode === "scanner") {
+    return (
+      <div style={{ minHeight: "100dvh", backgroundColor: "#0A0A0A", color: "#E8E2D8" }}>
+        <div style={{ padding: "16px 16px 100px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+            <h1 style={{ fontSize: 22, fontFamily: "var(--font-oswald)", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1 }}>
+              Scan Barcode
+            </h1>
+            <button
+              onClick={stopScanner}
+              style={{ color: "#9A9A9A", fontSize: 14, background: "none", border: "none", cursor: "pointer", fontFamily: "var(--font-inter)" }}
+            >
+              Cancel
+            </button>
+          </div>
+
+          {scanLoading ? (
+            <div style={{ textAlign: "center", padding: 40 }}>
+              <div style={{ color: "#9A9A9A", fontSize: 14 }}>Looking up barcode...</div>
+            </div>
+          ) : (
+            <div
+              id="barcode-reader"
+              ref={scannerRef}
+              style={{
+                width: "100%",
+                maxWidth: 400,
+                margin: "0 auto",
+                borderRadius: 12,
+                overflow: "hidden",
+                border: "1px solid #252525",
+              }}
+            />
+          )}
+
+          {scanError && (
+            <div style={{ textAlign: "center", marginTop: 16, color: "#C45B28", fontSize: 14 }}>
+              {scanError}
+            </div>
+          )}
         </div>
         <BottomNav />
-      </main>
+      </div>
     );
   }
 
-  return (
-    <main style={{ minHeight: "100vh", backgroundColor: "#0A0A0A", color: "#E8E2D8", padding: "40px 24px 112px" }}>
+  // ââ Confirm mode âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
-      {/* Toast */}
-      {toast && (
-        <div style={{
-          position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)",
-          backgroundColor: "#C45B28", color: "#0A0A0A", padding: "10px 24px",
-          borderRadius: 24, fontFamily: "var(--font-inter)", fontWeight: 600,
-          fontSize: 14, zIndex: 200, whiteSpace: "nowrap",
-        }}>
-          {toast}
-        </div>
-      )}
+  if (mode === "confirm" && selectedFood) {
+    return (
+      <div style={{ minHeight: "100dvh", backgroundColor: "#0A0A0A", color: "#E8E2D8" }}>
+        <div style={{ padding: "16px 16px 100px" }}>
+          <button
+            onClick={() => { setMode("home"); setSelectedFood(null); }}
+            style={{ color: "#9A9A9A", fontSize: 14, background: "none", border: "none", cursor: "pointer", marginBottom: 16, fontFamily: "var(--font-inter)" }}
+          >
+            Back
+          </button>
 
-      {/* ── Scanner Modal ── */}
-      {scannerOpen && (
-        <div style={{
-          position: "fixed", inset: 0, zIndex: 150,
-          backgroundColor: "rgba(0,0,0,0.96)",
-          display: "flex", flexDirection: "column",
-        }}>
           <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            padding: "20px 24px", borderBottom: "1px solid #252525",
+            backgroundColor: "#161616",
+            borderRadius: 12,
+            border: "1px solid #252525",
+            padding: 20,
           }}>
-            <span style={{ fontFamily: "var(--font-oswald)", fontSize: 20, fontWeight: 700, textTransform: "uppercase", color: "#E8E2D8" }}>
-              Scan Barcode
-            </span>
-            <button onClick={closeScanner} style={{ minWidth: 48, minHeight: 48, display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", cursor: "pointer", color: "#9A9A9A" }} aria-label="Close">
-              <svg viewBox="0 0 24 24" fill="none" width={22} height={22} stroke="currentColor" strokeWidth={1.8} strokeLinecap="round">
+            <h2 style={{ fontSize: 18, fontFamily: "var(--font-oswald)", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>
+              {selectedFood.description}
+            </h2>
+            {selectedFood.brand_owner && (
+              <p style={{ color: "#9A9A9A", fontSize: 13, marginBottom: 16 }}>{selectedFood.brand_owner}</p>
+            )}
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 20 }}>
+              {[
+                { label: "Cal", value: n(selectedFood.calories) },
+                { label: "Protein", value: `${n(selectedFood.protein_g)}g` },
+                { label: "Carbs", value: `${n(selectedFood.carbs_g)}g` },
+                { label: "Fat", value: `${n(selectedFood.fat_g)}g` },
+              ].map((item) => (
+                <div key={item.label} style={{ textAlign: "center" }}>
+                  <div style={{ color: "#C45B28", fontSize: 18, fontWeight: 700, fontFamily: "var(--font-oswald)" }}>{item.value}</div>
+                  <div style={{ color: "#9A9A9A", fontSize: 11 }}>{item.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {selectedFood.household_serving_text && (
+              <p style={{ color: "#9A9A9A", fontSize: 12, marginBottom: 16 }}>
+                Serving: {selectedFood.household_serving_text}
+                {selectedFood.serving_size ? ` (${selectedFood.serving_size}${selectedFood.serving_size_unit || "g"})` : ""}
+              </p>
+            )}
+
+            <button
+              onClick={() => logMeal(selectedFood)}
+              disabled={logging}
+              style={{
+                width: "100%",
+                padding: "14px 0",
+                borderRadius: 8,
+                backgroundColor: logging ? "#252525" : "#C45B28",
+                color: "#E8E2D8",
+                fontWeight: 700,
+                fontSize: 15,
+                fontFamily: "var(--font-oswald)",
+                textTransform: "uppercase",
+                letterSpacing: 1,
+                border: "none",
+                cursor: logging ? "not-allowed" : "pointer",
+                transition: "background-color 0.2s",
+              }}
+            >
+              {logging ? "Logging..." : "Log This Meal"}
+            </button>
+          </div>
+        </div>
+        <BottomNav />
+      </div>
+    );
+  }
+
+  // ââ Home mode ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+
+  return (
+    <div style={{ minHeight: "100dvh", backgroundColor: "#0A0A0A", color: "#E8E2D8" }}>
+      <div style={{ padding: "16px 16px 100px" }}>
+
+        {/* Header */}
+        <h1 style={{
+          fontSize: 26,
+          fontFamily: "var(--font-oswald)",
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: 1.5,
+          marginBottom: 20,
+        }}>
+          Fuel
+        </h1>
+
+        {/* Daily tracker card */}
+        <div style={{
+          backgroundColor: "#161616",
+          borderRadius: 12,
+          border: "1px solid #252525",
+          padding: 20,
+          marginBottom: 16,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+            <CalorieRing />
+            <div style={{ flex: 1 }}>
+              <MacroBar label="Protein" current={dailyTotals.protein} goal={GOALS.protein} color="#C45B28" />
+              <MacroBar label="Carbs" current={dailyTotals.carbs} goal={GOALS.carbs} color="#7A8B5E" />
+              <MacroBar label="Fat" current={dailyTotals.fat} goal={GOALS.fat} color="#5B7EC4" />
+            </div>
+          </div>
+        </div>
+
+        {/* Search bar */}
+        <div style={{ position: "relative", marginBottom: 16 }}>
+          <input
+            type="text"
+            placeholder="Search foods..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "14px 80px 14px 16px",
+              borderRadius: 10,
+              border: "1px solid #252525",
+              backgroundColor: "#161616",
+              color: "#E8E2D8",
+              fontSize: 15,
+              fontFamily: "var(--font-inter)",
+              outline: "none",
+              boxSizing: "border-box",
+            }}
+          />
+
+          {/* Clear button */}
+          {searchQuery && (
+            <button
+              onClick={() => { setSearchQuery(""); setResults([]); }}
+              className="absolute top-1/2 -translate-y-1/2 flex items-center justify-center w-9 h-9 transition-opacity hover:opacity-60"
+              style={{ right: 44, color: "#9A9A9A", background: "none", border: "none", cursor: "pointer" }}
+              aria-label="Clear search"
+            >
+              <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={2}>
                 <path d="M18 6L6 18M6 6l12 12" />
               </svg>
             </button>
-          </div>
+          )}
 
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, gap: 20 }}>
-
-            {scanStatus !== "found" && scanStatus !== "not_found" && (
-              <div style={{ width: "100%", maxWidth: 360 }}>
-                <div id="qr-reader-nutrition" style={{ width: "100%", borderRadius: 12, overflow: "hidden", border: "2px solid #C45B28" }} />
-                {scanStatus === "idle" && (
-                  <p style={{ fontFamily: "var(--font-inter)", fontSize: 13, color: "#9A9A9A", textAlign: "center", marginTop: 16 }}>
-                    Point camera at a product barcode
-                  </p>
-                )}
-                {scanStatus === "scanning" && (
-                  <p className="animate-pulse" style={{ fontFamily: "var(--font-inter)", fontSize: 13, color: "#9A9A9A", textAlign: "center", marginTop: 16 }}>
-                    Looking up barcode...
-                  </p>
-                )}
-                {scanStatus === "error" && (
-                  <p style={{ fontFamily: "var(--font-inter)", fontSize: 13, color: "#D4637A", textAlign: "center", marginTop: 16 }}>
-                    Camera access denied or unavailable
-                  </p>
-                )}
-              </div>
-            )}
-
-            {scanStatus === "not_found" && (
-              <div style={{ textAlign: "center", display: "flex", flexDirection: "column", gap: 16, alignItems: "center" }}>
-                <p style={{ fontFamily: "var(--font-inter)", fontSize: 15, color: "#9A9A9A" }}>Product not found</p>
-                <button onClick={openScanner} style={{ fontFamily: "var(--font-inter)", fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", padding: "14px 32px", borderRadius: 24, backgroundColor: "#C45B28", color: "#0A0A0A", border: "none", cursor: "pointer", minHeight: 48 }}>
-                  Try Again
-                </button>
-              </div>
-            )}
-
-            {scanStatus === "found" && scannedFood && (
-              <div style={{ width: "100%", maxWidth: 400, display: "flex", flexDirection: "column", gap: 16 }}>
-                <p style={{ fontFamily: "var(--font-inter)", fontSize: 11, fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", color: "#C45B28", textAlign: "center" }}>
-                  {scannedFood.source === "openfoodfacts" ? "Found via Open Food Facts" : "Found in USDA Database"}
-                </p>
-                <button
-                  onClick={() => { logFood(scannedFood); closeScanner(); }}
-                  disabled={loggingId === scannedFood.fdc_id}
-                  style={{ backgroundColor: "#161616", border: "2px solid #C45B28", borderRadius: 12, width: "100%", textAlign: "left", padding: "20px", cursor: "pointer", opacity: loggingId === scannedFood.fdc_id ? 0.5 : 1 }}
-                >
-                  <div style={{ fontFamily: "var(--font-inter)", fontSize: 15, fontWeight: 600, color: "#E8E2D8", marginBottom: 6, lineHeight: 1.3 }}>{scannedFood.description}</div>
-                  {(scannedFood.brand_owner || scannedFood.brand_name) && (
-                    <div style={{ fontFamily: "var(--font-inter)", fontSize: 12, color: "#9A9A9A", marginBottom: 12 }}>{scannedFood.brand_owner || scannedFood.brand_name}</div>
-                  )}
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 16, fontFamily: "var(--font-inter)", fontSize: 13 }}>
-                    <span style={{ color: "#C45B28", fontWeight: 700 }}>{Math.round(scannedFood.calories || 0)} cal</span>
-                    <span style={{ color: "#5B9BD5" }}>P {Math.round(Number(scannedFood.protein_g) || 0)}g</span>
-                    <span style={{ color: "#D4A843" }}>C {Math.round(Number(scannedFood.carbs_g) || 0)}g</span>
-                    <span style={{ color: "#D4637A" }}>F {Math.round(Number(scannedFood.fat_g) || 0)}g</span>
-                  </div>
-                  <div style={{ fontFamily: "var(--font-inter)", fontSize: 11, color: "#9A9A9A", marginTop: 12, textTransform: "uppercase", letterSpacing: "0.1em" }}>
-                    Tap to log as {mealType}
-                  </div>
-                </button>
-                <button onClick={openScanner} style={{ fontFamily: "var(--font-inter)", fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", padding: "14px 0", borderRadius: 24, width: "100%", backgroundColor: "transparent", color: "#9A9A9A", border: "1px solid #252525", cursor: "pointer", minHeight: 48 }}>
-                  Scan Another
-                </button>
-              </div>
-            )}
-          </div>
+          {/* Barcode scanner button */}
+          <button
+            onClick={startScanner}
+            className="absolute top-1/2 -translate-y-1/2 flex items-center justify-center w-9 h-9 transition-opacity hover:opacity-60"
+            style={{ right: 8, color: "#9A9A9A", background: "none", border: "none", cursor: "pointer" }}
+            aria-label="Scan barcode"
+          >
+            <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2" />
+              <path d="M7 8v8M12 8v8M17 8v8" />
+            </svg>
+          </button>
         </div>
-      )}
 
-      <div style={{ maxWidth: 640, margin: "0 auto", display: "flex", flexDirection: "column", gap: 28 }}>
-
-        {/* ── Header ── */}
-        <header>
-          <p style={{ fontFamily: "var(--font-inter)", fontSize: 11, fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", color: "#C45B28", marginBottom: 4 }}>
-            Pillar
+        {/* Helper text */}
+        {searchQuery.length === 0 && results.length === 0 && (
+          <p style={{ color: "#9A9A9A", fontSize: 13, textAlign: "center", marginBottom: 16, fontFamily: "var(--font-inter)" }}>
+            Type at least 2 characters -- try "chicken breast" or "protein bar"
           </p>
-          <h1 style={{ fontFamily: "var(--font-oswald)", fontSize: 36, fontWeight: 700, textTransform: "uppercase", color: "#E8E2D8", lineHeight: 1, margin: 0 }}>
-            Fuel
-          </h1>
-          <p style={{ fontFamily: "var(--font-inter)", fontSize: 12, color: "#9A9A9A", marginTop: 6, marginBottom: 0 }}>
-            {new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
-          </p>
-        </header>
+        )}
 
-        {/* ── Daily Tracker ── */}
-        <section style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: 12, padding: "24px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-
-            {/* Calorie ring */}
-            <div style={{ position: "relative", width: 112, height: 112, flexShrink: 0 }}>
-              <svg viewBox="0 0 100 100" width={112} height={112} style={{ transform: "rotate(-90deg)" }}>
-                <circle cx="50" cy="50" r="42" fill="none" stroke="#252525" strokeWidth="8" />
-                <circle
-                  cx="50" cy="50" r="42" fill="none"
-                  stroke={calPct >= 100 ? "#D4637A" : "#C45B28"}
-                  strokeWidth="8"
-                  strokeLinecap="round"
-                  strokeDasharray={`${strokeDash} ${circumference}`}
-                  style={{ transition: "stroke-dasharray 0.7s ease" }}
-                />
-              </svg>
-              <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ fontFamily: "var(--font-oswald)", fontSize: 22, fontWeight: 700, color: "#E8E2D8", lineHeight: 1 }}>
-                  {Math.round(totals.calories)}
-                </span>
-                <span style={{ fontFamily: "var(--font-inter)", fontSize: 10, color: "#9A9A9A", marginTop: 2 }}>cal</span>
-              </div>
-            </div>
-
-            {/* Macro bars */}
-            <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: "var(--font-inter)", fontSize: 13, color: "#E8E2D8", marginBottom: 2 }}>
-                {remaining > 0 ? `${remaining} cal remaining` : "Goal reached"}
-              </div>
-              <div style={{ fontFamily: "var(--font-inter)", fontSize: 11, color: "#9A9A9A", marginBottom: 14 }}>
-                of {GOALS.calories} daily goal
-              </div>
-              {[
-                { label: "Protein", val: totals.protein, goal: GOALS.protein, color: "#5B9BD5" },
-                { label: "Carbs",   val: totals.carbs,   goal: GOALS.carbs,   color: "#D4A843" },
-                { label: "Fat",     val: totals.fat,     goal: GOALS.fat,     color: "#D4637A" },
-              ].map((m) => (
-                <div key={m.label} style={{ marginBottom: 10 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "var(--font-inter)", fontSize: 11, marginBottom: 3 }}>
-                    <span style={{ color: "#9A9A9A" }}>{m.label}</span>
-                    <span style={{ color: "#E8E2D8" }}>{Math.round(m.val)}/{m.goal}g</span>
-                  </div>
-                  <div style={{ height: 5, backgroundColor: "#252525", borderRadius: 3, overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${clamp(m.val, m.goal)}%`, backgroundColor: m.color, borderRadius: 3, transition: "width 0.6s ease" }} />
-                  </div>
-                </div>
-              ))}
-            </div>
+        {/* Searching indicator */}
+        {searching && (
+          <div style={{ textAlign: "center", padding: 20 }}>
+            <div style={{ color: "#9A9A9A", fontSize: 14 }}>Searching...</div>
           </div>
-        </section>
+        )}
 
-        {/* ── Meal Type ── */}
-        <section>
-          <p style={{ fontFamily: "var(--font-inter)", fontSize: 11, fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", color: "#C45B28", marginBottom: 12 }}>
-            Log As
-          </p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
-            {(["breakfast", "lunch", "dinner", "snack"] as MealType[]).map((t) => (
+        {/* Search error message */}
+        {scanError && mode === "home" && (
+          <div style={{ textAlign: "center", marginBottom: 12 }}>
+            <p style={{ color: "#C45B28", fontSize: 13 }}>{scanError}</p>
+            <button onClick={() => setScanError("")} style={{ color: "#9A9A9A", fontSize: 12, background: "none", border: "none", cursor: "pointer", marginTop: 4 }}>
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        {/* Search results */}
+        {results.length > 0 && (
+          <div style={{ marginBottom: 24 }}>
+            <h2 style={{ fontSize: 14, fontFamily: "var(--font-oswald)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: "#9A9A9A", marginBottom: 10 }}>
+              Results
+            </h2>
+            {results.map((food) => (
               <button
-                key={t}
-                onClick={() => setMealType(t)}
+                key={food.id}
+                onClick={() => { setSelectedFood(food); setMode("confirm"); }}
                 style={{
-                  fontFamily: "var(--font-inter)", fontSize: 11, fontWeight: 600,
-                  textTransform: "uppercase", letterSpacing: "0.1em",
-                  padding: "13px 0", borderRadius: 24, minHeight: 48,
-                  border: `1px solid ${mealType === t ? "#C45B28" : "#252525"}`,
-                  backgroundColor: mealType === t ? "#C45B28" : "#161616",
-                  color: mealType === t ? "#0A0A0A" : "#9A9A9A",
+                  display: "block",
+                  width: "100%",
+                  textAlign: "left",
+                  backgroundColor: "#161616",
+                  borderRadius: 10,
+                  border: "1px solid #252525",
+                  padding: "14px 16px",
+                  marginBottom: 8,
                   cursor: "pointer",
+                  transition: "border-color 0.2s",
                 }}
               >
-                {t}
+                <div style={{ color: "#E8E2D8", fontSize: 14, fontWeight: 600, marginBottom: 4, fontFamily: "var(--font-inter)" }}>
+                  {food.description}
+                </div>
+                {food.brand_owner && (
+                  <div style={{ color: "#9A9A9A", fontSize: 12, marginBottom: 6 }}>{food.brand_owner}</div>
+                )}
+                <div style={{ display: "flex", gap: 16 }}>
+                  <span style={{ color: "#C45B28", fontSize: 13, fontWeight: 600 }}>{n(food.calories)} cal</span>
+                  <span style={{ color: "#9A9A9A", fontSize: 13 }}>P {n(food.protein_g)}g</span>
+                  <span style={{ color: "#9A9A9A", fontSize: 13 }}>C {n(food.carbs_g)}g</span>
+                  <span style={{ color: "#9A9A9A", fontSize: 13 }}>F {n(food.fat_g)}g</span>
+                </div>
               </button>
             ))}
           </div>
-        </section>
-
-        {/* ── Search + Scan ── */}
-        <section>
-          <p style={{ fontFamily: "var(--font-inter)", fontSize: 11, fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", color: "#C45B28", marginBottom: 12 }}>
-            Search Foods
-          </p>
-          <div style={{ display: "flex", gap: 10 }}>
-            <div style={{ position: "relative", flex: 1 }}>
-              <svg viewBox="0 0 24 24" fill="none" width={16} height={16} stroke="#9A9A9A" strokeWidth={1.8} strokeLinecap="round"
-                style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
-                <circle cx="11" cy="11" r="8" /><path d="M21 21L16.65 16.65" />
-              </svg>
-              <input
-                ref={inputRef}
-                type="text"
-                value={query}
-                onChange={(e) => handleInput(e.target.value)}
-                placeholder="Search foods..."
-                style={{
-                  width: "100%", boxSizing: "border-box", padding: "16px 44px",
-                  fontFamily: "var(--font-inter)", fontSize: 15,
-                  backgroundColor: "#161616", border: "1px solid #252525",
-                  borderRadius: 12, color: "#E8E2D8", outline: "none",
-                }}
-                onFocus={(e) => (e.currentTarget.style.borderColor = "#C45B28")}
-                onBlur={(e) => (e.currentTarget.style.borderColor = "#252525")}
-              />
-              {query && (
-                <button onClick={() => { setQuery(""); setResults([]); inputRef.current?.focus(); }}
-                  style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#9A9A9A", display: "flex", alignItems: "center", justifyContent: "center", minWidth: 32, minHeight: 32 }}>
-                  <svg viewBox="0 0 16 16" fill="none" width={14} height={14} stroke="currentColor" strokeWidth={1.6} strokeLinecap="round">
-                    <path d="M4 4L12 12M12 4L4 12" />
-                  </svg>
-                </button>
-              )}
-            </div>
-
-            {/* Barcode button */}
-            <button
-              onClick={openScanner}
-              aria-label="Scan barcode"
-              style={{
-                minWidth: 56, alignSelf: "stretch", flexShrink: 0,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                backgroundColor: "#161616", border: "1px solid #C45B28",
-                borderRadius: 12, cursor: "pointer", color: "#C45B28",
-              }}
-            >
-              <svg viewBox="0 0 24 24" fill="none" width={22} height={22} stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M2 7V4a1 1 0 011-1h3M2 17v3a1 1 0 001 1h3M22 7V4a1 1 0 00-1-1h-3M22 17v3a1 1 0 01-1 1h-3" />
-                <line x1="7" y1="7" x2="7" y2="17" strokeWidth={2} />
-                <line x1="10" y1="7" x2="10" y2="17" />
-                <line x1="13" y1="7" x2="13" y2="17" strokeWidth={2} />
-                <line x1="16" y1="7" x2="16" y2="17" />
-              </svg>
-            </button>
-          </div>
-
-          {searching && (
-            <p className="animate-pulse" style={{ fontFamily: "var(--font-inter)", fontSize: 13, color: "#9A9A9A", textAlign: "center", padding: "20px 0" }}>
-              Searching...
-            </p>
-          )}
-          {!searching && query.trim().length >= 2 && results.length === 0 && (
-            <p style={{ fontFamily: "var(--font-inter)", fontSize: 13, color: "#9A9A9A", textAlign: "center", padding: "20px 0" }}>
-              No results for "{query}"
-            </p>
-          )}
-          {!searching && query.trim().length < 2 && (
-            <p style={{ fontFamily: "var(--font-inter)", fontSize: 12, color: "#9A9A9A", marginTop: 10 }}>
-              Type at least 2 characters - try chicken breast or protein bar
-            </p>
-          )}
-
-          {results.length > 0 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 12 }}>
-              {results.map((food) => (
-                <button
-                  key={food.fdc_id}
-                  onClick={() => logFood(food)}
-                  disabled={loggingId === food.fdc_id}
-                  style={{
-                    backgroundColor: "#161616", border: "1px solid #252525", borderRadius: 12,
-                    width: "100%", textAlign: "left", padding: "16px 20px",
-                    cursor: loggingId === food.fdc_id ? "default" : "pointer",
-                    opacity: loggingId === food.fdc_id ? 0.5 : 1,
-                  }}
-                >
-                  <div style={{ fontFamily: "var(--font-inter)", fontSize: 14, fontWeight: 500, color: "#E8E2D8", marginBottom: 4, lineHeight: 1.3 }}>
-                    {food.description}
-                  </div>
-                  {(food.brand_owner || food.brand_name) && (
-                    <div style={{ fontFamily: "var(--font-inter)", fontSize: 12, color: "#9A9A9A", marginBottom: 8 }}>
-                      {food.brand_owner || food.brand_name}
-                    </div>
-                  )}
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 14, fontFamily: "var(--font-inter)", fontSize: 12 }}>
-                    <span style={{ color: "#C45B28", fontWeight: 600 }}>{Math.round(food.calories || 0)} cal</span>
-                    <span style={{ color: "#5B9BD5" }}>P {Math.round(Number(food.protein_g) || 0)}g</span>
-                    <span style={{ color: "#D4A843" }}>C {Math.round(Number(food.carbs_g) || 0)}g</span>
-                    <span style={{ color: "#D4637A" }}>F {Math.round(Number(food.fat_g) || 0)}g</span>
-                    {food.serving_size && (
-                      <span style={{ color: "#9A9A9A", marginLeft: "auto" }}>per {food.serving_size}{food.serving_size_unit}</span>
-                    )}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* ── Recent Meals ── */}
-        {recentMeals.length > 0 && (
-          <section>
-            <p style={{ fontFamily: "var(--font-inter)", fontSize: 11, fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", color: "#C45B28", marginBottom: 12 }}>
-              Recent
-            </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {recentMeals.map((meal) => (
-                <div key={meal.id} style={{ backgroundColor: "#161616", border: "1px solid #252525", borderRadius: 12, display: "flex", alignItems: "center", gap: 12, padding: "14px 20px" }}>
-                  <div style={{ width: 36, height: 36, flexShrink: 0, backgroundColor: "#0A0A0A", border: "1px solid #252525", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-inter)", fontSize: 10, fontWeight: 700, textTransform: "uppercase", color: "#C45B28" }}>
-                    {meal.meal_type?.slice(0, 1).toUpperCase() ?? "?"}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: "var(--font-inter)", fontSize: 13, fontWeight: 500, color: "#E8E2D8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {meal.food_name}
-                    </div>
-                    <div style={{ display: "flex", gap: 10, fontFamily: "var(--font-inter)", fontSize: 11, marginTop: 3 }}>
-                      <span style={{ color: "#5B9BD5" }}>P{Math.round(Number(meal.protein_g))}g</span>
-                      <span style={{ color: "#D4A843" }}>C{Math.round(Number(meal.carb_g))}g</span>
-                      <span style={{ color: "#D4637A" }}>F{Math.round(Number(meal.fat_g))}g</span>
-                      <span style={{ color: "#9A9A9A" }}>
-                        {new Date(meal.logged_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
-                      </span>
-                    </div>
-                  </div>
-                  <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    <div style={{ fontFamily: "var(--font-oswald)", fontSize: 16, fontWeight: 700, color: "#C45B28" }}>{meal.calories}</div>
-                    <button onClick={() => deleteMeal(meal.id)} style={{ fontFamily: "var(--font-inter)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.1em", color: "#9A9A9A", background: "none", border: "none", cursor: "pointer", marginTop: 2, padding: 0 }}>
-                      remove
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
         )}
 
+        {/* No results */}
+        {searchQuery.length >= 3 && !searching && results.length === 0 && (
+          <div style={{ textAlign: "center", padding: 20, color: "#9A9A9A", fontSize: 14 }}>
+            No foods found for "{searchQuery}"
+          </div>
+        )}
+
+        {/* Recent meals */}
+        {recentMeals.length > 0 && results.length === 0 && (
+          <div>
+            <h2 style={{ fontSize: 14, fontFamily: "var(--font-oswald)", fontWeight: 600, textTransform: "uppercase", letterSpacing: 1, color: "#9A9A9A", marginBottom: 10 }}>
+              Recent
+            </h2>
+            {recentMeals.map((meal) => (
+              <div
+                key={meal.id}
+                style={{
+                  backgroundColor: "#161616",
+                  borderRadius: 10,
+                  border: "1px solid #252525",
+                  padding: "12px 16px",
+                  marginBottom: 8,
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ color: "#E8E2D8", fontSize: 14, fontWeight: 600, fontFamily: "var(--font-inter)" }}>
+                    {meal.food_name || meal.name}
+                  </div>
+                  <div style={{ color: "#C45B28", fontSize: 13, fontWeight: 600 }}>{n(meal.calories)} cal</div>
+                </div>
+                <div style={{ display: "flex", gap: 16, marginTop: 4 }}>
+                  <span style={{ color: "#9A9A9A", fontSize: 12 }}>P {n(meal.protein_g)}g</span>
+                  <span style={{ color: "#9A9A9A", fontSize: 12 }}>C {n(meal.carb_g)}g</span>
+                  <span style={{ color: "#9A9A9A", fontSize: 12 }}>F {n(meal.fat_g)}g</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       <BottomNav />
-    </main>
+    </div>
   );
 }
