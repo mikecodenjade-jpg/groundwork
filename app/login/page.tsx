@@ -19,23 +19,44 @@ export default function LoginPage() {
     setMessage(null);
     setLoading(true);
 
-    if (mode === "signup") {
-      const { error } = await supabase.auth.signUp({ email, password });
-      if (error) {
-        setError(error.message);
+    try {
+      if (mode === "signup") {
+        const { error } = await supabase.auth.signUp({ email, password });
+        if (error) {
+          console.error("Supabase signup error:", JSON.stringify(error, null, 2));
+          const msg =
+            typeof error.message === "string" && error.message.length > 0
+              ? error.message
+              : error.status
+              ? `Authentication failed (${error.status})`
+              : "Sign up failed. Please try again.";
+          setError(msg);
+        } else {
+          router.push("/onboarding");
+        }
       } else {
-        router.push("/onboarding");
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) {
+          console.error("Supabase signin error:", JSON.stringify(error, null, 2));
+          const msg =
+            typeof error.message === "string" && error.message.length > 0
+              ? error.message
+              : error.status
+              ? `Authentication failed (${error.status})`
+              : "Sign in failed. Please try again.";
+          setError(msg);
+        } else {
+          router.push("/dashboard");
+        }
       }
-    } else {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (error) {
-        setError(error.message);
-      } else {
-        router.push("/dashboard");
-      }
+    } catch (err: unknown) {
+      console.error("Login exception:", err);
+      const message =
+        err instanceof Error ? err.message : "Something went wrong. Please try again.";
+      setError(message);
     }
 
     setLoading(false);
