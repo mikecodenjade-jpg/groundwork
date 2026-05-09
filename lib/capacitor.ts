@@ -5,14 +5,21 @@
  * and provides safe wrappers around native APIs.
  */
 
+type CapacitorWindow = Window & {
+  Capacitor?: {
+    isNativePlatform?: () => boolean;
+    getPlatform?: () => 'ios' | 'android' | 'web';
+  };
+};
+
 export function isNativeApp(): boolean {
   if (typeof window === 'undefined') return false;
-  return !!(window as any).Capacitor?.isNativePlatform?.();
+  return !!(window as CapacitorWindow).Capacitor?.isNativePlatform?.();
 }
 
 export function getPlatform(): 'ios' | 'android' | 'web' {
   if (typeof window === 'undefined') return 'web';
-  const cap = (window as any).Capacitor;
+  const cap = (window as CapacitorWindow).Capacitor;
   if (!cap?.isNativePlatform?.()) return 'web';
   return cap.getPlatform?.() || 'web';
 }

@@ -23,17 +23,6 @@ const HOME_KEYWORDS = [
   "pull up bar", "kettlebell", "kb ",
 ];
 
-// These exercises are always bodyweight — no equipment needed
-const BODYWEIGHT_KEYWORDS = [
-  "bodyweight", "push-up", "pushup", "push up", "pull-up", "pullup",
-  "pull up", "squat", "lunge", "plank", "burpee", "dip", "crunch",
-  "sit-up", "sit up", "mountain climber", "jump", "jog", "run",
-  "walk", "sprint", "stretch", "yoga", "warm-up", "warm up",
-  "cool-down", "cool down", "dynamic", "foam roll", "mobility",
-  "stride", "tempo", "hill repeat", "breathing", "calf raise",
-  "glute bridge", "hip thrust", "step-up", "step up",
-];
-
 /**
  * Determine the minimum equipment tier an exercise needs.
  * Returns "nothing" (bodyweight), "home" (dumbbells/bands), or "gym" (full gym).

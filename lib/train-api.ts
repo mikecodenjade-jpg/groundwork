@@ -42,7 +42,7 @@ export async function getFatigueState(userId: string) {
 }
 
 export async function onboardUser(userId: string, d: OnboardingData) {
-  const knownLifts: Record<string, any> = {};
+  const knownLifts: Record<string, { weight: number; reps: number }> = {};
   if (d.known_lifts) {
     if (d.known_lifts.squat_kg) knownLifts['Barbell Back Squat'] = { weight: d.known_lifts.squat_kg, reps: d.known_lifts.squat_reps || 5 };
     if (d.known_lifts.bench_kg) knownLifts['Barbell Bench Press'] = { weight: d.known_lifts.bench_kg, reps: d.known_lifts.bench_reps || 5 };
