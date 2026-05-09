@@ -2,6 +2,44 @@
 
 Generated 2026-05-09 as part of the critical-fixes pass on the audit (item C-6).
 
+## ⚠️ Production schema diverges from this repo's migrations (2026-05-09)
+
+After the original PR #3 hardening, the live Supabase project
+`kmnqpargwdxtozknswzk` was inspected and **does not exactly match** the
+migrations in this folder. In particular:
+
+- Production uses `profiles` and `mood_logs`. The repo migrations use
+  `user_profiles` and `mood_checkins`.
+- Production has additional tables that were never migrated through this
+  repo: `crew_posts`, `crew_members`, `email_preferences`, `gratitude_entries`
+  (with extra columns), `connection_checkins`, `injuries`,
+  `user_submitted_foods`, `activity_embeddings`, `generation_runs`, and
+  `_temp_deploy`.
+- Production already had `journal_entries` with select/insert RLS but was
+  missing owner-scoped update/delete policies on several user tables.
+
+A production-specific hardening migration named
+**`production_rls_hardening_20260509`** was applied directly to production
+via the Supabase SQL editor on 2026-05-09 and verified working. The repo
+copy of that migration is `supabase/migrations/025_production_rls_hardening.sql`.
+It is wrapped in `to_regclass(...) is not null` guards so it is safe to run
+against either schema (production or a fresh deploy from migrations 001–024).
+
+**What this means in practice:**
+
+- The earlier `024_rls_legacy_tables.sql` migration is still useful for fresh
+  deploys that follow the legacy table names. We are keeping it.
+- Migration `025_production_rls_hardening.sql` is the source of truth for
+  what's currently live in production.
+- Until the rest of the production schema is captured in migrations (see
+  "Concrete next steps" at the bottom), a fresh deploy from this repo will
+  not be byte-identical to production. That is a known gap, not a bug
+  introduced by this PR.
+- **No further deploy is required for the production hardening itself** —
+  it is already applied and verified. The repo changes in this PR are
+  documentation/parity only. The unsubscribe page change does need a normal
+  app redeploy (Vercel) so the browser starts calling the new RPC.
+
 The audit found ~10 tables that the app code reads or writes but that have
 no matching migration file in `supabase/migrations/`. Either the production
 database has tables that aren't tracked in source control (so a fresh deploy

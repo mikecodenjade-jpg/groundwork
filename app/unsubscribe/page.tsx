@@ -5,38 +5,34 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
-const EMAIL_TYPE_LABELS: Record<string, string> = {
-  weekly_digest: "Weekly Digest",
-  tips_content: "Tips & Training Content",
-  challenge_updates: "Challenge & Crew Updates",
-  all: "all emails",
-};
-
 type Status = "idle" | "loading" | "success" | "error";
 
 function UnsubscribeContent() {
   const params = useSearchParams();
-  const uid = params.get("uid");
-  const type = params.get("type") ?? "all";
+  // Production unsubscribe links use a single-use UUID token. Older links
+  // used `uid` + `type`; we accept either name for `token` to stay backwards
+  // compatible with anything already in the wild.
+  const token = params.get("token") ?? params.get("uid");
 
   const [status, setStatus] = useState<Status>("idle");
 
-  const typeLabel = EMAIL_TYPE_LABELS[type] ?? "emails";
-
   useEffect(() => {
-    if (!uid) setStatus("error");
-  }, [uid]);
+    if (!token) setStatus("error");
+  }, [token]);
 
   async function handleUnsubscribe() {
-    if (!uid) return;
+    if (!token) return;
     setStatus("loading");
 
-    const { error } = await supabase.rpc("unsubscribe_email", {
-      p_uid: uid,
-      p_type: type,
+    const { data, error } = await supabase.rpc("unsubscribe_email_by_token", {
+      token,
     });
 
-    setStatus(error ? "error" : "success");
+    if (error || data === false) {
+      setStatus("error");
+      return;
+    }
+    setStatus("success");
   }
 
   return (
@@ -85,7 +81,7 @@ function UnsubscribeContent() {
                 Unsubscribed
               </h1>
               <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)", lineHeight: 1.6 }}>
-                You&apos;ve been unsubscribed from <strong style={{ color: "#E8E2D8" }}>{typeLabel}</strong>.
+                You&apos;ve been unsubscribed from <strong style={{ color: "#E8E2D8" }}>all emails</strong>.
                 You can update your preferences anytime from account settings.
               </p>
             </div>
@@ -128,14 +124,14 @@ function UnsubscribeContent() {
                 Unsubscribe
               </h1>
               <p className="text-sm" style={{ color: "#9A9A9A", fontFamily: "var(--font-inter)", lineHeight: 1.6 }}>
-                Unsubscribe from <strong style={{ color: "#E8E2D8" }}>{typeLabel}</strong>?
-                You can re-enable this anytime from your account settings.
+                Unsubscribe from <strong style={{ color: "#E8E2D8" }}>all emails</strong>?
+                You can re-enable individual categories anytime from your account settings.
               </p>
             </div>
             <div className="flex flex-col gap-3">
               <button
                 onClick={handleUnsubscribe}
-                disabled={status === "loading" || !uid}
+                disabled={status === "loading" || !token}
                 className="w-full py-3 text-sm font-bold uppercase tracking-widest transition-opacity hover:opacity-90 disabled:opacity-50"
                 style={{ backgroundColor: "#C45B28", color: "#0A0A0A", borderRadius: "8px", fontFamily: "var(--font-inter)", fontWeight: 700, minHeight: "48px" }}
               >
