@@ -205,11 +205,12 @@ export default function DailyCheckinModal() {
     if (!mood || !sleep || !energy || !userId) return;
 
     // Crisis detection runs before any server call.
-    // If crisis keywords found in note, skip saving the note and surface resources.
-    if (note.trim() && detectCrisisKeywords(note)) {
-      setShowCrisis(true);
-      return;
-    }
+    // If the free-text note trips the detector, drop the note text but still
+    // persist the structured signal (mood/sleep/energy) — that's exactly the
+    // signal we want logged on the day a user is struggling. Then surface
+    // crisis resources.
+    const isCrisis = note.trim() ? detectCrisisKeywords(note) : false;
+    const safeNote = isCrisis ? null : note.trim() || null;
 
     setSaving(true);
 
@@ -218,8 +219,14 @@ export default function DailyCheckinModal() {
       mood,
       sleep: simplified ? null : sleep,
       energy: simplified ? null : energy,
-      note: note.trim() || null,
+      note: safeNote,
     });
+
+    if (isCrisis) {
+      setSaving(false);
+      setShowCrisis(true);
+      return;
+    }
 
     // Record completion date for returning-user detection
     try {

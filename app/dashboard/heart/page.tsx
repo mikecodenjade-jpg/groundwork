@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
 import BottomNav from "@/components/BottomNav";
+import CrisisScreen from "@/components/CrisisScreen";
 import { supabase } from "@/lib/supabase";
+import { detectCrisisInFields } from "@/lib/crisisDetection";
 
 // ── Design System ────────────────────────────────────────────────────────────
 
@@ -270,6 +272,7 @@ export default function HeartPage() {
   const [answer2, setAnswer2] = useState("");
   const [gratitudeAnswer, setGratitudeAnswer] = useState("");
   const [journalSaving, setJournalSaving] = useState(false);
+  const [showCrisis, setShowCrisis] = useState(false);
 
   const [connectionScore, setConnectionScore] = useState<number | null>(null);
   const [connectionSaving, setConnectionSaving] = useState(false);
@@ -334,14 +337,21 @@ export default function HeartPage() {
     if (!canSaveJournal) return;
     setJournalSaving(true);
 
+    // Scan all three free-text fields. On a crisis hit, redact text but keep
+    // the row so the structured signal (a check-in happened today) survives,
+    // and skip the gratitude row entirely.
+    const isCrisis = detectCrisisInFields(answer1, answer2, gratitudeAnswer);
+
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       const { data: newEntry, error: journalError } = await supabase.from("journal_entries").insert({
         user_id: user.id,
-        entry: [answer1.trim(), answer2.trim()].filter(Boolean).join(" | ") || "\u2013",
-        pissed_off: answer1.trim() || null,
-        handled_well: answer2.trim() || null,
-        gratitude_1: gratitudeAnswer.trim() || null,
+        entry: isCrisis
+          ? "[redacted]"
+          : [answer1.trim(), answer2.trim()].filter(Boolean).join(" | ") || "\u2013",
+        pissed_off: isCrisis ? null : answer1.trim() || null,
+        handled_well: isCrisis ? null : answer2.trim() || null,
+        gratitude_1: isCrisis ? null : gratitudeAnswer.trim() || null,
         gratitude_2: null,
         gratitude_3: null,
       }).select("id, created_at, pissed_off, handled_well, gratitude_1").single();
@@ -353,7 +363,7 @@ export default function HeartPage() {
         return;
       }
 
-      if (gratitudeAnswer.trim()) {
+      if (!isCrisis && gratitudeAnswer.trim()) {
         const { error: gratitudeError } = await supabase.from("gratitude_entries").insert({
           user_id: user.id,
           prompt: todayGratitudePrompt,
@@ -374,6 +384,12 @@ export default function HeartPage() {
     setAnswer1("");
     setAnswer2("");
     setGratitudeAnswer("");
+
+    if (isCrisis) {
+      setShowCrisis(true);
+      return;
+    }
+
     showToast("Entry saved");
   }
 
@@ -475,6 +491,10 @@ export default function HeartPage() {
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
+
+  if (showCrisis) {
+    return <CrisisScreen onDismiss={() => setShowCrisis(false)} />;
+  }
 
   return (
     <main

@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import CrisisScreen from "@/components/CrisisScreen";
+import { detectCrisisInFields } from "@/lib/crisisDetection";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -91,6 +93,9 @@ export default function TodayPage() {
   const [finalScore, setFinalScore] = useState(0);
   const [finalStreak, setFinalStreak] = useState(0);
 
+  // Crisis surfacing
+  const [showCrisis, setShowCrisis] = useState(false);
+
   // Load user interests on mount
   useEffect(() => {
     async function load() {
@@ -175,16 +180,22 @@ export default function TodayPage() {
       return;
     }
 
-    // Save journal entry — use combined entry string for NOT NULL compat
+    // Crisis scan on the free-text fields. On a hit we still record a journal
+    // row (so the streak/score logic below stays consistent), but redact the
+    // raw text and skip sentiment analysis. The crisis screen is shown after.
+    const isCrisis = detectCrisisInFields(heavy, handled);
+
     const { data: journalData } = await supabase.from("journal_entries").insert({
       user_id: user.id,
-      entry: [heavy.trim(), handled.trim()].filter(Boolean).join(" | ") || "–",
-      pissed_off: heavy.trim() || null,
-      handled_well: handled.trim() || null,
+      entry: isCrisis
+        ? "[redacted]"
+        : [heavy.trim(), handled.trim()].filter(Boolean).join(" | ") || "–",
+      pissed_off: isCrisis ? null : heavy.trim() || null,
+      handled_well: isCrisis ? null : handled.trim() || null,
     }).select("id").single();
 
-    // Fire-and-forget sentiment analysis on journal entry
-    if (journalData?.id) {
+    // Fire-and-forget sentiment analysis on journal entry — skip on crisis.
+    if (!isCrisis && journalData?.id) {
       const entryText = [heavy.trim(), handled.trim()].filter(Boolean).join(" ");
       supabase.functions.invoke("analyze-sentiment", {
         body: {
@@ -225,8 +236,18 @@ export default function TodayPage() {
     setFinalScore(score);
     setFinalStreak(calcStreak(allDates));
     setSaving(false);
+
+    if (isCrisis) {
+      setShowCrisis(true);
+      return;
+    }
+
     setStep("done");
   }, [heavy, handled]);
+
+  if (showCrisis) {
+    return <CrisisScreen onDismiss={() => setShowCrisis(false)} />;
+  }
 
   return (
     <main

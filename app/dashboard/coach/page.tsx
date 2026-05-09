@@ -5,7 +5,7 @@ import Link from "next/link";
 import BottomNav from "@/components/BottomNav";
 import { supabase } from "@/lib/supabase";
 import CrisisScreen from "@/components/CrisisScreen";
-import { detectCrisisKeywords } from "@/lib/crisisDetection";
+import { detectCrisisKeywords, CRISIS_RESPONSE } from "@/lib/crisisDetection";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -42,33 +42,6 @@ const QUICK_PROMPTS = [
   "I am eating like garbage and feel terrible",
   "I am thinking about leaving construction, what are my options",
 ];
-
-// ─── Crisis detection ─────────────────────────────────────────────────────────
-
-const CRISIS_PATTERNS = [
-  /\bsuicid/i,
-  /\bkill (my)?self\b/i,
-  /\bend (it|my life)\b/i,
-  /\bdon'?t want to (be here|live)\b/i,
-  /\b(want|going) to die\b/i,
-  /\bhurt (my)?self\b/i,
-  /\bself.?harm\b/i,
-  /\bno reason to (live|go on)\b/i,
-  /\bcan'?t (go on|do this anymore)\b/i,
-  /\bgive up on (life|everything)\b/i,
-];
-
-const CRISIS_RESPONSE = `This sounds heavy. I want you to talk to someone who can really help right now.
-
-Call or text **988** (Suicide & Crisis Lifeline) — available 24/7.
-
-Text **HOME to 741741** (Crisis Text Line) — free, confidential, 24/7.
-
-You don't have to carry this alone. Please reach out.`;
-
-function isCrisisMessage(text: string): boolean {
-  return CRISIS_PATTERNS.some((pattern) => pattern.test(text));
-}
 
 // ─── Session helpers ──────────────────────────────────────────────────────────
 
@@ -286,7 +259,7 @@ export default function CoachPage() {
       let finalMessages: Message[];
 
       // Crisis detection — intercept before hitting AI API
-      if (isCrisisMessage(trimmed)) {
+      if (detectCrisisKeywords(trimmed)) {
         const crisisMsg: Message = {
           id: (Date.now() + 1).toString(),
           role: "assistant",
