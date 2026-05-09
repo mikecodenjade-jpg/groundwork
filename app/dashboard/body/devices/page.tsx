@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import BottomNav from "@/components/BottomNav";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseUrl } from "@/lib/supabase";
 
 type WearableConnection = {
   id: string;
@@ -78,7 +78,7 @@ export default function ConnectedDevicesPage() {
       if (!user) { setConnectingProvider(null); return; }
 
       const res = await fetch(
-        `https://kmnqpargwdxtozknswzk.supabase.co/functions/v1/wearable-auth`,
+        `${supabaseUrl}/functions/v1/wearable-auth`,
         {
           method: "POST",
           headers: {
@@ -113,7 +113,7 @@ export default function ConnectedDevicesPage() {
       if (!user) { setDisconnectingId(null); return; }
 
       const res = await fetch(
-        `https://kmnqpargwdxtozknswzk.supabase.co/functions/v1/wearable-auth`,
+        `${supabaseUrl}/functions/v1/wearable-auth`,
         {
           method: "POST",
           headers: {
@@ -144,7 +144,7 @@ export default function ConnectedDevicesPage() {
       if (!user) { setSyncingId(null); return; }
 
       const res = await fetch(
-        `https://kmnqpargwdxtozknswzk.supabase.co/functions/v1/wearable-sync`,
+        `${supabaseUrl}/functions/v1/wearable-sync`,
         {
           method: "POST",
           headers: {
