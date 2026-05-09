@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import BottomNav from "@/components/BottomNav";
 import { supabase } from "@/lib/supabase";
@@ -821,6 +821,18 @@ function HistoryPanel({
 
 // ─── Message Bubble ───────────────────────────────────────────────────────────
 
+// Safely render **bold** segments as <strong> via React. Splitting on the
+// pattern keeps the rest of the text as plain strings — never HTML — so a
+// crafted assistant response can't inject markup.
+function renderBold(text: string): React.ReactNode[] {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, idx) => {
+    const m = part.match(/^\*\*([^*]+)\*\*$/);
+    if (m) return <strong key={idx}>{m[1]}</strong>;
+    return <React.Fragment key={idx}>{part}</React.Fragment>;
+  });
+}
+
 function MessageBubble({ message }: { message: Message }) {
   const isUser = message.role === "user";
 
@@ -860,7 +872,7 @@ function MessageBubble({ message }: { message: Message }) {
         }}
       >
         {paragraphs.map((para, i) => (
-          <p key={i} dangerouslySetInnerHTML={{ __html: para.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>") }} />
+          <p key={i}>{renderBold(para)}</p>
         ))}
       </div>
     </div>
