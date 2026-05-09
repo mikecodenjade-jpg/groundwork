@@ -177,7 +177,7 @@ const NAV_TABS = [
   },
   {
     label: "Fuel",
-    href: "/dashboard/fuel",
+    href: "/dashboard/nutrition",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" width={24} height={24}>
         <path
@@ -234,10 +234,10 @@ function isActive(href: string, pathname: string): boolean {
     );
   }
 
-  if (href === "/dashboard/fuel") {
+  if (href === "/dashboard/nutrition") {
     return (
-      pathname.startsWith("/dashboard/fuel") ||
-      pathname.startsWith("/dashboard/nutrition")
+      pathname.startsWith("/dashboard/nutrition") ||
+      pathname.startsWith("/dashboard/fuel")
     );
   }
 
