@@ -313,9 +313,27 @@ export default function CoachPage() {
       }
 
       try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData?.session?.access_token;
+        if (!accessToken) {
+          finalMessages = [
+            ...newMessages,
+            {
+              id: (Date.now() + 1).toString(),
+              role: "assistant",
+              content: "Please sign in again to keep chatting with the Coach.",
+            },
+          ];
+          setMessages(finalMessages);
+          return;
+        }
+
         const res = await fetch("/api/coach", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
           body: JSON.stringify({
             messages: newMessages.map(({ role, content }) => ({ role, content })),
             system: buildSystemPrompt(profile),
@@ -323,12 +341,20 @@ export default function CoachPage() {
         });
 
         const data = await res.json();
+        let assistantContent: string;
+        if (res.ok) {
+          assistantContent = data.content;
+        } else if (res.status === 401) {
+          assistantContent = "Please sign in again to keep chatting with the Coach.";
+        } else if (res.status === 429) {
+          assistantContent = "You're going fast — give it a minute and try again.";
+        } else {
+          assistantContent = "Coach is unavailable right now. Try again in a moment.";
+        }
         const assistantMsg: Message = {
           id: (Date.now() + 1).toString(),
           role: "assistant",
-          content: res.ok
-            ? data.content
-            : "Something went wrong. Check your API key configuration.",
+          content: assistantContent,
         };
         finalMessages = [...newMessages, assistantMsg];
       } catch {
